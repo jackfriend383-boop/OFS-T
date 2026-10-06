@@ -30,7 +30,7 @@ for (const r of routes) {
 await write('404.html', page('/404.html'));
 
 /* sitemap.xml: public pages in both languages, with hreflang alternates. */
-const PUBLIC = routes.filter((r) => r.key !== 'admin');
+const PUBLIC = routes.filter((r) => !['order', 'account'].includes(r.key));
 const prio = { home: '1.0', shop: '0.9', configurator: '0.9', about: '0.7' };
 const byKey = Object.groupBy(PUBLIC, (r) => r.key);
 const xml = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">'];

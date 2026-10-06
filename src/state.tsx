@@ -3,16 +3,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
 import { getKit, langOfPath, pagePath, type Cfg, type CartItem, type Kit, type Lang, type PageKey } from './lib/kit';
-import { makeBackend, type Backend } from './lib/backend';
+import { makeBackend, type Backend, type Customer } from './lib/backend';
 
 export type ModalName = 'cart' | 'search' | null;
-export type DrawerMode = 'cart' | 'checkout' | 'ok';
+export type DrawerMode = 'cart' | 'checkout';
 export type LiveChannel = 'live' | 'cartLive' | 'sresCount';
 
 interface Ctx {
   lang: Lang; kit: Kit; T: Kit['T']; backend: Backend;
   /** Router path of a page in the current language (always with a trailing slash). */
   to: (key: PageKey | string, query?: string) => string;
+  /** The signed-in customer (null for guests). `ready` is false until the stored session has been checked. */
+  account: { user: Customer | null; ready: boolean }; setCustomer: (u: Customer | null) => void; signOutCustomer: () => Promise<void>;
   cart: CartItem[]; cartCount: number; cartReady: boolean;
   addToCart: (c: Cfg) => void; changeQty: (ix: number, d: number) => void; removeItem: (ix: number) => void; clearCart: () => void;
   modal: ModalName; openModal: (m: Exclude<ModalName, null>) => void; closeModal: (restoreFocus?: boolean) => void;
@@ -70,6 +72,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
   const commit = useCallback((next: CartItem[]) => { setCart(next); store.set(CART_KEY, JSON.stringify(next)); }, []);
   const cartRef = useRef(cart); cartRef.current = cart;
+
+  /* ---------- Customer account ---------- */
+  const [account, setAccount] = useState<{ user: Customer | null; ready: boolean }>({ user: null, ready: false });
+  const backendRef = useRef(backend); backendRef.current = backend;
+  useEffect(() => {
+    let live = true;
+    const b = backendRef.current;
+    if (!b.hasCustomerSession()) { setAccount({ user: null, ready: true }); return; }
+    b.me().then((u) => live && setAccount({ user: u, ready: true })).catch(() => live && setAccount({ user: null, ready: true }));
+    return () => { live = false; };
+  }, []);
+  const setCustomer = useCallback((u: Customer | null) => setAccount({ user: u, ready: true }), []);
+  const signOutCustomer = useCallback(async () => { await backendRef.current.customerSignOut(); setAccount({ user: null, ready: true }); }, []);
 
   /* ---------- Announcements + toast ---------- */
   const [live, setLive] = useState<Record<LiveChannel, string>>({ live: '', cartLive: '', sresCount: '' });
@@ -136,9 +151,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const onEditConfig = useRef<((c: Cfg) => void) | null>(null);
 
   const value = useMemo<Ctx>(() => ({
-    lang, kit, T, backend, to, cart, cartCount: cart.reduce((s, i) => s + i.qty, 0), cartReady, addToCart, changeQty, removeItem, clearCart,
+    lang, kit, T, backend, to, account, setCustomer, signOutCustomer, cart, cartCount: cart.reduce((s, i) => s + i.qty, 0), cartReady, addToCart, changeQty, removeItem, clearCart,
     modal, openModal, closeModal, drawerMode, setDrawerMode, toast, hideToast, live, announce, cfgProvider, onPickDesign, onEditConfig, restoreRef,
-  }), [lang, kit, T, backend, to, cart, cartReady, addToCart, changeQty, removeItem, clearCart, modal, openModal, closeModal, drawerMode, toast, hideToast, live, announce]);
+  }), [lang, kit, T, backend, to, account, setCustomer, signOutCustomer, cart, cartReady, addToCart, changeQty, removeItem, clearCart, modal, openModal, closeModal, drawerMode, toast, hideToast, live, announce]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

@@ -13,16 +13,15 @@ function slot(str: string, name: string, node: ReactNode): ReactNode {
   return rest.length ? <>{a}{node}{rest.join(`{${name}}`)}</> : str;
 }
 
-const COUNTRIES_EN = ['Portugal', 'Spain', 'France', 'Italy', 'Germany', 'Netherlands', 'Belgium'];
+export const COUNTRIES_EN = ['Portugal', 'Spain', 'France', 'Italy', 'Germany', 'Netherlands', 'Belgium'];
 
 export function CartDrawer() {
-  const { kit, T, to, lang, cart, changeQty, removeItem, clearCart, modal, closeModal, drawerMode, setDrawerMode, announce, live, backend, onEditConfig } = useApp();
+  const { kit, T, to, lang, cart, changeQty, removeItem, modal, closeModal, drawerMode, setDrawerMode, announce, live, backend, onEditConfig } = useApp();
   const open = modal === 'cart';
   const body = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const focusSel = useRef<string | null>(null);
-  const [done, setDone] = useState<{ first: string; ref: string } | null>(null);
-  const title = drawerMode === 'checkout' ? T('checkout') : drawerMode === 'ok' ? T('orderReceived') : T('cartTitle');
+  const title = drawerMode === 'checkout' ? T('checkout') : T('cartTitle');
   const money = kit.money;
 
   // Focus follow-ups requested by an action (after the DOM has been updated).
@@ -33,7 +32,6 @@ export function CartDrawer() {
     (el || titleRef.current)?.focus();
   });
   useEffect(() => { if (open) easeInCartItems(); }, [open]);
-  useEffect(() => { if (!open && drawerMode === 'ok') setDrawerMode('cart'); }, [open, drawerMode, setDrawerMode]);
 
   const editHref = (i: number) => to('configurator', kit.cfgQuery(cart[i].cfg));
   const sub = cart.reduce((s, i) => s + kit.priceOf(i.cfg) * i.qty, 0);
@@ -88,15 +86,7 @@ export function CartDrawer() {
       </div>
       <div className="drawer-body" id="cartBody" ref={body}>
         {drawerMode === 'cart' && cartView}
-        {drawerMode === 'checkout' && <Checkout key={lang} onBack={() => { setDrawerMode('cart'); focusSel.current = '#checkout'; }} onDone={(r) => { setDone(r); clearCart(); setDrawerMode('ok'); focusSel.current = 'title'; }} />}
-        {drawerMode === 'ok' && done && (
-          <div className="ok">
-            <span className="tick" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" focusable="false"><path d="m5 12 5 5 9-10" /></svg></span>
-            <h3 style={{ margin: 0 }}>{T('thanks', { name: done.first })}</h3>
-            <p className="muted" style={{ margin: 0, maxWidth: '32ch' }}>{T('receivedBody')}{done.ref && slot(T('refLine'), 'ref', <b className="mono">{done.ref}</b>)}</p>
-            <p className="note" style={{ margin: 0, maxWidth: '32ch' }}>{T('noPaymentShort')}</p>
-          </div>
-        )}
+        {drawerMode === 'checkout' && <Checkout key={lang} onBack={() => { setDrawerMode('cart'); focusSel.current = '#checkout'; }} />}
       </div>
       <div className="drawer-foot" id="cartFoot">{drawerMode === 'cart' && cartFoot}</div>
       <p className="sr" id="cartLive" role="status" aria-live="polite">{live.cartLive}</p>
@@ -113,8 +103,10 @@ const FIELDS = [
   { id: 'coCity', label: 'fCity', ac: 'address-level2', msg: 'fCityMsg', props: {} },
 ] as const;
 
-function Checkout({ onBack, onDone }: { onBack: () => void; onDone: (r: { first: string; ref: string }) => void }) {
-  const { kit, T, to, cart, backend } = useApp();
+function Checkout({ onBack }: { onBack: () => void }) {
+  const { kit, T, to, cart, backend, account } = useApp();
+  const u = account.user; // signed-in customer: checkout starts pre-filled from their saved details
+  const saved: Record<string, string> = { coName: u?.name || '', coEmail: u?.email || '', coAddr: u?.street || '', coPost: u?.postcode || '', coCity: u?.city || '' };
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<{ cls: string; node: ReactNode } | null>(null);
   const [sending, setSending] = useState(false);
@@ -154,16 +146,16 @@ function Checkout({ onBack, onDone }: { onBack: () => void; onDone: (r: { first:
     if (!backend.configured) { setStatus({ cls: 'note', node: notSetUp() }); return; }
     if (sending) return;
     const val = (id: string) => ((form.querySelector('#' + id) as HTMLInputElement | null)?.value || '').trim();
-    const first = val('coName').split(/\s+/)[0];
     setSending(true); setStatus(null);
     try {
-      const res = await backend.submitOrder({
+      const res = await backend.startCheckout({
         customer: { name: val('coName'), email: val('coEmail'), street: val('coAddr'), postcode: val('coPost'), city: val('coCity'), country: val('coCountry') },
         items: cart.map((i) => ({ cfg: { ...i.cfg }, qty: i.qty })),
         consentTerms: !!(form.querySelector('#coTerms') as HTMLInputElement | null)?.checked,
         consentPersonalised: pers ? !!(form.querySelector('#coPers') as HTMLInputElement | null)?.checked : null,
       });
-      onDone({ first, ref: res && res.ref ? res.ref : '' });
+      // Off to Stripe's hosted payment page. The cart stays saved until the order page sees the payment succeed.
+      window.location.assign(res.url);
     } catch (err: any) {
       const msg = err && err.code === 'denied' ? T('orderDenied') : (err && err.message) || T('somethingWrong');
       setStatus({ cls: 'err', node: slot(T('orderFailed', { msg, email: '{email}' }), 'email', mail()) });
@@ -184,7 +176,7 @@ function Checkout({ onBack, onDone }: { onBack: () => void; onDone: (r: { first:
   const field = (f: (typeof FIELDS)[number]) => (
     <div className="co-f" key={f.id}>
       <label htmlFor={f.id}>{T(f.label)}</label>
-      <input className="field" id={f.id} name={f.ac} type={'type' in f ? f.type : 'text'} autoComplete={f.ac} required {...f.props}
+      <input className="field" id={f.id} name={f.ac} type={'type' in f ? f.type : 'text'} autoComplete={f.ac} required defaultValue={saved[f.id]} {...f.props}
         aria-invalid={errs[f.id] ? true : undefined} aria-describedby={errs[f.id] ? f.id + 'Err' : undefined} />
       <p className="err" id={f.id + 'Err'} hidden={!errs[f.id]}>{errs[f.id]}</p>
     </div>
@@ -200,7 +192,7 @@ function Checkout({ onBack, onDone }: { onBack: () => void; onDone: (r: { first:
       <div className="co-2">{field(FIELDS[3])}{field(FIELDS[4])}</div>
       <div className="co-f">
         <label htmlFor="coCountry">{T('fCountry')}</label>
-        <select className="field" id="coCountry" name="country" autoComplete="country-name" required>{COUNTRIES_EN.map((c, i) => <option key={c} value={c}>{countryLabels[i]}</option>)}</select>
+        <select className="field" id="coCountry" name="country" autoComplete="country-name" required defaultValue={u?.country && COUNTRIES_EN.includes(u.country) ? u.country : undefined}>{COUNTRIES_EN.map((c, i) => <option key={c} value={c}>{countryLabels[i]}</option>)}</select>
       </div>
       {check('coTerms', termsLabel)}
       {pers && check('coPers', T('persCheck'))}

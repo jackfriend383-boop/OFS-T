@@ -24,9 +24,53 @@ CREATE TABLE IF NOT EXISTS orders (
   total_cents          INTEGER NOT NULL CHECK (total_cents BETWEEN 1 AND 1000000),
   lang                 TEXT CHECK (lang IS NULL OR length(lang) BETWEEN 2 AND 5),
   consent_terms        INTEGER NOT NULL CHECK (consent_terms = 1),
-  consent_personalised INTEGER CHECK (consent_personalised IS NULL OR consent_personalised = 1)
+  consent_personalised INTEGER CHECK (consent_personalised IS NULL OR consent_personalised = 1),
+  -- Payment (Stripe Checkout). An order is created 'unpaid' when checkout starts and is marked 'paid' ONLY by the
+  -- signed Stripe webhook, after the amount received has been compared with total_cents.
+  payment_status       TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'expired', 'mismatch')),
+  stripe_session_id    TEXT,
+  paid_at              TEXT,
+  user_id              TEXT   -- customer account (users.id) when the buyer was signed in
 );
 CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders (created_at DESC);
+CREATE INDEX IF NOT EXISTS orders_stripe_session_idx ON orders (stripe_session_id);
+CREATE INDEX IF NOT EXISTS orders_user_idx ON orders (user_id, created_at DESC);
+-- (An older database without the payment columns: run migrations/0002_payments.sql first, then this file.)
+
+-- Customer accounts. Passwordless: a customer proves they own an email address by clicking a one-time link we send.
+CREATE TABLE IF NOT EXISTS users (
+  id            TEXT PRIMARY KEY CHECK (length(id) = 36),
+  email         TEXT NOT NULL UNIQUE CHECK (length(email) BETWEEN 3 AND 254 AND email = lower(email)),
+  created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  last_login_at TEXT,
+  name          TEXT CHECK (name IS NULL OR length(name) <= 200),
+  phone         TEXT CHECK (phone IS NULL OR length(phone) <= 40),
+  street        TEXT CHECK (street IS NULL OR length(street) <= 300),
+  postcode      TEXT CHECK (postcode IS NULL OR length(postcode) <= 20),
+  city          TEXT CHECK (city IS NULL OR length(city) <= 120),
+  country       TEXT CHECK (country IS NULL OR length(country) <= 60),
+  lang          TEXT CHECK (lang IS NULL OR length(lang) BETWEEN 2 AND 5)
+);
+
+-- One-time sign-in links (only the SHA-256 hash of the token is stored) and the log used to throttle requests for them.
+CREATE TABLE IF NOT EXISTS login_links (
+  token_hash TEXT PRIMARY KEY,
+  email      TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at    TEXT
+);
+CREATE TABLE IF NOT EXISTS link_requests (
+  email TEXT NOT NULL,
+  at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS link_requests_at_idx ON link_requests (at);
+
+CREATE TABLE IF NOT EXISTS customer_sessions (
+  token_hash TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS customer_sessions_user_idx ON customer_sessions (user_id);
 
 CREATE TABLE IF NOT EXISTS admin_sessions (
   token_hash TEXT PRIMARY KEY,

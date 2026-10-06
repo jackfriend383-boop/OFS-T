@@ -52,7 +52,9 @@
     "refunds": {"title": "Reembolsos e devoluções — {brand}", "crumb": "Reembolsos e devoluções", "description": "Política de reembolsos, devoluções e direito de livre resolução das encomendas de kits OFS/T."},
     "cookies": {"title": "Política de cookies — {brand}", "crumb": "Política de cookies", "description": "Que cookies e armazenamento local o site da OFS/T utiliza e porquê."},
     "404": {"title": "Página não encontrada — {brand}", "description": "Esta página não existe. Veja os kits de autocolantes OFS/T para o Citroën Ami ou abra o configurador."},
-    "admin": {"title": "Administração de encomendas — {brand}", "description": "Painel de encomendas para o proprietário da loja."}
+    "admin": {"title": "Administração de encomendas — {brand}", "description": "Painel de encomendas para o proprietário da loja."},
+    "order": {"title": "A sua encomenda — {brand}", "description": "Estado do pagamento da sua encomenda OFS/T."},
+    "account": {"title": "A sua conta — {brand}", "description": "Entre para ver as suas encomendas OFS/T e os dados guardados."}
   },
 
   "build": {
@@ -176,15 +178,15 @@
     "privacyLink": "política de privacidade",
     "persCheck": "Compreendo que os kits personalizados são feitos de acordo com as minhas escolhas e não podem ser devolvidos por mudança de opinião (os kits com defeito estão sempre cobertos).",
     "newTab": " (abre num novo separador)",
-    "noPayment": "Não é feito nenhum pagamento online: enviaremos um email para confirmar o pagamento e a entrega.",
+    "noPayment": "Vai pagar com segurança no passo seguinte, através da Stripe. Nunca vemos os dados do seu cartão.",
     "notSetUp": "As encomendas online ainda não estão ativas — envie-nos um email para {email}.",
     "ourContact": "o nosso endereço de contacto",
     "emailPlaceholder": "[EMAIL DE CONTACTO]",
-    "placeOrder": "Fazer encomenda",
+    "placeOrder": "Continuar para o pagamento",
     "backToCart": "Voltar ao carrinho",
     "required": "Este campo é obrigatório.",
     "badEmail": "Indique um endereço de email válido, como nome@exemplo.pt.",
-    "sending": "A enviar a encomenda…",
+    "sending": "A abrir o pagamento seguro…",
     "orderDenied": "Não foi possível aceitar a encomenda.",
     "somethingWrong": "Ocorreu um erro.",
     "orderFailed": "{msg} O seu carrinho mantém-se. Se o problema persistir, envie-nos um email para {email}.",
@@ -243,6 +245,7 @@
     "dlPng": "Descarregar PNG",
     "dlSvg": "SVG + linha de corte",
     "forOrder": " de {name}, encomenda {ref}",
+    "payPaid": "Pago via Stripe", "warnMismatch": "A Stripe indica um valor diferente do total da encomenda. Verifique este pagamento no painel da Stripe antes de enviar.",
     "warnTotal": "O total enviado ({sent}) difere da tabela de preços ({list}). Use o total da tabela de preços.",
     "warnDropped_one": "{n} artigo não pôde ser lido e não é apresentado.",
     "warnDropped_other": "{n} artigos não puderam ser lidos e não são apresentados.",
@@ -271,6 +274,22 @@
     "beCredentials": "Email ou palavra-passe incorretos.",
     "beSession": "A sua sessão expirou. Inicie sessão novamente.",
     "beDenied": "Esta conta não tem permissão para fazer isso.",
-    "beGeneric": "Ocorreu um erro. Tente novamente."
+    "beGeneric": "Ocorreu um erro. Tente novamente.",
+    "bePayment": "Não foi possível abrir a página de pagamento. Tente novamente dentro de instantes.",
+    "orderEyebrow": "A sua encomenda", "orderChecking": "A verificar o pagamento…", "orderPaidH": "Pagamento recebido", "orderPaidText": "Obrigado! Recebemos a sua encomenda e enviaremos um email para o endereço indicado quando o kit seguir.",
+    "orderPendingH": "A aguardar confirmação", "orderPendingText": "O seu pagamento ainda está a ser confirmado pelo banco. Esta página atualiza sozinha; também pode fechá-la, enviaremos um email.",
+    "orderCancelledH": "Pagamento cancelado", "orderCancelledText": "Não foi cobrado nada. O carrinho continua guardado, pode voltar atrás e tentar de novo.",
+    "orderFailedH": "O pagamento não foi concluído", "orderFailedText": "Não foi cobrado nada. O carrinho continua guardado, pode tentar de novo ou usar outro método de pagamento.",
+    "orderUnknownH": "Não encontrámos essa encomenda", "orderUnknownText": "Verifique a ligação ou abra o carrinho para recomeçar.",
+    "orderRef": "Referência da encomenda", "orderBackShop": "Continuar a ver", "orderOpenCart": "Abrir carrinho",
+    "beLink": "Esse link de acesso expirou ou já foi usado. Peça um novo.", "beMail": "Não foi possível enviar o email. Tente novamente dentro de instantes.",
+    "acctMenu": "Menu da conta", "acctSignIn": "Entrar", "acctMyAccount": "A minha conta", "acctMyOrders": "As minhas encomendas", "acctSignOut": "Terminar sessão", "acctSignedInAs": "Sessão iniciada como",
+    "acctEyebrow": "A sua conta", "acctH1Out": "Entrar", "acctLeadOut": "Sem palavra-passe. Indique o seu email e enviamos um link de acesso de uso único. É novo? Isto cria a sua conta.",
+    "acctEmail": "Email", "acctSendLink": "Enviar link por email", "acctSendingLink": "A enviar…",
+    "acctSentH": "Veja o seu email", "acctSentText": "Enviámos um link de acesso para {email}. É válido durante 15 minutos e só pode ser usado uma vez. Não encontra? Veja o spam.", "acctOtherEmail": "Usar outro email",
+    "acctVerifying": "A iniciar sessão…", "acctH1In": "Olá, {name}", "acctH1InNoName": "A sua conta",
+    "acctProfileH": "Os seus dados", "acctProfileNote": "Opcional. Usamos estes dados para preencher o checkout por si.", "acctPhone": "Telefone (opcional)", "acctSave": "Guardar dados", "acctSaving": "A guardar…", "acctSaved": "Dados guardados.",
+    "acctOrdersH": "As suas encomendas", "acctNoOrders": "Ainda não tem encomendas pagas.", "acctLoadingOrders": "A carregar as encomendas…", "acctOrderN": "Encomenda {ref}", "acctStNew": "Recebida", "acctStPrinted": "Em produção", "acctStShipped": "Enviada",
+    "acctDangerH": "Eliminar conta", "acctDangerText": "Elimina a sua conta e os dados guardados. As encomendas anteriores são mantidas para contabilidade, como a lei exige.", "acctDeleteBtn": "Eliminar a minha conta", "acctDeleteConfirm": "Sim, eliminar", "acctCancel": "Cancelar", "acctDeleted": "A sua conta foi eliminada."
   }
 }

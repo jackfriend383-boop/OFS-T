@@ -60,14 +60,14 @@ function jsonld(key: SeoKey, lang: Lang, title: string) {
 /* Everything that goes in <head> for a page, as an HTML string. Elements carry data-h so a client-side navigation can swap them. */
 export function headHtml(key: SeoKey, lang: Lang): string {
   const L = I18N[lang], m = meta(key, lang), canonical = pageUrl(lang, key);
-  const noindex = key === '404' || key === 'admin';
+  const noindex = key === '404' || key === 'order' || key === 'account';
   const alts = [...LANGS.map((l) => [I18N[l].hreflang, pageUrl(l, key)]), ['x-default', pageUrl('pt', key)]];
   const og = abs('/assets/img/og-image.png');
   const t = (s: string) => `<meta data-h ${s}>`;
   return [
     `<title data-h>${e(m.title)}</title>`,
     t(`name="description" content="${e(m.description)}"`),
-    noindex ? t(`name="robots" content="${key === 'admin' ? 'noindex,nofollow' : 'noindex'}"`) : '',
+    noindex ? t(`name="robots" content="${key === 'order' || key === 'account' ? 'noindex,nofollow' : 'noindex'}"`) : '',
     `<link data-h rel="canonical" href="${canonical}">`,
     ...(key === '404' ? [] : alts.map(([h, u]) => `<link data-h rel="alternate" hreflang="${h}" href="${u}">`)),
     t('property="og:type" content="website"'), t(`property="og:site_name" content="${e(BRAND)}"`), t(`property="og:locale" content="${L.locale}"`),

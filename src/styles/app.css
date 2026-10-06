@@ -3,3 +3,27 @@
 .shell{display:block}
 /* An inert shell (a dialog is open) keeps its look. */
 .shell[inert]{pointer-events:none}
+
+/* Customer account: profile button + menu, account page cards, order list. */
+.acct{display:grid;gap:16px;align-content:start}
+.acct > *{max-width:760px;width:100%}
+.acct-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:12px}
+.acct-card h2{margin:0;font-size:18px}
+.acct-msg{margin:0}
+.acct-actions{display:flex;flex-wrap:wrap;gap:10px}
+.acct-danger{background:var(--err);color:#fff;border-color:transparent}
+.acct-danger-outline{color:var(--err)}
+.acct-orders{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.acct-orders > li{border-top:1px solid var(--line);padding-top:14px}
+.acct-orders > li:first-child{border-top:0;padding-top:0}
+.acct-order-head{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}
+.acct-order-head .price{margin-left:auto}
+.acct-pill{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--raise);color:var(--fg)}
+.acct-lines{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;font-size:14px}
+.acct-menu{position:relative}
+.acct-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg)}
+.acct-pop{position:absolute;right:0;top:calc(100% + 8px);min-width:230px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:8px;display:grid;gap:2px;box-shadow:0 14px 34px rgba(0,0,0,.35);z-index:60}
+.acct-pop a,.acct-pop button{text-align:left;padding:10px 12px;border-radius:9px;font:inherit;font-size:14px;color:var(--fg)}
+.acct-pop a:hover,.acct-pop button:hover{background:var(--raise)}
+.acct-pop-who{display:grid;gap:2px;margin:0 0 6px;padding:8px 12px 10px;border-bottom:1px solid var(--line);font-size:13px;overflow-wrap:anywhere}
+@media (max-width:560px){.tools .acct-btn{display:none}}

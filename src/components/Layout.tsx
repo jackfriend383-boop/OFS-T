@@ -105,8 +105,42 @@ function LangSwitch({ cls }: { cls: 'lang' | 'mlang' }) {
   );
 }
 
+/* Profile button: a plain "Sign in" link for guests; for a signed-in customer a small menu (account, orders, sign out). */
+function AccountMenu() {
+  const { T, to, backend, account, signOutCustomer } = useApp();
+  const { pathname } = useLocation();
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setOpen(false); btn.current?.focus(); } };
+    document.addEventListener('click', onDown); document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('click', onDown); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  if (!backend.configured) return null;
+  const icon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="8.5" r="3.6" /><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4" /></svg>;
+  const user = account.user;
+  if (!user) return <Link to={to('account')} className="icon-btn acct-btn" aria-label={T('acctSignIn')}>{icon}</Link>;
+  return (
+    <div className="acct-menu acct-btn" ref={wrap}>
+      <button type="button" className="icon-btn" ref={btn} aria-label={T('acctMenu')} aria-haspopup="menu" aria-expanded={open} aria-controls="acctPop" onClick={() => setOpen((o) => !o)}>{icon}<span className="acct-dot" aria-hidden="true" /></button>
+      {open && (
+        <div className="acct-pop" id="acctPop" role="menu">
+          <p className="acct-pop-who"><span className="muted">{T('acctSignedInAs')}</span><b>{user.name || user.email}</b></p>
+          <Link role="menuitem" to={to('account')}>{T('acctMyAccount')}</Link>
+          <Link role="menuitem" to={to('account') + '#orders'}>{T('acctMyOrders')}</Link>
+          <button type="button" role="menuitem" onClick={() => { setOpen(false); void signOutCustomer(); }}>{T('acctSignOut')}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Header() {
-  const { T, kit, to, cartCount, openModal, modal } = useApp();
+  const { T, kit, to, cartCount, openModal, modal, backend, account } = useApp();
   const ui = kit.L.ui;
   const { pathname } = useLocation();
   const page = pageOfPath(pathname);
@@ -151,12 +185,14 @@ function Header() {
           <button type="button" className="icon-btn" id="openSearch" aria-label={ui.t_search} aria-haspopup="dialog" onClick={() => openModal('search')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg></button>
           <LangSwitch cls="lang" />
           <ThemeButton />
+          <AccountMenu />
           <button type="button" className="icon-btn" id="openCart" aria-label={cartLabel} aria-haspopup="dialog" onClick={() => openModal('cart')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h2.2l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.6 8H6.1" /><circle cx="9.5" cy="20" r="1.2" /><circle cx="17" cy="20" r="1.2" /></svg><span className="badge" id="cartCount" aria-hidden="true">{cartCount}</span></button>
           <button type="button" className="icon-btn menu-btn" id="menuBtn" ref={menuBtn} aria-label={ui.t_menu} aria-expanded={menu} aria-controls="mnav" onClick={() => setMenu((m) => !m)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
         </div>
       </header>
       <nav className={'mnav' + (menu ? ' on' : '')} id="mnav" ref={mnav} aria-label={ui.t_nav_mobile}>
         {links.map((l) => <Link key={l.k} to={l.href} data-r={l.k} aria-current={l.cur ? 'page' : undefined}>{l.label}</Link>)}
+        {backend.configured && <Link to={to('account')} data-r="account" aria-current={page === 'account' ? 'page' : undefined}>{account.user ? T('acctMyAccount') : T('acctSignIn')}</Link>}
         <LangSwitch cls="mlang" />
       </nav>
     </>

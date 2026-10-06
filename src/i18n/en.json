@@ -52,7 +52,9 @@
     "refunds": {"title": "Refunds & returns — {brand}", "crumb": "Refunds & returns", "description": "Refund, return and withdrawal policy for OFS/T sticker kit orders."},
     "cookies": {"title": "Cookie policy — {brand}", "crumb": "Cookie policy", "description": "Which cookies and local storage the OFS/T website uses and why."},
     "404": {"title": "Page not found — {brand}", "description": "This page does not exist. Browse OFS/T sticker kits for the Citroën Ami or open the configurator."},
-    "admin": {"title": "Orders admin — {brand}", "description": "Order dashboard for the shop owner."}
+    "admin": {"title": "Orders admin — {brand}", "description": "Order dashboard for the shop owner."},
+    "order": {"title": "Your order — {brand}", "description": "Payment status of your OFS/T order."},
+    "account": {"title": "Your account — {brand}", "description": "Sign in to view your OFS/T orders and saved details."}
   },
 
   "build": {
@@ -150,15 +152,15 @@
     "privacyLink": "privacy policy",
     "persCheck": "I understand that personalised kits are made to my choices and cannot be returned for a change of mind (faulty kits are always covered).",
     "newTab": " (opens in a new tab)",
-    "noPayment": "No payment is taken online: we'll email you to confirm payment and delivery.",
+    "noPayment": "You'll pay securely on the next step with Stripe. We never see your card details.",
     "notSetUp": "Online ordering isn't set up yet — email us at {email}.",
     "ourContact": "our contact address",
     "emailPlaceholder": "[CONTACT EMAIL]",
-    "placeOrder": "Place order",
+    "placeOrder": "Continue to payment",
     "backToCart": "Back to cart",
     "required": "This field is required.",
     "badEmail": "Enter a valid email address, like name@example.com.",
-    "sending": "Sending order…",
+    "sending": "Opening secure payment…",
     "orderDenied": "The order couldn't be accepted.",
     "somethingWrong": "Something went wrong.",
     "orderFailed": "{msg} Your cart is still here. If it keeps happening, email us at {email}.",
@@ -217,6 +219,7 @@
     "dlPng": "Download PNG",
     "dlSvg": "SVG + cut line",
     "forOrder": " for {name}, order {ref}",
+    "payPaid": "Paid via Stripe", "warnMismatch": "Stripe reports a different amount than the order total. Check this payment in the Stripe dashboard before shipping.",
     "warnTotal": "Submitted total {sent} differs from the price list ({list}). Use the price-list total.",
     "warnDropped_one": "{n} item could not be read and is not shown.",
     "warnDropped_other": "{n} items could not be read and are not shown.",
@@ -245,6 +248,22 @@
     "beCredentials": "Email or password is incorrect.",
     "beSession": "Your session has expired. Please sign in again.",
     "beDenied": "This account isn't allowed to do that.",
-    "beGeneric": "Something went wrong. Please try again."
+    "beGeneric": "Something went wrong. Please try again.",
+    "bePayment": "We couldn't open the payment page. Please try again in a moment.",
+    "orderEyebrow": "Your order", "orderChecking": "Checking your payment…", "orderPaidH": "Payment received", "orderPaidText": "Thank you! We've got your order and will email you at the address you gave when your kit ships.",
+    "orderPendingH": "Waiting for confirmation", "orderPendingText": "Your payment is still being confirmed by your bank. This page updates by itself; you can also close it, we'll email you.",
+    "orderCancelledH": "Payment cancelled", "orderCancelledText": "Nothing was charged. Your cart is still saved, so you can go back and try again.",
+    "orderFailedH": "Payment didn't go through", "orderFailedText": "Nothing was charged. Your cart is still saved, so you can try again or use another payment method.",
+    "orderUnknownH": "We couldn't find that order", "orderUnknownText": "Check the link, or open the cart to start again.",
+    "orderRef": "Order reference", "orderBackShop": "Keep browsing", "orderOpenCart": "Open cart",
+    "beLink": "That sign-in link has expired or was already used. Please request a new one.", "beMail": "We couldn't send the email. Please try again in a moment.",
+    "acctMenu": "Account menu", "acctSignIn": "Sign in", "acctMyAccount": "My account", "acctMyOrders": "My orders", "acctSignOut": "Sign out", "acctSignedInAs": "Signed in as",
+    "acctEyebrow": "Your account", "acctH1Out": "Sign in", "acctLeadOut": "No password needed. Enter your email and we'll send you a one-time sign-in link. New here? That creates your account.",
+    "acctEmail": "Email", "acctSendLink": "Email me a link", "acctSendingLink": "Sending…",
+    "acctSentH": "Check your inbox", "acctSentText": "We sent a sign-in link to {email}. It works for 15 minutes and can be used once. Nothing there? Look in spam.", "acctOtherEmail": "Use a different email",
+    "acctVerifying": "Signing you in…", "acctH1In": "Hi, {name}", "acctH1InNoName": "Your account",
+    "acctProfileH": "Your details", "acctProfileNote": "Optional. We use these to fill in checkout for you.", "acctPhone": "Phone (optional)", "acctSave": "Save details", "acctSaving": "Saving…", "acctSaved": "Details saved.",
+    "acctOrdersH": "Your orders", "acctNoOrders": "No paid orders yet.", "acctLoadingOrders": "Loading your orders…", "acctOrderN": "Order {ref}", "acctStNew": "Received", "acctStPrinted": "In production", "acctStShipped": "Shipped",
+    "acctDangerH": "Delete account", "acctDangerText": "Deletes your account and saved details. Past orders are kept for accounting, as the law requires.", "acctDeleteBtn": "Delete my account", "acctDeleteConfirm": "Yes, delete it", "acctCancel": "Cancel", "acctDeleted": "Your account was deleted."
   }
 }

@@ -44,5 +44,6 @@ set `VITE_BASE=/` and `VITE_SITE_URL=https://your-domain` there.
 
 - `brand/` logos and icons (the ones the site uses are copied into `public/assets/img/`).
 - `worker/` Cloudflare Worker + D1 database for online orders (`worker/schema.sql`; setup steps: `guides/CLOUDFLARE-SETUP.md`).
+- `guides/PAYMENTS-ACCOUNTS-ADMIN-SETUP.md` Stripe payments, customer accounts (magic-link email) and the admin subdomain.
 - `guides/LEGAL-TODO.md` placeholders and legal wording to complete before launch.
 - `SECURITY.md` security notes and headers to set if you add a CDN.

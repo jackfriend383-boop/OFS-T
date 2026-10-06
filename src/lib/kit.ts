@@ -107,9 +107,9 @@ const cache: Partial<Record<Lang, Kit>> = {};
 export const getKit = (lang: Lang): Kit => (cache[lang] ||= build(lang));
 
 /* ---------- Routes ---------- */
-export const PAGE_KEYS = ['home', 'shop', 'configurator', 'about', 'privacy', 'terms', 'refunds', 'cookies', 'admin'] as const;
+export const PAGE_KEYS = ['home', 'shop', 'configurator', 'about', 'privacy', 'terms', 'refunds', 'cookies', 'order', 'account'] as const;
 export type PageKey = (typeof PAGE_KEYS)[number];
-export const PAGE_PATH: Record<PageKey, string> = { home: '', shop: 'shop/', configurator: 'configurator/', about: 'about/', privacy: 'privacy/', terms: 'terms/', refunds: 'refunds/', cookies: 'cookies/', admin: 'admin/' };
+export const PAGE_PATH: Record<PageKey, string> = { home: '', shop: 'shop/', configurator: 'configurator/', about: 'about/', privacy: 'privacy/', terms: 'terms/', refunds: 'refunds/', cookies: 'cookies/', order: 'order/', account: 'account/' };
 export const NAV: PageKey[] = ['home', 'shop', 'configurator', 'about'];
 /* App path (without the deploy base) of a page in a language, always with a trailing slash. */
 export const pagePath = (lang: Lang, key: PageKey | string) => (lang === 'en' ? '/en/' : '/') + (PAGE_PATH[key as PageKey] ?? key);

@@ -10,7 +10,7 @@ import { fileBase, moldPNG, moldSVG, saveFile, svgBlob } from '../lib/mold';
 import type { Cfg } from '../lib/kit';
 
 type Panel = 'boot' | 'setup' | 'login' | 'locked' | 'main';
-interface Order { id: string; ref: string; status: string; created: Date; name: string; email: string; street: string; postcode: string; city: string; country: string; items: { cfg: Cfg; qty: number; list: number }[]; dropped: number; total: number; listTotal: number; pers: boolean }
+interface Order { id: string; ref: string; status: string; created: Date; name: string; email: string; street: string; postcode: string; city: string; country: string; items: { cfg: Cfg; qty: number; list: number }[]; dropped: number; total: number; listTotal: number; pers: boolean; pay: string }
 const NEXT: Record<string, string> = { new: 'printed', printed: 'shipped', shipped: 'new' };
 const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
 const Rich = ({ html, as: Tag = 'span', ...p }: { html: string; as?: any } & Record<string, any>) => <Tag {...p} dangerouslySetInnerHTML={{ __html: html }} />; // our own copy, never user input
@@ -54,6 +54,7 @@ export default function Admin() {
       id: String(o.id), ref: String(o.id).slice(-6).toUpperCase(), status: STATUS[o.status] ? o.status : 'new', created: new Date(o.created_at),
       name: str(cu.name, 200), email: str(cu.email, 254), street: str(cu.street, 300), postcode: str(cu.postcode, 20), city: str(cu.city, 120), country: str(cu.country, 60),
       items, dropped: raw.length - items.length, total, listTotal: items.reduce((s, i) => s + i.list * i.qty, 0), pers: o.consent_personalised === true,
+      pay: o.payment_status === 'paid' ? 'paid' : o.payment_status === 'mismatch' ? 'mismatch' : 'unpaid', // set only by Stripe's signed webhook
     };
   }
 
@@ -166,13 +167,14 @@ export default function Admin() {
                 const warn: string[] = [];
                 if (o.total !== o.listTotal) warn.push(T('warnTotal', { sent: euro(o.total), list: euro(o.listTotal) }));
                 if (o.dropped) warn.push(T.n('warnDropped', o.dropped));
+                if (o.pay === 'mismatch') warn.push(T('warnMismatch'));
                 const when = isNaN(o.created.getTime()) ? '' : o.created.toLocaleString(T.locale);
                 return (
                   <article className="order" key={o.id} aria-labelledby={'ord-' + oi}>
                     <div className="order-head">
                       <div>
                         <h3 id={'ord-' + oi}>{o.name || T('customer')} <span className="muted mono adm-ref">#{o.ref}</span></h3>
-                        <p>{o.email}<br />{o.street}, {o.postcode} {o.city}, {o.country}<br />{when} · <span className="price">{euro(o.listTotal)}</span>{o.pers ? ' · ' + T('persAck') : ''}</p>
+                        <p>{o.email}<br />{o.street}, {o.postcode} {o.city}, {o.country}<br />{when} · <span className="price">{euro(o.listTotal)}</span>{o.pay === 'paid' ? ' · ' + T('payPaid') : ''}{o.pers ? ' · ' + T('persAck') : ''}</p>
                         {warn.map((w) => <p className="err" key={w}>{w}</p>)}
                       </div>
                       <div className="adm-st">

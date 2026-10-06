@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import { AppProvider, useApp } from './state';
 import { Layout } from './components/Layout';
@@ -9,8 +9,8 @@ import Home from './pages/Home';
 import Shop from './pages/Shop';
 import Configurator from './pages/Configurator';
 import Prose from './pages/Prose';
-
-const Admin = lazy(() => import('./pages/Admin'));
+import Order from './pages/Order';
+import Account from './pages/Account';
 
 function NotFound() {
   const { lang, to } = useApp();
@@ -31,13 +31,6 @@ function NotFound() {
   );
 }
 
-/* The admin page is browser-only (sessions, downloads) and lazy-loaded: the server renders just its frame. */
-function ClientOnly({ children }: { children: React.ReactNode }) {
-  const [on, setOn] = useState(false);
-  useEffect(() => setOn(true), []);
-  const frame = <section className="view adm" data-view="admin"><p className="adm-empty">…</p></section>;
-  return on ? <Suspense fallback={frame}>{children}</Suspense> : frame;
-}
 
 function Page({ page }: { page: PageKey | null }) {
   switch (page) {
@@ -45,7 +38,8 @@ function Page({ page }: { page: PageKey | null }) {
     case 'shop': return <Shop />;
     case 'configurator': return <Configurator />;
     case 'about': case 'privacy': case 'terms': case 'refunds': case 'cookies': return <Prose page={page} />;
-    case 'admin': return <ClientOnly><Admin /></ClientOnly>;
+    case 'order': return <Order />;
+    case 'account': return <Account />;
     default: return <NotFound />;
   }
 }
