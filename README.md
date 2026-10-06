@@ -19,9 +19,9 @@ src/
   seo.ts                       per-page <head>: title, canonical, hreflang, Open Graph, JSON-LD
   content.ts                   page copy for home / shop / configurator / admin / 404 (pt + en)
   content/{pt,en}/*.html       long prose pages (about, privacy, terms, refunds, cookies)
-  data/designs.json, site.json designs, prices, business details, Supabase config (same files as before)
+  data/designs.json, site.json designs, prices, business details, order API address (same files as before)
   i18n/{pt,en}.json            UI strings (same files as before)
-  lib/                         kit (data helpers), car (SVG renderer + live stage), backend (Supabase), mold, motion
+  lib/                         kit (data helpers), car (SVG renderer + live stage), backend (Cloudflare Worker API), mold, motion
   components/, pages/          React components
   styles/site.css              the original stylesheet, unchanged apart from the font paths
 scripts/prerender.mjs          renders every route, writes sitemap.xml, fixes the site URL in robots.txt / llms.txt
@@ -30,7 +30,7 @@ scripts/prerender.mjs          renders every route, writes sitemap.xml, fixes th
 ## Editing
 
 - Designs, prices, colours: `src/data/designs.json`; Portuguese tags and colour names in `src/i18n/pt.json`; artwork in `src/lib/car.ts` (`ART`).
-- Business details and the optional Supabase backend: `src/data/site.json` (the build rejects secret keys).
+- Business details and the optional order backend address (`apiUrl`): `src/data/site.json`.
 - Prose pages: edit the HTML in `src/content/pt/` and `src/content/en/` (keep both in step; `{{root}}` is the language root).
 - Interactive page text: `src/content.ts`; interface strings: `src/i18n/*.json`.
 
@@ -43,6 +43,7 @@ set `VITE_BASE=/` and `VITE_SITE_URL=https://your-domain` there.
 ## Other files
 
 - `brand/` logos and icons (the ones the site uses are copied into `public/assets/img/`).
-- `supabase/schema.sql` database schema for online orders (setup steps: `guides/SUPABASE-SETUP.md`).
+- `worker/` Cloudflare Worker + D1 database for online orders (`worker/schema.sql`; setup steps: `guides/CLOUDFLARE-SETUP.md`).
+- `supabase/` and `guides/SUPABASE-SETUP.md` are the previous Supabase backend, kept for reference only; the site no longer uses them.
 - `guides/LEGAL-TODO.md` placeholders and legal wording to complete before launch.
 - `SECURITY.md` security notes and headers to set if you add a CDN.

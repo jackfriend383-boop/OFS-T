@@ -1,0 +1,19 @@
+{
+  "name": "ofst-api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "db:local": "wrangler d1 execute ofst-orders --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute ofst-orders --remote --file=./schema.sql",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261006.1",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.0.0"
+  }
+}
+

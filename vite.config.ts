@@ -2,30 +2,21 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import site from './src/data/site.json';
 
-/* Optional order backend. Refuses anything that is not a public anon/publishable key (same rules as the old tools/build.py),
-   and puts the Supabase origin into the Content-Security-Policy of every page. */
-function supabaseOrigin(): string {
-  const url = (site.supabaseUrl || '').trim().replace(/\/$/, '');
-  const key = (site.supabaseAnonKey || '').trim();
-  if (!url && !key) return '';
-  if (!url || !key) throw new Error('Set both supabaseUrl and supabaseAnonKey in src/data/site.json, or leave both empty.');
-  const u = new URL(url);
-  if (u.protocol !== 'https:' || !/^[a-z0-9.-]+$/.test(u.hostname) || u.pathname !== '/' || u.search || u.hash || u.port || u.username)
-    throw new Error(`supabaseUrl must look like https://YOURPROJECT.supabase.co (got ${url}).`);
-  if (!/^[A-Za-z0-9._-]+$/.test(key)) throw new Error('supabaseAnonKey contains unexpected characters.');
-  if (key.startsWith('sb_secret_')) throw new Error('supabaseAnonKey is a SECRET key. Use the anon / publishable key.');
-  if (key.split('.').length === 3) {
-    let role = '';
-    try { role = JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString()).role; } catch { /* checked below */ }
-    if (role !== 'anon') throw new Error(`supabaseAnonKey has role "${role}". Only the "anon" public key may be used.`);
-  } else if (!key.startsWith('sb_publishable_')) {
-    throw new Error('supabaseAnonKey is not a Supabase anon (eyJ...) or publishable (sb_publishable_...) key.');
-  }
-  return `https://${u.hostname}`;
+/* Optional order backend (the Cloudflare Worker in worker/). Refuses anything that is not a plain origin and puts that
+   origin into the Content-Security-Policy of every page. No secret ever belongs in site.json. */
+function apiOrigin(): string {
+  const url = (site.apiUrl || '').trim().replace(/\/$/, '');
+  if (!url) return '';
+  let u: URL;
+  try { u = new URL(url); } catch { throw new Error(`apiUrl is not a valid URL (got ${url}).`); }
+  const local = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+  if ((u.protocol !== 'https:' && !(local && u.protocol === 'http:')) || !/^[a-z0-9.-]+$/.test(u.hostname) || u.pathname !== '/' || u.search || u.hash || u.username)
+    throw new Error(`apiUrl must look like https://ofst-api.YOUR-SUBDOMAIN.workers.dev (got ${url}).`);
+  return u.origin;
 }
 
 function htmlVars(): Plugin {
-  const connect = supabaseOrigin();
+  const connect = apiOrigin();
   return {
     name: 'ofst-html-vars',
     transformIndexHtml: (html) => html

@@ -1,8 +1,8 @@
 # Security
 
 OFS/T is a pre-rendered static site (built by Vite from `src/` (prerendered into `dist/`), served by GitHub Pages).
-The only backend is an **optional Supabase project** for orders (see `SUPABASE-SETUP.md`, `supabase/schema.sql`,
-`src/lib/backend.ts`). When `supabaseUrl`/`supabaseAnonKey` in `src/data/site.json` are empty (the default) nothing is
+The only backend is an **optional Cloudflare Worker + D1 database** for orders (see `guides/CLOUDFLARE-SETUP.md`,
+`worker/src/index.ts`, `worker/schema.sql`, `src/lib/backend.ts`). When `apiUrl` in `src/data/site.json` is empty (the default) nothing is
 sent anywhere: the checkout tells the visitor to order by email. There are no customer accounts, uploads, payments,
 analytics, embeds or reviews. One owner account signs in at `/admin/` (noindex, unlinked) to read orders.
 
@@ -36,9 +36,9 @@ default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src
 font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'
 ```
 
-When the order backend is configured, `vite.config.ts` appends the Supabase origin to `connect-src`
-(`connect-src 'self' https://YOURPROJECT.supabase.co`) and nothing else. The build also refuses a non-https/odd URL
-and any key that is not an anon/publishable key (it rejects `sb_secret_…` and JWTs whose role is not `anon`).
+When the order backend is configured, `vite.config.ts` appends the Worker origin to `connect-src`
+(`connect-src 'self' https://ofst-api.YOUR-SUBDOMAIN.workers.dev`) and nothing else. The build refuses a non-https URL
+(plain http only for localhost), a URL with a path, or anything that is not a bare origin. No key or password ever goes in `site.json`.
 
 - `style-src 'unsafe-inline'` is needed because markup and JS templates use `style="…"` attributes
   (e.g. colour swatches `style="--c:#…"`, some layout tweaks in templates and in `core.js`). It allows inline CSS only, never script.
@@ -83,26 +83,25 @@ relax `Permissions-Policy: payment=` and add the provider's domains to `script-s
 
 Go through every item before taking real orders or storing customer data.
 
-### Status of the Supabase order backend
+### Status of the Cloudflare order backend
 
 Implemented:
-- [x] Only the public anon/publishable key in the site (build refuses secret/service_role keys); no secrets in git.
-- [x] RLS enabled on `orders` and `admins`; separate insert / select / update policies; no delete policy; table privileges
-      revoked and re-granted per column (customers may insert only the order columns; admins may update only `status`).
-- [x] Identity from the verified JWT only (`auth.uid()` in `is_admin()`), never from request bodies.
-- [x] Server-side sign-out (`/auth/v1/logout?scope=global`); session in `sessionStorage`, refreshed before expiry.
-- [x] Server-side input validation (constraints + policy checks), client-side validation and sanitising, friendly
-      error messages (server text never shown verbatim).
+- [x] No secrets in the site or in git. The admin email/password are Worker secrets (`wrangler secret put`); local test values live in the git-ignored `worker/.dev.vars`.
+- [x] D1 has no public endpoint: the browser can only call the Worker, which uses prepared (bound) statements only. Orders are validated field by field (same limits as the `CHECK` constraints in `worker/schema.sql`); extra customer keys, bad types and oversized bodies are rejected.
+- [x] Admin identity is a random 256-bit bearer token issued after a correct password (constant-time compare); only its SHA-256 hash is stored, with an 8-hour expiry. Never read from a request body.
+- [x] Server-side sign-out (`POST /api/admin/logout` deletes every session); session in `sessionStorage`, gone when the tab closes.
+- [x] CORS allow-list (`ALLOWED_ORIGINS`): requests from any other website origin are refused. Bearer tokens, no cookies.
+- [x] Throttling: 10 failed sign-ins per 15 minutes (global) and a global 30-orders-per-10-minutes cap.
+- [x] Client-side validation and sanitising, friendly error messages (server text never shown verbatim).
 - [x] Data minimisation: name, email, street, postcode, city, country; consent flags stored with the order. User agent not sent.
 - [x] No uploads. Admin page `noindex,nofollow`, not linked, not in the sitemap or `llms.txt`.
 
 Still to do:
 - [ ] Payments (hosted checkout) with **verified webhooks** and server-side prices; until then the owner verifies totals by hand.
-- [ ] Order confirmation emails (needs an Edge Function or email provider; durable-medium requirement, see `LEGAL-TODO.md`).
-- [ ] Stronger abuse protection for order inserts: per-IP rate limiting and a CAPTCHA (e.g. Cloudflare Turnstile verified in
-      a Supabase Edge Function, with inserts then allowed only from that function). Today there is only Supabase's built-in
-      Auth rate limiting and the global 30-orders-per-10-minutes cap.
-- [ ] Policy version/date stored with the consent flags; 2FA on the Supabase account; regular encrypted exports (free plan has no backups).
+- [ ] Order confirmation emails (needs an email provider called from the Worker; durable-medium requirement, see `LEGAL-TODO.md`).
+- [ ] Stronger abuse protection for order inserts: per-IP rate limiting (Cloudflare Rate Limiting rules) and a CAPTCHA
+      (Cloudflare Turnstile verified inside the Worker). Today there are only the global caps above.
+- [ ] Policy version/date stored with the consent flags; 2FA on the Cloudflare account; regular encrypted exports (`wrangler d1 export`; D1 also has 30-day Time Travel restore).
 - [ ] HTTP headers (`frame-ancestors`, HSTS) via a host that supports them.
 
 ### Secrets and keys

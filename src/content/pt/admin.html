@@ -9,16 +9,16 @@
 
     <div class="adm-panel" id="admSetup" hidden>
       <h2 tabindex="-1">As encomendas online ainda não estão ativas</h2>
-      <p>As encomendas ficam guardadas numa base de dados gratuita da Supabase que só o proprietário pode ler. Para a ativar:</p>
+      <p>As encomendas ficam guardadas numa base de dados gratuita Cloudflare D1 que só o proprietário pode ler. Para a ativar:</p>
       <ol class="adm-steps">
-        <li>Crie um projeto na Supabase (região: UE, p. ex. Frankfurt).</li>
-        <li>Abra o <b>SQL Editor</b>, cole o conteúdo de <code>supabase/schema.sql</code> do repositório e clique em <b>Run</b>.</li>
-        <li>Em <b>Authentication</b>, desative os registos públicos e adicione-se como utilizador (<b>Users → Add user</b>).</li>
-        <li>Copie o UID do seu utilizador e execute <code>insert into public.admins (user_id) values ('YOUR-UID');</code> no SQL Editor.</li>
-        <li>Copie o <b>Project URL</b> e a chave <b>anon public</b> (ou publishable) para <code>src/data/site.json</code> (<code>supabaseUrl</code>, <code>supabaseAnonKey</code>). Nunca a chave <code>service_role</code> / secreta.</li>
-        <li>Execute <code>python tools/build.py</code> e depois faça commit e push.</li>
+        <li>Em <code>worker/</code>, inicie sessão com <code>npx wrangler login</code> e crie a base de dados: <code>npx wrangler d1 create ofst-orders</code>. Cole o <code>database_id</code> em <code>worker/wrangler.jsonc</code>.</li>
+        <li>Crie as tabelas: <code>npm run db:remote</code> (dentro de <code>worker/</code>).</li>
+        <li>Defina o seu acesso de administrador: <code>npx wrangler secret put ADMIN_EMAIL</code> e <code>npx wrangler secret put ADMIN_PASSWORD</code> (12+ caracteres).</li>
+        <li>Coloque o endereço do seu site em <code>ALLOWED_ORIGINS</code> em <code>worker/wrangler.jsonc</code> e publique a API com <code>npm run deploy</code>.</li>
+        <li>Copie o endereço do Worker que aparece (https://ofst-api….workers.dev) para <code>src/data/site.json</code> como <code>apiUrl</code>. Nunca coloque uma palavra-passe nesse ficheiro.</li>
+        <li>Execute <code>npm run build</code> e depois faça commit e push.</li>
       </ol>
-      <p class="adm-note">O guia completo está em <code>SUPABASE-SETUP.md</code>. A ferramenta de ficheiros de impressão abaixo funciona sem base de dados.</p>
+      <p class="adm-note">O guia completo está em <code>guides/CLOUDFLARE-SETUP.md</code>. A ferramenta de ficheiros de impressão abaixo funciona sem base de dados.</p>
     </div>
 
     <form class="adm-panel adm-login" id="admLogin" novalidate hidden aria-labelledby="admLoginTitle">
