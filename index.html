@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Security: see SECURITY.md. 'unsafe-inline' is for styles only (style="" attributes); scripts are 'self' only. frame-ancestors cannot be set in a meta tag: set it as an HTTP header at the host. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'__CSP_CONNECT__; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="__THEME_DARK__" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="__THEME_LIGHT__" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/icons/OFST-icon-white-on-black-32px.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/img/icons/OFST-icon-white-on-black-192px.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/img/icons/OFST-icon-white-on-black-512px.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/icons/OFST-icon-white-on-black-180px.png">
+<link rel="manifest" href="/site.webmanifest">
+<!-- Theme preload: synchronous and before the stylesheet, so a saved light/dark choice applies without a flash. -->
+<script src="/assets/js/theme-init.js"></script>
+<link rel="preload" href="/src/assets/fonts/archivo-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<!--head-->
+</head>
+<body>
+<div id="root"><!--app--></div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+/* Page copy for the interactive pages (home, shop, configurator, admin, 404), in both languages.
+   The long prose pages (about, privacy, terms, refunds, cookies) stay as HTML fragments in src/content/<lang>/*.html. */
+import type { Lang } from './lib/kit';
+
+const en = {
+  home: {
+    eyebrow: 'Vinyl door kits for the Citroën Ami',
+    h1: ['Small car.', 'Big', 'personality.'],
+    lead: 'Pre-cut sticker kits for the lower door panel and rear quarter window of your Ami. Pick a design, set two colours and see it on your car before you order.',
+    open: 'Open configurator', browse: 'Browse designs', showDesign: 'Show design',
+    specs: [['Material', 'Outdoor vinyl'], ['Finish', 'Matte or gloss'], ['Shape', 'Pre-cut'], ['Fitting', 'At home']],
+    popular: 'Popular designs', all: (n: number) => `All ${n} designs`,
+    how: 'How it works',
+    steps: [['Pick a design', 'Choose from fifteen designs, then set a primary and an accent vinyl colour.'], ['Preview it', 'Zoom in on the door panel and rear window, and compare matte with gloss.'], ['Apply at home', 'Panels arrive pre-cut, with a step-by-step fitting guide for doing it yourself.']],
+    fitEyebrow: 'Fitment', fitTitle: 'Cut for the Citroën Ami',
+    fitText: 'Every kit covers two areas: the rounded panel around the door badge and the rear quarter window. The roof stays black, and nothing goes over seals or hinges.',
+    fitList: [['Citroën Ami', '2020 →'], ['Finish', 'matte or gloss'], ['Sides', 'one or both'], ['Kit contents', 'door panel + rear window']],
+    canvas: "More than a car. It's your canvas.", designYours: 'Design yours',
+  },
+  shop: {
+    eyebrow: 'Shop', h1: 'All designs', designs: 'Designs', filter: 'Filter by category',
+    lead: 'Each kit covers the lower door panel and the rear quarter window. Prices are for one side; add the second side in the configurator.',
+  },
+  cfg: {
+    options: 'Options', back: 'Back to designs', h1: ['Customize', 'your Ami'],
+    lead: 'Choose a design, adjust the colours and see your Ami change in real time.',
+    version: 'Ami version', design: 'Design', browse: 'Browse', browseAria: 'Browse designs', colours: 'Vinyl colours',
+    fixed: 'This artwork is printed in its own colours.', finishKit: 'Finish & kit', finish: 'Finish', matte: 'Matte', gloss: 'Gloss',
+    kitSize: 'Kit size', one: 'One side', both: (p: string) => `Both +${p}`,
+    badge: 'Badge text', badgeHint: (p: string) => `Your text on the door badge, +${p}`, badgePh: 'Up to 8 characters',
+    preview: 'Preview', prev: 'Previous design', next: 'Next design', replay: 'Replay drive-in', camera: 'Camera view',
+    views: [['full', 'Full car'], ['door', 'Door'], ['window', 'Rear window']] as [string, string][], hint: '← → to switch designs',
+    kicker: ['Small car.', 'Big personality.'], tagline: 'Same Ami. Different vibe.', yourKit: 'Your kit', total: 'Total',
+    persBefore: "Personalised kit: made to your choices, so it can't be ", persLink: 'returned', persAfter: ' for a change of mind. Faulty kits are always covered.',
+    ship: ['Made to order', 'Shipping and delivery times shown at checkout'],
+    specs: [['Vinyl', 'Outdoor vinyl, matte or gloss'], ['Panels', 'Door panel + rear window, per side'], ['Includes', 'Step-by-step fitting guide']],
+    choose: 'Choose a design', designsGroup: 'Designs',
+  },
+  notFound: { eyebrow: 'Error 404', h1: 'Page not found', text: "That page doesn't exist or has moved. Try the shop, or design your own kit in the configurator.", browse: 'Browse designs', home: 'Back to home', other: null as null | [string, string] },
+  admin: {
+    eyebrow: 'Admin', h1: 'Orders', lead: "Every door kit is laid out on the print mold with the customer's colours. Download a PNG (transparent, 6000 px wide) or an SVG with a magenta CutContour layer.",
+    loading: 'Loading…', setupTitle: "Online ordering isn't set up yet", setupIntro: 'Orders are stored in a free Supabase database that only you can read. To switch it on:',
+    steps: [
+      'Create a Supabase project (region: EU, e.g. Frankfurt).',
+      'Open <b>SQL Editor</b>, paste the contents of <code>supabase/schema.sql</code> from the repository and click <b>Run</b>.',
+      'In <b>Authentication</b>, turn off public sign-ups, then add yourself as a user (<b>Users → Add user</b>).',
+      "Copy your user's UID and run <code>insert into public.admins (user_id) values ('YOUR-UID');</code> in the SQL editor.",
+      'Copy the <b>Project URL</b> and the <b>anon public</b> (or publishable) key into <code>web/src/data/site.json</code> (<code>supabaseUrl</code>, <code>supabaseAnonKey</code>). Never the <code>service_role</code> / secret key.',
+      'Run <code>npm run build</code> in <code>web/</code>, then commit and push.',
+    ],
+    setupNote: 'The full walkthrough is in <code>SUPABASE-SETUP.md</code>. The print-file tool below works without a database.',
+    signIn: 'Sign in', email: 'Email', password: 'Password',
+    lockedTitle: "This account isn't an admin", lockedText: 'You are signed in, but this account is not listed in the <code>admins</code> table, so no orders are shown.', signOut: 'Sign out',
+    listTitle: 'Order list', refresh: 'Refresh',
+    toolTitle: 'Mold file of a design', toolNote: "A test print file in the design's default colours, to check the printer setup.", design: 'Design', png: 'Download PNG', svg: 'SVG + cut line',
+  },
+};
+
+const pt: typeof en = {
+  home: {
+    eyebrow: 'Kits de vinil para as portas do Citroën Ami',
+    h1: ['Carro pequeno.', 'Grande', 'personalidade.'],
+    lead: 'Kits de autocolantes pré-cortados para o painel inferior da porta e o vidro lateral traseiro do seu Ami. Escolha um design, defina duas cores e veja o resultado no seu carro antes de encomendar.',
+    open: 'Abrir configurador', browse: 'Ver designs', showDesign: 'Mostrar design',
+    specs: [['Material', 'Vinil de exterior'], ['Acabamento', 'Mate ou brilhante'], ['Formato', 'Pré-cortado'], ['Aplicação', 'Em casa']],
+    popular: 'Designs populares', all: (n: number) => `Todos os ${n} designs`,
+    how: 'Como funciona',
+    steps: [['Escolha um design', 'Escolha entre quinze designs e defina uma cor de vinil principal e uma cor de destaque.'], ['Pré-visualize', 'Aproxime a vista do painel da porta e do vidro traseiro e compare o acabamento mate com o brilhante.'], ['Aplique em casa', 'Os painéis chegam pré-cortados, com um guia de aplicação passo a passo para fazer tudo por conta própria.']],
+    fitEyebrow: 'Compatibilidade', fitTitle: 'Cortado para o Citroën Ami',
+    fitText: 'Cada kit cobre duas zonas: o painel arredondado à volta do emblema da porta e o vidro lateral traseiro. O tejadilho fica preto e nada é aplicado sobre borrachas ou dobradiças.',
+    fitList: [['Citroën Ami', '2020 →'], ['Acabamento', 'mate ou brilhante'], ['Lados', 'um ou os dois'], ['Conteúdo do kit', 'painel da porta + vidro traseiro']],
+    canvas: 'Mais do que um carro. É a sua tela.', designYours: 'Crie o seu',
+  },
+  shop: {
+    eyebrow: 'Loja', h1: 'Todos os designs', designs: 'Designs', filter: 'Filtrar por categoria',
+    lead: 'Cada kit cobre o painel inferior da porta e o vidro lateral traseiro. Os preços são por lado; acrescente o segundo lado no configurador.',
+  },
+  cfg: {
+    options: 'Opções', back: 'Voltar aos designs', h1: ['Personalize', 'o seu Ami'],
+    lead: 'Escolha um design, ajuste as cores e veja o seu Ami mudar em tempo real.',
+    version: 'Versão do Ami', design: 'Design', browse: 'Explorar', browseAria: 'Explorar designs', colours: 'Cores do vinil',
+    fixed: 'Esta arte é impressa nas suas próprias cores.', finishKit: 'Acabamento e kit', finish: 'Acabamento', matte: 'Mate', gloss: 'Brilhante',
+    kitSize: 'Tamanho do kit', one: 'Um lado', both: (p: string) => `Os dois +${p}`,
+    badge: 'Texto do emblema', badgeHint: (p: string) => `O seu texto no emblema da porta, +${p}`, badgePh: 'Até 8 caracteres',
+    preview: 'Pré-visualização', prev: 'Design anterior', next: 'Design seguinte', replay: 'Repetir a entrada do carro', camera: 'Vista da câmara',
+    views: [['full', 'Carro inteiro'], ['door', 'Porta'], ['window', 'Vidro traseiro']] as [string, string][], hint: '← → para mudar de design',
+    kicker: ['Carro pequeno.', 'Grande personalidade.'], tagline: 'O mesmo Ami. Outra atitude.', yourKit: 'O seu kit', total: 'Total',
+    persBefore: 'Kit personalizado: é feito de acordo com as suas escolhas, por isso não pode ser ', persLink: 'devolvido', persAfter: ' por mudança de opinião. Os kits com defeito estão sempre cobertos.',
+    ship: ['Feito por encomenda', 'Portes e prazos de entrega indicados ao finalizar a compra'],
+    specs: [['Vinil', 'Vinil de exterior, mate ou brilhante'], ['Painéis', 'Painel da porta + vidro traseiro, por lado'], ['Inclui', 'Guia de aplicação passo a passo']],
+    choose: 'Escolha um design', designsGroup: 'Designs',
+  },
+  notFound: { eyebrow: 'Erro 404', h1: 'Página não encontrada', text: 'Esta página não existe ou mudou de endereço. Experimente a loja ou crie o seu próprio kit no configurador.', browse: 'Ver designs', home: 'Voltar ao início', other: ["Page not found: this page doesn't exist or has moved.", 'Go to the English site'] },
+  admin: {
+    eyebrow: 'Administração', h1: 'Encomendas', lead: 'Cada kit de porta é colocado no molde de impressão com as cores escolhidas pelo cliente. Descarregue um PNG (transparente, 6000 px de largura) ou um SVG com uma camada CutContour a magenta.',
+    loading: 'A carregar…', setupTitle: 'As encomendas online ainda não estão ativas', setupIntro: 'As encomendas ficam guardadas numa base de dados gratuita da Supabase que só o proprietário pode ler. Para a ativar:',
+    steps: [
+      'Crie um projeto na Supabase (região: UE, p. ex. Frankfurt).',
+      'Abra o <b>SQL Editor</b>, cole o conteúdo de <code>supabase/schema.sql</code> do repositório e clique em <b>Run</b>.',
+      'Em <b>Authentication</b>, desative os registos públicos e adicione-se como utilizador (<b>Users → Add user</b>).',
+      "Copie o UID do seu utilizador e execute <code>insert into public.admins (user_id) values ('YOUR-UID');</code> no SQL Editor.",
+      'Copie o <b>Project URL</b> e a chave <b>anon public</b> (ou publishable) para <code>web/src/data/site.json</code> (<code>supabaseUrl</code>, <code>supabaseAnonKey</code>). Nunca a chave <code>service_role</code> / secreta.',
+      'Execute <code>npm run build</code> em <code>web/</code> e depois faça commit e push.',
+    ],
+    setupNote: 'O guia completo está em <code>SUPABASE-SETUP.md</code>. A ferramenta de ficheiros de impressão abaixo funciona sem base de dados.',
+    signIn: 'Iniciar sessão', email: 'Email', password: 'Palavra-passe',
+    lockedTitle: 'Esta conta não é de administrador', lockedText: 'Tem sessão iniciada, mas esta conta não consta da tabela <code>admins</code>, por isso não são apresentadas encomendas.', signOut: 'Terminar sessão',
+    listTitle: 'Lista de encomendas', refresh: 'Atualizar',
+    toolTitle: 'Ficheiro de molde de um design', toolNote: 'Um ficheiro de impressão de teste nas cores predefinidas do design, para verificar a configuração da impressora.', design: 'Design', png: 'Descarregar PNG', svg: 'SVG + linha de corte',
+  },
+};
+
+export const COPY: Record<Lang, typeof en> = { en, pt };

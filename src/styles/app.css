@@ -1,0 +1,5 @@
+/* Additions for the React app (everything else is the original site.css). */
+/* The page shell wraps header, main and footer; it must not change layout. */
+.shell{display:block}
+/* An inert shell (a dialog is open) keeps its look. */
+.shell[inert]{pointer-events:none}

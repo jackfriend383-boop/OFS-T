@@ -1,5 +1,8 @@
-# Local backup of the original single-file version (kept out of the repo)
-reference-ami-graphics.html
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+*.log
 
 # OS / editor
 .DS_Store
@@ -9,6 +12,5 @@ desktop.ini
 .idea/
 .claude/
 
-# Python
-__pycache__/
-*.pyc
+# Local backup of the original single-file version
+reference-ami-graphics.html

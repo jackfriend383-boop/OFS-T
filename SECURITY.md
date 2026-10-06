@@ -1,8 +1,8 @@
 # Security
 
-OFS/T is a pre-rendered static site (built by `tools/build.py` from `src/` into `docs/`, served by GitHub Pages).
+OFS/T is a pre-rendered static site (built by Vite from `src/` (prerendered into `dist/`), served by GitHub Pages).
 The only backend is an **optional Supabase project** for orders (see `SUPABASE-SETUP.md`, `supabase/schema.sql`,
-`assets/js/backend.js`). When `supabaseUrl`/`supabaseAnonKey` in `src/data/site.json` are empty (the default) nothing is
+`src/lib/backend.ts`). When `supabaseUrl`/`supabaseAnonKey` in `src/data/site.json` are empty (the default) nothing is
 sent anywhere: the checkout tells the visitor to order by email. There are no customer accounts, uploads, payments,
 analytics, embeds or reviews. One owner account signs in at `/admin/` (noindex, unlinked) to read orders.
 
@@ -22,7 +22,7 @@ Please do not access other people's data, run denial-of-service tests or use aut
 | Script injection in general | — | CSP `script-src 'self'`: no inline scripts, no `eval`, no inline event handlers (`tools/check.py` fails the build if any appear). JSON-LD blocks are data (`type="application/ld+json"`), which CSP does not execute. |
 | Clickjacking | Site framed by another origin | Needs `frame-ancestors 'none'` / `X-Frame-Options: DENY` as an HTTP header (cannot be set via meta; GitHub Pages cannot set headers, see below). Low impact today: no state-changing actions. |
 | Secrets in the repo | — | None exist. No API keys, tokens or credentials are needed to build or run the site. Keep it that way (see checklist). |
-| Supply chain | — | Build uses Python standard library only; no npm/pip dependencies. Fonts were downloaded once from Google Fonts and committed. |
+| Supply chain | — | Build uses npm packages (React, React Router, Vite, TypeScript); commit package-lock.json and run `npm audit` regularly. Fonts were downloaded once from Google Fonts and committed. |
 | Fake / tampered orders (backend on) | Anyone can call the public insert API directly, with any payload | RLS insert policy + table constraints (allowed customer keys only, size limits, email shape, total 1–1 000 000 cents, terms consent required); status/created_at forced by trigger and not even granted as insertable columns; global flood cap (30 orders / 10 min). **The total is computed in the browser from `designs.json` and can be forged:** the admin dashboard recomputes it from the price list and warns on mismatch, and the owner must verify totals before asking for payment. |
 | Stored XSS in the admin dashboard | Order rows are attacker-controlled | `admin.js` re-validates every kit with `sanitizeCfg()`, escapes all text with `esc()`, allowlists status values and uuids; nothing from a row is used as HTML or as a URL. |
 | Order data / admin session theft | — | Only an admin (row in `admins`, matched by `auth.uid()` from the JWT) can select/update orders, and only the `status` column is updatable; no delete grant. Session tokens live in `sessionStorage` (per tab), refreshed when expired; sign-out calls `/auth/v1/logout?scope=global` (revokes refresh tokens server-side). |
@@ -36,7 +36,7 @@ default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src
 font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'
 ```
 
-When the order backend is configured, `tools/build.py` appends the Supabase origin to `connect-src`
+When the order backend is configured, `vite.config.ts` appends the Supabase origin to `connect-src`
 (`connect-src 'self' https://YOURPROJECT.supabase.co`) and nothing else. The build also refuses a non-https/odd URL
 and any key that is not an anon/publishable key (it rejects `sb_secret_…` and JWTs whose role is not `anon`).
 
@@ -48,7 +48,7 @@ and any key that is not an anon/publishable key (it rejects `sb_secret_…` and 
 
 ### Verifying there are no third-party requests
 
-After `python tools/build.py`, search `docs/` for `src=`/`href=` attributes pointing to `http(s)://`.
+After `npm run build`, search `dist/` for `src=`/`href=` attributes pointing to `http(s)://`.
 Expected matches only: `<link rel="canonical">`, `og:url`/`og:image`/`twitter:image` (own domain), JSON-LD `@context`/URLs,
 and outbound legal links that the visitor clicks (`livroreclamacoes.pt`, `cnpd.pt`, `cniacc.pt`, `consumidor.gov.pt`).
 `car.js` contains the SVG namespace string `http://www.w3.org/2000/svg`, which is an identifier, not a request.
