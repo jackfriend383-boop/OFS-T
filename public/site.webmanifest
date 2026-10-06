@@ -6,8 +6,8 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0B0D0E",
-  "theme_color": "#0B0D0E",
+  "background_color": "#0A0B10",
+  "theme_color": "#0A0B10",
   "icons": [
     {
       "src": "assets/img/icons/OFST-icon-white-on-black-192px.png",
@@ -23,3 +23,4 @@
     }
   ]
 }
+

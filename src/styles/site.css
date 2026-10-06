@@ -1,4 +1,4 @@
-﻿/* FONTS: self-hosted (assets/fonts/, SIL OFL 1.1, see assets/fonts/LICENSE.txt). latin + latin-ext subsets only.
+/* FONTS: self-hosted (assets/fonts/, SIL OFL 1.1, see assets/fonts/LICENSE.txt). latin + latin-ext subsets only.
    Owned by the fonts/privacy work; no requests go to Google Fonts. */
 /* Archivo 400 800 latin-ext */
 @font-face{font-family:'Archivo';font-style:normal;font-weight:400 800;font-stretch:62% 125%;font-display:swap;src:url(../assets/fonts/archivo-var-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
@@ -17,14 +17,14 @@
 /* Dark is the default look. Light applies when the visitor picks it with the header toggle (data-ofst),
    or, if they haven't, when the viewer/OS asks for light. */
 :root{
-  --bg:#0B0D0E; --panel:#111416; --raise:#171B1D; --line:#22272A; --line-2:#30363A;
-  --fg:#ECEEE7; --muted:#8D9490; --dim:#5E6562;
-  --accent:#D4F23A; --accent-ink:#0B0D0E; --accent-hover:#E2FA60; --accent-text:#D4F23A;
-  --stage-hi:#30373B; --stage-mid:#171B1D; --stage-lo:#0C0E0F; --stage-shade:rgba(0,0,0,.45);
-  --mini-hi:#2A3033; --mini-lo:#111416; --glass:rgba(17,20,22,.8); --hero-glow:#2A3134;
-  --band-glow:#24301A; --band-a:#141819; --band-b:#0E1112; --summary-top:#0E1112; --kicker:#B9BEB8;
+  --bg:#0A0B10; --panel:#11131A; --raise:#181B24; --line:#1F2330; --line-2:#2D3242;
+  --fg:#EEF0F6; --muted:#9097A8; --dim:#5F6678;
+  --accent:#FF6A2B; --accent-ink:#0A0B10; --accent-hover:#FF8250; --accent-text:#FF7A3D;
+  --stage-hi:#2B3040; --stage-mid:#171A24; --stage-lo:#0B0C11; --stage-shade:rgba(0,0,0,.45);
+  --mini-hi:#262B3A; --mini-lo:#11131A; --glass:rgba(17,19,26,.8); --hero-glow:#2A2F42;
+  --band-glow:#3A1D10; --band-a:#14161E; --band-b:#0D0E14; --summary-top:#0D0E14; --kicker:#BBC0CE;
   --sw-edge:rgba(255,255,255,.18); --logo-filter:none; --scrim:rgba(0,0,0,.55);
-  --focus:#D4F23A; --field-edge:#646B6F; --err:#FF8B7B;
+  --focus:#FF8250; --field-edge:#6A7287; --err:#FF8B7B;
   /* Highlights: dark theme = lime text; light theme = dark ink on a lime marker (lime text is unreadable on light). */
   --mark:transparent; --mark-pad:0; --focus-w:2px; --focus-off:3px; --focus-halo:transparent; --focus-extra:0 0 0 0 transparent;
   --display:'Archivo','Arial Black',system-ui,sans-serif;
@@ -36,41 +36,41 @@
   color-scheme:dark;
 }
 :root[data-ofst="light"]{
-  --bg:#EEF0EC; --panel:#FFFFFF; --raise:#E4E7E3; --line:#D8DCD7; --line-2:#C3C8C3;
-  --fg:#111416; --muted:#59615D; --dim:#858C88;
-  --accent:#D4F23A; --accent-ink:#111416; --accent-hover:#C6E62A; --accent-text:#111416;
-  --stage-hi:#FFFFFF; --stage-mid:#E6E9E5; --stage-lo:#D3D7D2; --stage-shade:rgba(0,0,0,.06);
-  --mini-hi:#FFFFFF; --mini-lo:#E3E6E2; --glass:rgba(255,255,255,.82); --hero-glow:#FFFFFF;
-  --band-glow:#E6F5A8; --band-a:#FFFFFF; --band-b:#F0F2EE; --summary-top:#F6F7F4; --kicker:#3D4441;
-  --sw-edge:rgba(0,0,0,.18); --logo-filter:invert(1); --scrim:rgba(17,20,22,.35);
-  --focus:#D4F23A; --field-edge:#7F847F; --err:#B42318;
-  --mark:#D4F23A; --mark-pad:0 .12em; --focus-w:3px; --focus-off:2px; --focus-halo:#111416; --focus-extra:0 0 0 3px #111416;
+  --bg:#F2F3F6; --panel:#FFFFFF; --raise:#E6E8EE; --line:#DADDE5; --line-2:#C4C9D4;
+  --fg:#0E1017; --muted:#586075; --dim:#8A91A3;
+  --accent:#FF6A2B; --accent-ink:#0E1017; --accent-hover:#F25A18; --accent-text:#0E1017;
+  --stage-hi:#FFFFFF; --stage-mid:#E8EAF0; --stage-lo:#D5D9E3; --stage-shade:rgba(0,0,0,.06);
+  --mini-hi:#FFFFFF; --mini-lo:#E4E7EE; --glass:rgba(255,255,255,.82); --hero-glow:#FFFFFF;
+  --band-glow:#FFD9C4; --band-a:#FFFFFF; --band-b:#F0F2F6; --summary-top:#F7F8FA; --kicker:#3A4154;
+  --sw-edge:rgba(0,0,0,.18); --logo-filter:invert(1); --scrim:rgba(14,16,23,.35);
+  --focus:#FF6A2B; --field-edge:#7B8398; --err:#B42318;
+  --mark:#FF6A2B; --mark-pad:0 .12em; --focus-w:3px; --focus-off:2px; --focus-halo:#0E1017; --focus-extra:0 0 0 3px #0E1017;
   color-scheme:light;
 }
 @media (prefers-color-scheme:light){
   :root:not([data-ofst]):not([data-theme="dark"]){
-    --bg:#EEF0EC; --panel:#FFFFFF; --raise:#E4E7E3; --line:#D8DCD7; --line-2:#C3C8C3;
-    --fg:#111416; --muted:#59615D; --dim:#858C88;
-    --accent:#D4F23A; --accent-ink:#111416; --accent-hover:#C6E62A; --accent-text:#111416;
-    --stage-hi:#FFFFFF; --stage-mid:#E6E9E5; --stage-lo:#D3D7D2; --stage-shade:rgba(0,0,0,.06);
-    --mini-hi:#FFFFFF; --mini-lo:#E3E6E2; --glass:rgba(255,255,255,.82); --hero-glow:#FFFFFF;
-    --band-glow:#E6F5A8; --band-a:#FFFFFF; --band-b:#F0F2EE; --summary-top:#F6F7F4; --kicker:#3D4441;
-    --sw-edge:rgba(0,0,0,.18); --logo-filter:invert(1); --scrim:rgba(17,20,22,.35);
-    --focus:#D4F23A; --field-edge:#7F847F; --err:#B42318;
-    --mark:#D4F23A; --mark-pad:0 .12em; --focus-w:3px; --focus-off:2px; --focus-halo:#111416; --focus-extra:0 0 0 3px #111416;
+    --bg:#F2F3F6; --panel:#FFFFFF; --raise:#E6E8EE; --line:#DADDE5; --line-2:#C4C9D4;
+    --fg:#0E1017; --muted:#586075; --dim:#8A91A3;
+    --accent:#FF6A2B; --accent-ink:#0E1017; --accent-hover:#F25A18; --accent-text:#0E1017;
+    --stage-hi:#FFFFFF; --stage-mid:#E8EAF0; --stage-lo:#D5D9E3; --stage-shade:rgba(0,0,0,.06);
+    --mini-hi:#FFFFFF; --mini-lo:#E4E7EE; --glass:rgba(255,255,255,.82); --hero-glow:#FFFFFF;
+    --band-glow:#FFD9C4; --band-a:#FFFFFF; --band-b:#F0F2F6; --summary-top:#F7F8FA; --kicker:#3A4154;
+    --sw-edge:rgba(0,0,0,.18); --logo-filter:invert(1); --scrim:rgba(14,16,23,.35);
+    --focus:#FF6A2B; --field-edge:#7B8398; --err:#B42318;
+    --mark:#FF6A2B; --mark-pad:0 .12em; --focus-w:3px; --focus-off:2px; --focus-halo:#0E1017; --focus-extra:0 0 0 3px #0E1017;
     color-scheme:light;
   }
 }
 :root:not([data-ofst])[data-theme="light"]{
-  --bg:#EEF0EC; --panel:#FFFFFF; --raise:#E4E7E3; --line:#D8DCD7; --line-2:#C3C8C3;
-  --fg:#111416; --muted:#59615D; --dim:#858C88;
-  --accent:#D4F23A; --accent-ink:#111416; --accent-hover:#C6E62A; --accent-text:#111416;
-  --stage-hi:#FFFFFF; --stage-mid:#E6E9E5; --stage-lo:#D3D7D2; --stage-shade:rgba(0,0,0,.06);
-  --mini-hi:#FFFFFF; --mini-lo:#E3E6E2; --glass:rgba(255,255,255,.82); --hero-glow:#FFFFFF;
-  --band-glow:#E6F5A8; --band-a:#FFFFFF; --band-b:#F0F2EE; --summary-top:#F6F7F4; --kicker:#3D4441;
-  --sw-edge:rgba(0,0,0,.18); --logo-filter:invert(1); --scrim:rgba(17,20,22,.35);
-  --focus:#D4F23A; --field-edge:#7F847F; --err:#B42318;
-  --mark:#D4F23A; --mark-pad:0 .12em; --focus-w:3px; --focus-off:2px; --focus-halo:#111416; --focus-extra:0 0 0 3px #111416;
+  --bg:#F2F3F6; --panel:#FFFFFF; --raise:#E6E8EE; --line:#DADDE5; --line-2:#C4C9D4;
+  --fg:#0E1017; --muted:#586075; --dim:#8A91A3;
+  --accent:#FF6A2B; --accent-ink:#0E1017; --accent-hover:#F25A18; --accent-text:#0E1017;
+  --stage-hi:#FFFFFF; --stage-mid:#E8EAF0; --stage-lo:#D5D9E3; --stage-shade:rgba(0,0,0,.06);
+  --mini-hi:#FFFFFF; --mini-lo:#E4E7EE; --glass:rgba(255,255,255,.82); --hero-glow:#FFFFFF;
+  --band-glow:#FFD9C4; --band-a:#FFFFFF; --band-b:#F0F2F6; --summary-top:#F7F8FA; --kicker:#3A4154;
+  --sw-edge:rgba(0,0,0,.18); --logo-filter:invert(1); --scrim:rgba(14,16,23,.35);
+  --focus:#FF6A2B; --field-edge:#7B8398; --err:#B42318;
+  --mark:#FF6A2B; --mark-pad:0 .12em; --focus-w:3px; --focus-off:2px; --focus-halo:#0E1017; --focus-extra:0 0 0 3px #0E1017;
   color-scheme:light;
 }
 /* Theme switch: everything eases between palettes for a moment */
@@ -602,59 +602,84 @@ html.js-motion .hero-intro .hero-cta .btn + .btn{animation-delay:.5s}
 @media (max-width:640px){.oitem{grid-template-columns:minmax(0,1fr)}.adm-st{justify-items:start}}
 /* /ADMIN */
 
-/* ---------- Polish pass (home): atmosphere, spotlight cards, numbered steps, striped CTA band ---------- */
+
+
+/* ---------- Revamp: midnight ink + signal orange. Shape rule: pills for buttons, 24-32px for containers. ---------- */
+@property --tint{syntax:'<color>';inherits:true;initial-value:#FF6A2B}
 ::selection{background:var(--accent);color:var(--accent-ink)}
-/* Hero: a lime floor glow and a soft contact shadow so the car sits on a surface instead of floating. */
-.hero::after{content:"";position:absolute;left:34%;right:-10%;bottom:0;height:46%;background:radial-gradient(60% 80% at 58% 100%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 72%);pointer-events:none;opacity:.9;z-index:0}
-.hero-stage::before{content:"";position:absolute;left:12%;right:10%;bottom:17%;height:7%;background:radial-gradient(50% 50% at 50% 50%,var(--stage-shade),transparent 72%);filter:blur(6px);pointer-events:none}
-.hero-copy,.hero-stage{z-index:1}.hero-stage > *{position:relative}
-.hero-copy .lead{max-width:38ch}
-.hero-cta .btn svg{transition:transform .3s var(--ease)}
-.hero-cta .btn:hover svg,.canvas-band .btn:hover svg{transform:translateX(4px)}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(60% 42% at 88% -6%,color-mix(in srgb,var(--accent) 11%,transparent),transparent 70%),radial-gradient(40% 30% at 0% 100%,color-mix(in srgb,var(--accent) 5%,transparent),transparent 70%)}
+
+/* Buttons */
+.btn{border-radius:999px;height:50px;padding:0 26px}
 .btn-primary{box-shadow:inset 0 1px 0 rgb(255 255 255 / .35)}
 .btn-primary:hover{transform:translateY(-1px)}
 .btn-ghost:hover{background:var(--raise)}
+.btn svg{transition:transform .3s var(--ease)}
+.btn:hover svg{transform:translateX(4px)}
+.icon-btn{border-radius:50%}
 
-/* Specs strip: a lime tick slides in over the hovered cell. */
-.specs-strip div{position:relative;transition:background .3s}
-.specs-strip div::before{content:"";position:absolute;left:0;top:-1px;height:2px;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .5s var(--ease)}
-.specs-strip div:hover{background:color-mix(in srgb,var(--raise) 55%,transparent)}
-.specs-strip div:hover::before{transform:scaleX(1)}
+/* Header: a floating glass pill on wide screens */
+@media (min-width:901px){
+  .top{top:12px;margin:12px var(--gutter) 0;padding-inline:22px 14px;height:62px;border:1px solid var(--line);border-radius:999px;background:color-mix(in srgb,var(--panel) 72%,transparent);box-shadow:0 18px 40px -28px rgb(0 0 0 / .6)}
+  .top .nav a{padding:20px 0}
+  .nav-ink{bottom:12px}
+}
 
-/* Design cards: cursor spotlight (--mx/--my set by motion.ts, no React state) and a lime edge on hover. */
-.dcard{position:relative;isolation:isolate;overflow:hidden}
-.dcard::before{content:"";position:absolute;inset:0;z-index:-1;opacity:0;transition:opacity .35s;background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),color-mix(in srgb,var(--accent) 14%,transparent),transparent 70%)}
+/* Hero: the car sits in a stage panel that takes on the colour of the design on show. */
+.hero{padding-top:clamp(20px,3vw,44px)}
+.hero::before{background:radial-gradient(45% 60% at 70% 50%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 70%)}
+.hero h1{font-size:clamp(2.4rem,5.8vw,5rem)}
+@supports (width:1cqi){.hero h1{font-size:clamp(2rem,min(5.8vw,calc(100cqi / 9.3)),5rem)}}
+@supports (width:1cqi){html:lang(pt) .hero h1{font-size:clamp(1.45rem,min(5.8vw,calc(100cqi / 11.6)),5rem)}}
+.hero-stage{--tint:#FF6A2B;transition:--tint .9s var(--ease);z-index:1;border:1px solid var(--line);border-radius:32px;padding:clamp(10px,2vw,30px) clamp(8px,2vw,28px) 18px;
+  background:radial-gradient(70% 75% at 50% 42%,color-mix(in srgb,var(--tint) 40%,transparent),transparent 72%),linear-gradient(165deg,var(--raise),var(--panel))}
+.hero-stage::after{content:"";position:absolute;left:14%;right:14%;bottom:84px;height:7%;background:radial-gradient(50% 50% at 50% 50%,var(--stage-shade),transparent 72%);filter:blur(6px);pointer-events:none}
+.hero-copy{z-index:1}
+.hero-caption{margin-top:0;padding-inline:6px}
+.dots button[aria-pressed="true"]{background:var(--accent)}
+
+/* Spec strip: four tiles */
+.specs-strip{border:0;gap:12px;margin:14px var(--gutter) 0}
+.specs-strip div:nth-child(n){border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:20px 22px;position:relative;transition:border-color .3s,background .3s}
+.specs-strip div:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line-2));background:var(--raise)}
+.specs-strip b{font-size:clamp(17px,1.7vw,22px)}
+
+/* Design cards: bento row on the home page (one wide lead card), cursor spotlight, accent edge on hover */
+.dcard{position:relative;isolation:isolate;overflow:hidden;border-radius:24px;padding:16px}
+.dcard .mini{border-radius:16px}
+.dcard::before{content:"";position:absolute;inset:0;z-index:-1;opacity:0;transition:opacity .35s;background:radial-gradient(280px circle at var(--mx,50%) var(--my,0%),color-mix(in srgb,var(--accent) 16%,transparent),transparent 70%)}
 .dcard:hover::before{opacity:1}
-.dcard:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line-2))}
-.dcard .price{font-size:14px}
+.dcard:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line-2))}
+#featured{grid-template-columns:repeat(5,minmax(0,1fr))}
+#featured > .dcard:first-child{grid-column:span 2;padding:20px}
+#featured > .dcard:first-child h3{font-size:22px}
+@media (max-width:1100px){#featured{grid-template-columns:repeat(2,minmax(0,1fr))}#featured > .dcard:first-child{grid-column:auto;padding:16px}#featured > .dcard:first-child h3{font-size:16px}}
 
-/* How it works: oversized outlined numerals and a rail that fills on hover. */
-.steps{gap:clamp(14px,2vw,28px)}
-.step-card{position:relative;padding-top:22px;border-top:0;gap:10px}
-.step-card::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:var(--line-2)}
-.step-card::after{content:"";position:absolute;left:0;top:0;height:2px;width:100%;background:var(--accent);transform:scaleX(.14);transform-origin:left;transition:transform .6s var(--ease)}
-.step-card:hover::after{transform:scaleX(1)}
-.step-card .n{font:800 clamp(3rem,6vw,4.75rem)/.9 var(--display);font-stretch:125%;letter-spacing:-.02em;color:transparent;-webkit-text-stroke:1.5px var(--accent-text);background:none;padding:0;margin-bottom:6px;transition:color .4s var(--ease)}
-.step-card:hover .n{color:var(--accent-text)}
-:root[data-ofst="light"] .step-card .n{-webkit-text-stroke-color:var(--fg)}
-:root[data-ofst="light"] .step-card:hover .n{color:var(--fg)}
+/* How it works: panels with outlined numerals, the middle one dropped for rhythm */
+.steps{gap:clamp(14px,2vw,24px);align-items:start}
+.step-card{background:var(--panel);border:1px solid var(--line);border-radius:28px;padding:28px 28px 32px;gap:10px;transition:border-color .3s,transform .5s var(--ease)}
+.step-card:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--line-2))}
+.step-card .n{font:800 clamp(3.2rem,6vw,5rem)/.9 var(--display);font-stretch:125%;letter-spacing:-.02em;color:transparent;-webkit-text-stroke:1.5px var(--accent);background:none;padding:0;margin-bottom:10px;transition:color .4s var(--ease)}
+.step-card:hover .n{color:var(--accent)}
 .step-card h3{font-size:20px}
+@media (min-width:901px){.step-card:nth-child(2){margin-top:36px}}
 
-/* Fit panel: spec rows read as a datasheet, with a lime marker on the key they describe. */
-.fit{background:linear-gradient(160deg,var(--panel),color-mix(in srgb,var(--panel) 70%,var(--bg)))}
-.fit li{position:relative;padding-left:18px;transition:background .25s}
-.fit li::before{content:"";position:absolute;left:0;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--accent);opacity:.35;transition:opacity .25s,transform .35s var(--ease)}
-.fit li:hover::before{opacity:1;transform:scale(1.5)}
+/* Fit panel */
+.fit{border-radius:32px;background:linear-gradient(160deg,var(--panel),color-mix(in srgb,var(--panel) 70%,var(--bg)))}
+.fit li{position:relative;padding-left:20px}
+.fit li::before{content:"";position:absolute;left:0;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--accent);opacity:.4;transition:opacity .25s,transform .35s var(--ease)}
+.fit li:hover::before{opacity:1;transform:scale(1.4)}
 
-/* Closing band: diagonal racing stripes (echoing the Racing Lines design) fade in on the right, behind the CTA. */
-.canvas-band{isolation:isolate}
-.canvas-band::before{content:"";position:absolute;inset:-20% -4% -20% 48%;z-index:-1;background:repeating-linear-gradient(115deg,color-mix(in srgb,var(--accent) 20%,transparent) 0 22px,transparent 22px 64px);-webkit-mask-image:linear-gradient(90deg,transparent,#000 60%);mask-image:linear-gradient(90deg,transparent,#000 60%);transition:transform 1.2s var(--ease)}
+/* Closing band: solid signal orange with ink type and diagonal stripes */
+.canvas-band{isolation:isolate;border:0;border-radius:36px;background:var(--accent);color:var(--accent-ink);padding:clamp(32px,6vw,80px)}
+.canvas-band h2{font-size:clamp(2rem,4.6vw,3.8rem)}
+.canvas-band::before{content:"";position:absolute;inset:-20% -4% -20% 50%;z-index:-1;background:repeating-linear-gradient(115deg,rgb(10 11 16 / .13) 0 22px,transparent 22px 64px);-webkit-mask-image:linear-gradient(90deg,transparent,#000 60%);mask-image:linear-gradient(90deg,transparent,#000 60%);transition:transform 1.2s var(--ease)}
 .canvas-band:hover::before{transform:translateX(-18px)}
-.canvas-band .btn{height:54px;padding-inline:28px}
+.canvas-band .btn-primary{background:var(--accent-ink);color:#F4F5F8;height:56px;padding-inline:30px;box-shadow:none}
+.canvas-band .btn-primary:hover{background:#000}
 @media (max-width:900px){.canvas-band::before{inset:-20% -10% -20% 20%;opacity:.6}}
 
-/* Footer wordmark gets a little more presence. */
-.foot .brand span{font-size:22px}
-@media (prefers-reduced-motion:reduce){.canvas-band:hover::before{transform:none}}
-
-
+/* Footer as a rounded plate */
+.foot{margin:48px var(--gutter) 0;padding:40px clamp(22px,4vw,48px);border:1px solid var(--line);border-bottom:0;border-radius:32px 32px 0 0;background:var(--panel)}
+@media (prefers-reduced-motion:reduce){.canvas-band:hover::before{transform:none}.hero-stage{transition:none}}#featured > .dcard:not(:first-child) .dcard-actions{flex-direction:column}#featured > .dcard:not(:first-child) .dcard-actions .btn{width:100%;flex:none}#featured .dcard .dcard-row{flex-wrap:wrap}
+@media (min-width:901px){.hero{grid-template-columns:minmax(0,1.05fr) minmax(0,1.2fr)}}

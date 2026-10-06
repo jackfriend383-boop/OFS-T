@@ -45,7 +45,7 @@ export default function Home() {
             <Link className="btn btn-ghost" to={to('shop')}>{c.browse}</Link>
           </div>
         </div>
-        <div className="hero-stage" ref={hostWrap}
+        <div className="hero-stage" ref={hostWrap} style={{ '--tint': kit.COLORS[cfg.c1]?.hex } as any}
           onMouseEnter={() => (paused.current = true)} onMouseLeave={() => (paused.current = false)} onFocus={() => (paused.current = true)} onBlur={() => (paused.current = false)}>
           <CarStage id="heroCar" cfg={cfg} style={{ cursor: 'pointer' }} onClick={() => navigate(to('configurator', 'design=' + hero.id))} />
           <div className="hero-caption">
@@ -81,7 +81,7 @@ export default function Home() {
 
       <div className="section" style={{ paddingTop: 0 }}>
         <div className="canvas-band">
-          <div style={{ display: 'grid', gap: 12 }}><span className="eyebrow">OFS/T</span><h2 className="display">{c.canvas}</h2></div>
+          <h2 className="display">{c.canvas}</h2>
           <Link className="btn btn-primary" to={to('configurator')}>{c.designYours}</Link>
         </div>
       </div>
