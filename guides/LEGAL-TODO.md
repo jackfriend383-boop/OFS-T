@@ -48,7 +48,7 @@ and `[CONFIRM: …]` = `[CONFIRMAR: …]`.
 | `[NUMBER]` days (damaged in transit) | refunds §7 |
 | `[CONFIRM: the host sets no cookies on this site.]` | cookies §5 |
 | `SITE_URL` (`https://YOUR-USERNAME.github.io/...`) | `src/data/site.json` |
-| Order database: name **Supabase, Inc.** as processor (orders: name, email, address, country, consent flags; EU region e.g. Frankfurt; DPA accepted), plus retention and any transfer note | privacy §2, §4, §5, §6 (once `SUPABASE-SETUP.md` is done) |
+| Order database: name **Cloudflare, Inc.** as processor (orders: name, email, address, country, consent flags; D1 jurisdiction/location hint, e.g. EU; Cloudflare DPA accepted), plus retention and any transfer note | privacy §2, §4, §5, §6 (once `CLOUDFLARE-SETUP.md` is done) |
 
 Note: the footer `<address>` is filled in by `src/seo.ts` from `src/data/site.json` (`legalName`, `nif`, `address`,
 `email`) for both languages, so fill those in once there. While a value is still a `[PLACEHOLDER]`, the Portuguese pages show

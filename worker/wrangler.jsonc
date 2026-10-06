@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ofst-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "vars": {
+    // Websites allowed to call this API (comma separated, origins only: no path, no trailing slash).
+    // Set the first one to your real site, e.g. https://YOUR-USERNAME.github.io or https://your-domain.com
+    "ALLOWED_ORIGINS": "https://YOUR-USERNAME.github.io,http://localhost:5173"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ofst-orders",
+      // Replaced by `wrangler d1 create ofst-orders` output (see guides/CLOUDFLARE-SETUP.md).
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}

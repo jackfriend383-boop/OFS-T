@@ -9,16 +9,16 @@
 
     <div class="adm-panel" id="admSetup" hidden>
       <h2 tabindex="-1">Online ordering isn't set up yet</h2>
-      <p>Orders are stored in a free Supabase database that only you can read. To switch it on:</p>
+      <p>Orders are stored in a free Cloudflare D1 database that only you can read. To switch it on:</p>
       <ol class="adm-steps">
-        <li>Create a Supabase project (region: EU, e.g. Frankfurt).</li>
-        <li>Open <b>SQL Editor</b>, paste the contents of <code>supabase/schema.sql</code> from the repository and click <b>Run</b>.</li>
-        <li>In <b>Authentication</b>, turn off public sign-ups, then add yourself as a user (<b>Users → Add user</b>).</li>
-        <li>Copy your user's UID and run <code>insert into public.admins (user_id) values ('YOUR-UID');</code> in the SQL editor.</li>
-        <li>Copy the <b>Project URL</b> and the <b>anon public</b> (or publishable) key into <code>src/data/site.json</code> (<code>supabaseUrl</code>, <code>supabaseAnonKey</code>). Never the <code>service_role</code> / secret key.</li>
-        <li>Run <code>python tools/build.py</code>, then commit and push.</li>
+        <li>In <code>worker/</code>, log in with <code>npx wrangler login</code> and create the database: <code>npx wrangler d1 create ofst-orders</code>. Paste the <code>database_id</code> into <code>worker/wrangler.jsonc</code>.</li>
+        <li>Create the tables: <code>npm run db:remote</code> (inside <code>worker/</code>).</li>
+        <li>Set your admin sign-in: <code>npx wrangler secret put ADMIN_EMAIL</code> and <code>npx wrangler secret put ADMIN_PASSWORD</code> (12+ characters).</li>
+        <li>Put your website address in <code>ALLOWED_ORIGINS</code> in <code>worker/wrangler.jsonc</code>, then publish the API with <code>npm run deploy</code>.</li>
+        <li>Copy the Worker address it prints (https://ofst-api….workers.dev) into <code>src/data/site.json</code> as <code>apiUrl</code>. Never put a password in that file.</li>
+        <li>Run <code>npm run build</code>, then commit and push.</li>
       </ol>
-      <p class="adm-note">The full walkthrough is in <code>SUPABASE-SETUP.md</code>. The print-file tool below works without a database.</p>
+      <p class="adm-note">The full walkthrough is in <code>guides/CLOUDFLARE-SETUP.md</code>. The print-file tool below works without a database.</p>
     </div>
 
     <form class="adm-panel adm-login" id="admLogin" novalidate hidden aria-labelledby="admLoginTitle">
