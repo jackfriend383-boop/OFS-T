@@ -15,6 +15,17 @@ export function useReveal(routeKey: string) {
     document.documentElement.classList.add('js-motion');
     const cleanups: Array<() => void> = [];
 
+    /* Card spotlight: the pointer position feeds two CSS variables (no React state, no re-render). Fine pointers only. */
+    if (matchMedia('(hover: hover)').matches) {
+      const onMove = (e: PointerEvent) => {
+        const card = (e.target as HTMLElement).closest?.('.dcard') as HTMLElement | null; if (!card) return;
+        const r = card.getBoundingClientRect();
+        card.style.setProperty('--mx', e.clientX - r.left + 'px'); card.style.setProperty('--my', e.clientY - r.top + 'px');
+      };
+      document.addEventListener('pointermove', onMove, { passive: true });
+      cleanups.push(() => document.removeEventListener('pointermove', onMove));
+    }
+
     /* Hero intro: headline lines stagger in, then the lead and the buttons rise. */
     const heroCopy = $('.hero-copy');
     if (heroCopy) {

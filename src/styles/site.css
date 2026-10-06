@@ -601,3 +601,60 @@ html.js-motion .hero-intro .hero-cta .btn + .btn{animation-delay:.5s}
 .adm-note:empty{display:none}
 @media (max-width:640px){.oitem{grid-template-columns:minmax(0,1fr)}.adm-st{justify-items:start}}
 /* /ADMIN */
+
+/* ---------- Polish pass (home): atmosphere, spotlight cards, numbered steps, striped CTA band ---------- */
+::selection{background:var(--accent);color:var(--accent-ink)}
+/* Hero: a lime floor glow and a soft contact shadow so the car sits on a surface instead of floating. */
+.hero::after{content:"";position:absolute;left:34%;right:-10%;bottom:0;height:46%;background:radial-gradient(60% 80% at 58% 100%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 72%);pointer-events:none;opacity:.9;z-index:0}
+.hero-stage::before{content:"";position:absolute;left:12%;right:10%;bottom:17%;height:7%;background:radial-gradient(50% 50% at 50% 50%,var(--stage-shade),transparent 72%);filter:blur(6px);pointer-events:none}
+.hero-copy,.hero-stage{z-index:1}.hero-stage > *{position:relative}
+.hero-copy .lead{max-width:38ch}
+.hero-cta .btn svg{transition:transform .3s var(--ease)}
+.hero-cta .btn:hover svg,.canvas-band .btn:hover svg{transform:translateX(4px)}
+.btn-primary{box-shadow:inset 0 1px 0 rgb(255 255 255 / .35)}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-ghost:hover{background:var(--raise)}
+
+/* Specs strip: a lime tick slides in over the hovered cell. */
+.specs-strip div{position:relative;transition:background .3s}
+.specs-strip div::before{content:"";position:absolute;left:0;top:-1px;height:2px;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .5s var(--ease)}
+.specs-strip div:hover{background:color-mix(in srgb,var(--raise) 55%,transparent)}
+.specs-strip div:hover::before{transform:scaleX(1)}
+
+/* Design cards: cursor spotlight (--mx/--my set by motion.ts, no React state) and a lime edge on hover. */
+.dcard{position:relative;isolation:isolate;overflow:hidden}
+.dcard::before{content:"";position:absolute;inset:0;z-index:-1;opacity:0;transition:opacity .35s;background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),color-mix(in srgb,var(--accent) 14%,transparent),transparent 70%)}
+.dcard:hover::before{opacity:1}
+.dcard:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line-2))}
+.dcard .price{font-size:14px}
+
+/* How it works: oversized outlined numerals and a rail that fills on hover. */
+.steps{gap:clamp(14px,2vw,28px)}
+.step-card{position:relative;padding-top:22px;border-top:0;gap:10px}
+.step-card::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:var(--line-2)}
+.step-card::after{content:"";position:absolute;left:0;top:0;height:2px;width:100%;background:var(--accent);transform:scaleX(.14);transform-origin:left;transition:transform .6s var(--ease)}
+.step-card:hover::after{transform:scaleX(1)}
+.step-card .n{font:800 clamp(3rem,6vw,4.75rem)/.9 var(--display);font-stretch:125%;letter-spacing:-.02em;color:transparent;-webkit-text-stroke:1.5px var(--accent-text);background:none;padding:0;margin-bottom:6px;transition:color .4s var(--ease)}
+.step-card:hover .n{color:var(--accent-text)}
+:root[data-ofst="light"] .step-card .n{-webkit-text-stroke-color:var(--fg)}
+:root[data-ofst="light"] .step-card:hover .n{color:var(--fg)}
+.step-card h3{font-size:20px}
+
+/* Fit panel: spec rows read as a datasheet, with a lime marker on the key they describe. */
+.fit{background:linear-gradient(160deg,var(--panel),color-mix(in srgb,var(--panel) 70%,var(--bg)))}
+.fit li{position:relative;padding-left:18px;transition:background .25s}
+.fit li::before{content:"";position:absolute;left:0;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--accent);opacity:.35;transition:opacity .25s,transform .35s var(--ease)}
+.fit li:hover::before{opacity:1;transform:scale(1.5)}
+
+/* Closing band: diagonal racing stripes (echoing the Racing Lines design) fade in on the right, behind the CTA. */
+.canvas-band{isolation:isolate}
+.canvas-band::before{content:"";position:absolute;inset:-20% -4% -20% 48%;z-index:-1;background:repeating-linear-gradient(115deg,color-mix(in srgb,var(--accent) 20%,transparent) 0 22px,transparent 22px 64px);-webkit-mask-image:linear-gradient(90deg,transparent,#000 60%);mask-image:linear-gradient(90deg,transparent,#000 60%);transition:transform 1.2s var(--ease)}
+.canvas-band:hover::before{transform:translateX(-18px)}
+.canvas-band .btn{height:54px;padding-inline:28px}
+@media (max-width:900px){.canvas-band::before{inset:-20% -10% -20% 20%;opacity:.6}}
+
+/* Footer wordmark gets a little more presence. */
+.foot .brand span{font-size:22px}
+@media (prefers-reduced-motion:reduce){.canvas-band:hover::before{transform:none}}
+
+
