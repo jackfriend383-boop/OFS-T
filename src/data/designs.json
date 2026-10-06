@@ -1,0 +1,39 @@
+{
+  "currency": "EUR",
+  "extras": {"secondSide": 29, "badge": 9},
+  "cats": ["All", "Signature", "Street", "Racing", "Retro", "Minimal"],
+  "colors": {
+    "volt": {"name": "Volt", "hex": "#D4F23A"},
+    "ice": {"name": "Ice", "hex": "#6FDCEB"},
+    "ember": {"name": "Ember", "hex": "#FF6A2B"},
+    "violet": {"name": "Violet", "hex": "#9B7BFF"},
+    "rose": {"name": "Rose", "hex": "#FF5C8D"},
+    "gold": {"name": "Gold", "hex": "#F2B83A"},
+    "chalk": {"name": "Chalk", "hex": "#F1F0EA"},
+    "stone": {"name": "Stone", "hex": "#8C938E"},
+    "graphite": {"name": "Graphite", "hex": "#2B2F33"},
+    "flame": {"name": "Flame Red", "hex": "#E42404"},
+    "crimson": {"name": "Crimson", "hex": "#B41C04"},
+    "azure": {"name": "Azure", "hex": "#147CFA"},
+    "cobalt": {"name": "Cobalt", "hex": "#0454E2"}
+  },
+  "designs": [
+    {"id": "flame-red", "name": "Flame Camo", "tag": "Two-tone flames, black cuts", "cat": "Signature", "price": 69, "c1": "flame", "c2": "crimson", "art": "flame"},
+    {"id": "flame-blue", "name": "Flame Camo Blue", "tag": "Two-tone flames, black cuts", "cat": "Signature", "price": 69, "c1": "azure", "c2": "cobalt", "art": "flame"},
+    {"id": "flame-stealth", "name": "Flame Camo Stealth", "tag": "Graphite with gold pinlines", "cat": "Signature", "price": 69, "c1": "gold", "c2": "graphite", "art": "stealth", "fixed": true},
+    {"id": "street-flow", "name": "Street Flow", "tag": "Bold & clean", "cat": "Street", "price": 49, "c1": "volt", "c2": "graphite"},
+    {"id": "racing-lines", "name": "Racing Lines", "tag": "Sporty & dynamic", "cat": "Racing", "price": 55, "c1": "chalk", "c2": "volt"},
+    {"id": "neon-wave", "name": "Neon Wave", "tag": "Electric vibes", "cat": "Street", "price": 52, "c1": "ice", "c2": "violet"},
+    {"id": "retro-stripe", "name": "Retro Stripe", "tag": "Classic touch", "cat": "Retro", "price": 49, "c1": "ember", "c2": "gold"},
+    {"id": "urban-camo", "name": "Urban Camo", "tag": "Stealth style", "cat": "Street", "price": 59, "c1": "stone", "c2": "chalk"},
+    {"id": "pixel", "name": "Pixel", "tag": "Digital future", "cat": "Street", "price": 54, "c1": "violet", "c2": "rose"},
+    {"id": "checker", "name": "Checkered", "tag": "Finish-line energy", "cat": "Racing", "price": 57, "c1": "chalk", "c2": "ember"},
+    {"id": "halftone", "name": "Halftone", "tag": "Print-shop texture", "cat": "Retro", "price": 52, "c1": "rose", "c2": "gold"},
+    {"id": "pinstripe", "name": "Pinstripe", "tag": "Quiet detail", "cat": "Minimal", "price": 39, "c1": "volt", "c2": "chalk"},
+    {"id": "bolt", "name": "Bolt", "tag": "Loud on purpose", "cat": "Street", "price": 49, "c1": "gold", "c2": "ember"},
+    {"id": "contour", "name": "Contour", "tag": "Mapped lines", "cat": "Minimal", "price": 45, "c1": "ice", "c2": "chalk"},
+    {"id": "sunset", "name": "Sunset 78", "tag": "Seventies horizon", "cat": "Retro", "price": 55, "c1": "ember", "c2": "rose"}
+  ],
+  "featured": ["flame-red", "street-flow", "flame-blue", "racing-lines"],
+  "heroCycle": ["flame-red", "street-flow", "flame-blue", "neon-wave", "flame-stealth", "retro-stripe"]
+}

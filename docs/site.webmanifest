@@ -1,0 +1,25 @@
+{
+  "name": "OFS/T",
+  "short_name": "OFS/T",
+  "description": "Kits de autocolantes em vinil pré-cortados para a porta e o vidro lateral traseiro do Citroën Ami. Escolha um design, defina duas cores e veja-o no seu carro antes de encomendar.",
+  "lang": "pt-PT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0B0D0E",
+  "theme_color": "#0B0D0E",
+  "icons": [
+    {
+      "src": "assets/img/icons/OFST-icon-white-on-black-192px.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/img/icons/OFST-icon-white-on-black-512px.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

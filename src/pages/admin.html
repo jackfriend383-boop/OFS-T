@@ -1,0 +1,62 @@
+<section class="view adm" data-view="admin">
+  <div class="page-head">
+    <span class="eyebrow">Admin</span>
+    <h1 class="display">Orders</h1>
+    <p class="muted adm-lead">Every door kit is laid out on the print mold with the customer's colours. Download a PNG (transparent, 6000&nbsp;px wide) or an SVG with a magenta CutContour layer.</p>
+  </div>
+  <div class="section adm-body">
+    <p class="adm-empty" id="admBoot">Loading…</p>
+
+    <div class="adm-panel" id="admSetup" hidden>
+      <h2 tabindex="-1">Online ordering isn't set up yet</h2>
+      <p>Orders are stored in a free Supabase database that only you can read. To switch it on:</p>
+      <ol class="adm-steps">
+        <li>Create a Supabase project (region: EU, e.g. Frankfurt).</li>
+        <li>Open <b>SQL Editor</b>, paste the contents of <code>supabase/schema.sql</code> from the repository and click <b>Run</b>.</li>
+        <li>In <b>Authentication</b>, turn off public sign-ups, then add yourself as a user (<b>Users → Add user</b>).</li>
+        <li>Copy your user's UID and run <code>insert into public.admins (user_id) values ('YOUR-UID');</code> in the SQL editor.</li>
+        <li>Copy the <b>Project URL</b> and the <b>anon public</b> (or publishable) key into <code>src/data/site.json</code> (<code>supabaseUrl</code>, <code>supabaseAnonKey</code>). Never the <code>service_role</code> / secret key.</li>
+        <li>Run <code>python tools/build.py</code>, then commit and push.</li>
+      </ol>
+      <p class="adm-note">The full walkthrough is in <code>SUPABASE-SETUP.md</code>. The print-file tool below works without a database.</p>
+    </div>
+
+    <form class="adm-panel adm-login" id="admLogin" novalidate hidden aria-labelledby="admLoginTitle">
+      <h2 id="admLoginTitle" tabindex="-1">Sign in</h2>
+      <div class="co-f"><label for="admEmail">Email</label><input class="field" id="admEmail" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required></div>
+      <div class="co-f"><label for="admPass">Password</label><input class="field" id="admPass" name="password" type="password" autocomplete="current-password" required></div>
+      <p class="err" id="admLoginErr" role="alert"></p>
+      <button class="btn btn-primary" type="submit" id="admLoginBtn">Sign in</button>
+    </form>
+
+    <div class="adm-panel" id="admLocked" hidden>
+      <h2 tabindex="-1">This account isn't an admin</h2>
+      <p class="muted">You are signed in, but this account is not listed in the <code>admins</code> table, so no orders are shown.</p>
+      <button class="btn btn-ghost" type="button" data-signout>Sign out</button>
+    </div>
+
+    <div id="admMain" hidden>
+      <h2 class="sr" id="admListTitle" tabindex="-1">Order list</h2>
+      <div class="adm-bar">
+        <span class="adm-note" id="admWho"></span>
+        <button class="btn btn-ghost" type="button" id="admRefresh">Refresh</button>
+        <button class="btn btn-ghost" type="button" data-signout>Sign out</button>
+      </div>
+      <p class="adm-note" id="admMsg" role="status" aria-live="polite"></p>
+      <div class="adm-stats" id="admStats"></div>
+      <div class="orders" id="admOrders"></div>
+    </div>
+
+    <section class="adm-tool" aria-labelledby="admToolTitle">
+      <h2 id="admToolTitle">Mold file of a design</h2>
+      <p class="adm-note">A test print file in the design's default colours, to check the printer setup.</p>
+      <div class="adm-bar">
+        <label for="admDesign">Design</label>
+        <select class="field adm-select" id="admDesign"></select>
+        <button class="btn btn-primary" type="button" id="admTestPng">Download PNG</button>
+        <button class="btn btn-ghost" type="button" id="admTestSvg">SVG + cut line</button>
+      </div>
+      <div class="moldp adm-test-prev" id="admTestPrev"></div>
+    </section>
+  </div>
+</section>

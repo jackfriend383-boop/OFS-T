@@ -1,0 +1,21 @@
+{
+  "SITE_URL": "https://jackfriend383-boop.github.io/OFS-T",
+  "name": "OFS/T",
+  "legalName": "[LEGAL NAME]",
+  "tradingName": "OFS/T",
+  "nif": "[NIF]",
+  "address": {
+    "street": "[STREET ADDRESS]",
+    "postcode": "[POSTCODE]",
+    "city": "[CITY]",
+    "country": "Portugal"
+  },
+  "email": "[CONTACT EMAIL]",
+  "phone": "[PHONE (optional)]",
+  "securityEmail": "[SECURITY CONTACT EMAIL]",
+  "themeColorDark": "#0B0D0E",
+  "themeColorLight": "#EEF0EC",
+  "lastmod": "2026-10-06",
+  "supabaseUrl": "",
+  "supabaseAnonKey": ""
+}

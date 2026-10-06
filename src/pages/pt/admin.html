@@ -1,0 +1,62 @@
+<section class="view adm" data-view="admin">
+  <div class="page-head">
+    <span class="eyebrow">Administração</span>
+    <h1 class="display">Encomendas</h1>
+    <p class="muted adm-lead">Cada kit de porta é colocado no molde de impressão com as cores escolhidas pelo cliente. Descarregue um PNG (transparente, 6000&nbsp;px de largura) ou um SVG com uma camada CutContour a magenta.</p>
+  </div>
+  <div class="section adm-body">
+    <p class="adm-empty" id="admBoot">A carregar…</p>
+
+    <div class="adm-panel" id="admSetup" hidden>
+      <h2 tabindex="-1">As encomendas online ainda não estão ativas</h2>
+      <p>As encomendas ficam guardadas numa base de dados gratuita da Supabase que só o proprietário pode ler. Para a ativar:</p>
+      <ol class="adm-steps">
+        <li>Crie um projeto na Supabase (região: UE, p. ex. Frankfurt).</li>
+        <li>Abra o <b>SQL Editor</b>, cole o conteúdo de <code>supabase/schema.sql</code> do repositório e clique em <b>Run</b>.</li>
+        <li>Em <b>Authentication</b>, desative os registos públicos e adicione-se como utilizador (<b>Users → Add user</b>).</li>
+        <li>Copie o UID do seu utilizador e execute <code>insert into public.admins (user_id) values ('YOUR-UID');</code> no SQL Editor.</li>
+        <li>Copie o <b>Project URL</b> e a chave <b>anon public</b> (ou publishable) para <code>src/data/site.json</code> (<code>supabaseUrl</code>, <code>supabaseAnonKey</code>). Nunca a chave <code>service_role</code> / secreta.</li>
+        <li>Execute <code>python tools/build.py</code> e depois faça commit e push.</li>
+      </ol>
+      <p class="adm-note">O guia completo está em <code>SUPABASE-SETUP.md</code>. A ferramenta de ficheiros de impressão abaixo funciona sem base de dados.</p>
+    </div>
+
+    <form class="adm-panel adm-login" id="admLogin" novalidate hidden aria-labelledby="admLoginTitle">
+      <h2 id="admLoginTitle" tabindex="-1">Iniciar sessão</h2>
+      <div class="co-f"><label for="admEmail">Email</label><input class="field" id="admEmail" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required></div>
+      <div class="co-f"><label for="admPass">Palavra-passe</label><input class="field" id="admPass" name="password" type="password" autocomplete="current-password" required></div>
+      <p class="err" id="admLoginErr" role="alert"></p>
+      <button class="btn btn-primary" type="submit" id="admLoginBtn">Iniciar sessão</button>
+    </form>
+
+    <div class="adm-panel" id="admLocked" hidden>
+      <h2 tabindex="-1">Esta conta não é de administrador</h2>
+      <p class="muted">Tem sessão iniciada, mas esta conta não consta da tabela <code>admins</code>, por isso não são apresentadas encomendas.</p>
+      <button class="btn btn-ghost" type="button" data-signout>Terminar sessão</button>
+    </div>
+
+    <div id="admMain" hidden>
+      <h2 class="sr" id="admListTitle" tabindex="-1">Lista de encomendas</h2>
+      <div class="adm-bar">
+        <span class="adm-note" id="admWho"></span>
+        <button class="btn btn-ghost" type="button" id="admRefresh">Atualizar</button>
+        <button class="btn btn-ghost" type="button" data-signout>Terminar sessão</button>
+      </div>
+      <p class="adm-note" id="admMsg" role="status" aria-live="polite"></p>
+      <div class="adm-stats" id="admStats"></div>
+      <div class="orders" id="admOrders"></div>
+    </div>
+
+    <section class="adm-tool" aria-labelledby="admToolTitle">
+      <h2 id="admToolTitle">Ficheiro de molde de um design</h2>
+      <p class="adm-note">Um ficheiro de impressão de teste nas cores predefinidas do design, para verificar a configuração da impressora.</p>
+      <div class="adm-bar">
+        <label for="admDesign">Design</label>
+        <select class="field adm-select" id="admDesign"></select>
+        <button class="btn btn-primary" type="button" id="admTestPng">Descarregar PNG</button>
+        <button class="btn btn-ghost" type="button" id="admTestSvg">SVG + linha de corte</button>
+      </div>
+      <div class="moldp adm-test-prev" id="admTestPrev"></div>
+    </section>
+  </div>
+</section>

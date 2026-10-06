@@ -1,0 +1,14 @@
+# Local backup of the original single-file version (kept out of the repo)
+reference-ami-graphics.html
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+.claude/
+
+# Python
+__pycache__/
+*.pyc

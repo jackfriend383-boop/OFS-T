@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Security: see SECURITY.md. 'unsafe-inline' is for styles only (style="" attributes in markup and JS templates); scripts are 'self' only. frame-ancestors cannot be set in a meta tag: set it as an HTTP header at the host. connect-src gets the Supabase origin from site.json when the order backend is configured (tools/build.py). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Administração de encomendas — OFS/T</title>
+<meta name="description" content="Painel de encomendas para o proprietário da loja.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://jackfriend383-boop.github.io/OFS-T/admin/">
+<!-- Languages: pt-PT (default, site root) and English (/en/). Strings: src/i18n/*.json. -->
+<link rel="alternate" hreflang="pt-PT" href="https://jackfriend383-boop.github.io/OFS-T/admin/">
+<link rel="alternate" hreflang="en" href="https://jackfriend383-boop.github.io/OFS-T/en/admin/">
+<link rel="alternate" hreflang="x-default" href="https://jackfriend383-boop.github.io/OFS-T/admin/">
+<meta name="theme-color" content="#0B0D0E" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EEF0EC" media="(prefers-color-scheme: light)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OFS/T">
+<meta property="og:locale" content="pt_PT">
+<meta property="og:locale:alternate" content="en_GB">
+<meta property="og:title" content="Administração de encomendas — OFS/T">
+<meta property="og:description" content="Painel de encomendas para o proprietário da loja.">
+<meta property="og:url" content="https://jackfriend383-boop.github.io/OFS-T/admin/">
+<meta property="og:image" content="https://jackfriend383-boop.github.io/OFS-T/assets/img/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Logótipo OFS/T">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Administração de encomendas — OFS/T">
+<meta name="twitter:description" content="Painel de encomendas para o proprietário da loja.">
+<meta name="twitter:image" content="https://jackfriend383-boop.github.io/OFS-T/assets/img/og-image.png">
+<link rel="icon" href="../favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/img/icons/OFST-icon-white-on-black-32px.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../assets/img/icons/OFST-icon-white-on-black-192px.png">
+<link rel="icon" type="image/png" sizes="512x512" href="../assets/img/icons/OFST-icon-white-on-black-512px.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/img/icons/OFST-icon-white-on-black-180px.png">
+<link rel="manifest" href="../site.webmanifest">
+<!-- Theme preload: must stay synchronous and before the stylesheet to avoid a flash of the wrong theme. -->
+<script src="../assets/js/theme-init.js"></script>
+<!-- FONTS: self-hosted in assets/fonts (SIL OFL 1.1); @font-face rules are in the FONTS block at the top of site.css. No third-party font requests. -->
+<link rel="preload" href="../assets/fonts/archivo-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<!-- /FONTS -->
+<link rel="stylesheet" href="../assets/css/site.css">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "Organization",
+   "@id": "https://jackfriend383-boop.github.io/OFS-T/#organization",
+   "name": "OFS/T",
+   "url": "https://jackfriend383-boop.github.io/OFS-T/",
+   "logo": {
+    "@type": "ImageObject",
+    "url": "https://jackfriend383-boop.github.io/OFS-T/assets/img/icons/OFST-icon-white-on-black-512px.png",
+    "width": 512,
+    "height": 512
+   },
+   "description": "Kits de autocolantes em vinil pré-cortados para a porta e o vidro lateral traseiro do Citroën Ami. Escolha um design, defina duas cores e veja-o no seu carro antes de encomendar."
+  },
+  {
+   "@type": "WebSite",
+   "@id": "https://jackfriend383-boop.github.io/OFS-T/#website",
+   "name": "OFS/T",
+   "url": "https://jackfriend383-boop.github.io/OFS-T/",
+   "inLanguage": [
+    "pt-PT",
+    "en"
+   ],
+   "publisher": {
+    "@id": "https://jackfriend383-boop.github.io/OFS-T/#organization"
+   }
+  },
+  {
+   "@type": "WebPage",
+   "@id": "https://jackfriend383-boop.github.io/OFS-T/admin/#webpage",
+   "url": "https://jackfriend383-boop.github.io/OFS-T/admin/",
+   "name": "Administração de encomendas — OFS/T",
+   "inLanguage": "pt-PT",
+   "isPartOf": {
+    "@id": "https://jackfriend383-boop.github.io/OFS-T/#website"
+   }
+  }
+ ]
+}
+</script>
+<script src="../assets/js/data.js" defer></script>
+<script src="../assets/js/i18n.js" defer></script>
+<script src="../assets/js/config.js" defer></script>
+<script src="../assets/js/backend.js" defer></script>
+<script src="../assets/js/core.js" defer></script>
+<script src="../assets/js/motion.js" defer></script>
+<script src="../assets/js/car.js" defer></script>
+<script src="../assets/js/mold-data.js" defer></script>
+<script src="../assets/js/admin.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Saltar para o conteúdo</a>
+<header class="top">
+  <a href="../" class="brand" aria-label="OFS/T — página inicial"><img src="../assets/img/OFST-icon-white.svg" alt="" width="34" height="34"><span>OFS/T</span></a>
+  <nav class="nav" id="nav" aria-label="Principal">
+    <a href="../" data-r="home">Início</a>
+    <a href="../shop/" data-r="shop">Loja</a>
+    <a href="../configurator/" data-r="configurator">Configurador</a>
+    <a href="../about/" data-r="about">Sobre</a>
+    <span class="nav-ink" id="navInk"></span>
+  </nav>
+  <div class="tools">
+    <button type="button" class="icon-btn" id="openSearch" aria-label="Pesquisar designs" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></button>
+    <div class="lang" role="group" aria-label="Idioma"><a href="../admin/" hreflang="pt-PT" lang="pt-PT" data-lang="pt" aria-current="true">PT<span class="sr"> Português</span></a><span class="sep" aria-hidden="true">|</span><a href="../en/admin/" hreflang="en" lang="en" data-lang="en">EN<span class="sr"> English</span></a></div>
+    <button type="button" class="icon-btn theme-btn" id="themeBtn" aria-label="Mudar para o tema claro"><svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg><svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg></button>
+    <button type="button" class="icon-btn" id="openCart" aria-label="Abrir carrinho" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h2.2l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.6 8H6.1"/><circle cx="9.5" cy="20" r="1.2"/><circle cx="17" cy="20" r="1.2"/></svg><span class="badge" id="cartCount" aria-hidden="true">0</span></button>
+    <button type="button" class="icon-btn menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+</header>
+<nav class="mnav" id="mnav" aria-label="Menu móvel">
+  <a href="../" data-r="home">Início</a><a href="../shop/" data-r="shop">Loja</a><a href="../configurator/" data-r="configurator">Configurador</a><a href="../about/" data-r="about">Sobre</a><div class="mlang" role="group" aria-label="Idioma"><a href="../admin/" hreflang="pt-PT" lang="pt-PT" data-lang="pt" aria-current="true">PT<span class="sr"> Português</span></a><a href="../en/admin/" hreflang="en" lang="en" data-lang="en">EN<span class="sr"> English</span></a></div>
+</nav>
+
+<main id="main" tabindex="-1">
+<section class="view adm" data-view="admin">
+  <div class="page-head">
+    <span class="eyebrow">Administração</span>
+    <h1 class="display">Encomendas</h1>
+    <p class="muted adm-lead">Cada kit de porta é colocado no molde de impressão com as cores escolhidas pelo cliente. Descarregue um PNG (transparente, 6000&nbsp;px de largura) ou um SVG com uma camada CutContour a magenta.</p>
+  </div>
+  <div class="section adm-body">
+    <p class="adm-empty" id="admBoot">A carregar…</p>
+
+    <div class="adm-panel" id="admSetup" hidden>
+      <h2 tabindex="-1">As encomendas online ainda não estão ativas</h2>
+      <p>As encomendas ficam guardadas numa base de dados gratuita da Supabase que só o proprietário pode ler. Para a ativar:</p>
+      <ol class="adm-steps">
+        <li>Crie um projeto na Supabase (região: UE, p. ex. Frankfurt).</li>
+        <li>Abra o <b>SQL Editor</b>, cole o conteúdo de <code>supabase/schema.sql</code> do repositório e clique em <b>Run</b>.</li>
+        <li>Em <b>Authentication</b>, desative os registos públicos e adicione-se como utilizador (<b>Users → Add user</b>).</li>
+        <li>Copie o UID do seu utilizador e execute <code>insert into public.admins (user_id) values ('YOUR-UID');</code> no SQL Editor.</li>
+        <li>Copie o <b>Project URL</b> e a chave <b>anon public</b> (ou publishable) para <code>src/data/site.json</code> (<code>supabaseUrl</code>, <code>supabaseAnonKey</code>). Nunca a chave <code>service_role</code> / secreta.</li>
+        <li>Execute <code>python tools/build.py</code> e depois faça commit e push.</li>
+      </ol>
+      <p class="adm-note">O guia completo está em <code>SUPABASE-SETUP.md</code>. A ferramenta de ficheiros de impressão abaixo funciona sem base de dados.</p>
+    </div>
+
+    <form class="adm-panel adm-login" id="admLogin" novalidate hidden aria-labelledby="admLoginTitle">
+      <h2 id="admLoginTitle" tabindex="-1">Iniciar sessão</h2>
+      <div class="co-f"><label for="admEmail">Email</label><input class="field" id="admEmail" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required></div>
+      <div class="co-f"><label for="admPass">Palavra-passe</label><input class="field" id="admPass" name="password" type="password" autocomplete="current-password" required></div>
+      <p class="err" id="admLoginErr" role="alert"></p>
+      <button class="btn btn-primary" type="submit" id="admLoginBtn">Iniciar sessão</button>
+    </form>
+
+    <div class="adm-panel" id="admLocked" hidden>
+      <h2 tabindex="-1">Esta conta não é de administrador</h2>
+      <p class="muted">Tem sessão iniciada, mas esta conta não consta da tabela <code>admins</code>, por isso não são apresentadas encomendas.</p>
+      <button class="btn btn-ghost" type="button" data-signout>Terminar sessão</button>
+    </div>
+
+    <div id="admMain" hidden>
+      <h2 class="sr" id="admListTitle" tabindex="-1">Lista de encomendas</h2>
+      <div class="adm-bar">
+        <span class="adm-note" id="admWho"></span>
+        <button class="btn btn-ghost" type="button" id="admRefresh">Atualizar</button>
+        <button class="btn btn-ghost" type="button" data-signout>Terminar sessão</button>
+      </div>
+      <p class="adm-note" id="admMsg" role="status" aria-live="polite"></p>
+      <div class="adm-stats" id="admStats"></div>
+      <div class="orders" id="admOrders"></div>
+    </div>
+
+    <section class="adm-tool" aria-labelledby="admToolTitle">
+      <h2 id="admToolTitle">Ficheiro de molde de um design</h2>
+      <p class="adm-note">Um ficheiro de impressão de teste nas cores predefinidas do design, para verificar a configuração da impressora.</p>
+      <div class="adm-bar">
+        <label for="admDesign">Design</label>
+        <select class="field adm-select" id="admDesign"></select>
+        <button class="btn btn-primary" type="button" id="admTestPng">Descarregar PNG</button>
+        <button class="btn btn-ghost" type="button" id="admTestSvg">SVG + linha de corte</button>
+      </div>
+      <div class="moldp adm-test-prev" id="admTestPrev"></div>
+    </section>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div style="display:grid;gap:10px;align-content:start"><a href="../" class="brand" aria-label="OFS/T — página inicial"><img src="../assets/img/OFST-icon-white.svg" alt="" width="34" height="34"><span>OFS/T</span></a><span style="max-width:40ch">Kits de autocolantes independentes para o Citroën Ami. Sem qualquer ligação à Citroën ou à Stellantis.</span>
+    <!-- Business details: filled in by tools/build.py from src/data/site.json (legalName, nif, address, email). Edit them there (see LEGAL-TODO.md). -->
+    <address style="font-style:normal;font-size:12.5px;line-height:1.55;max-width:44ch">OFS/T é a designação comercial de [NOME LEGAL], NIF [NIF]<br>[MORADA], [CÓDIGO POSTAL] [LOCALIDADE], Portugal<br>Email: [EMAIL DE CONTACTO]</address></div>
+  <div><h2>Loja</h2><a href="../shop/">Todos os designs</a><a href="../configurator/">Configurador</a></div>
+  <div><h2>Ajuda</h2><a href="../about/">Aplicação e cuidados</a><a href="../about/#faq">Perguntas frequentes</a></div>
+  <div><h2>Legal</h2><a href="../privacy/">Privacidade</a><a href="../terms/">Condições de venda</a><a href="../refunds/">Reembolsos e devoluções</a><a href="../cookies/">Cookies</a><a href="https://www.livroreclamacoes.pt" rel="noopener">Livro de Reclamações</a><span style="display:block;margin-top:8px;font-size:12px;max-width:30ch">A plataforma europeia de resolução de litígios em linha (RLL) foi encerrada em julho de 2025. Para a resolução extrajudicial de litígios, consulte as nossas <a href="../terms/#disputes" style="display:inline;padding:0;text-decoration:underline">condições de venda</a>.</span></div>
+</footer>
+
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+  <div class="drawer-head"><h2 id="drawerTitle" tabindex="-1">O seu carrinho</h2><button type="button" class="icon-btn" id="closeCart" aria-label="Fechar carrinho"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="drawer-body" id="cartBody"></div>
+  <div class="drawer-foot" id="cartFoot"></div>
+  <p class="sr" id="cartLive" role="status" aria-live="polite"></p>
+</div>
+<div class="search" id="search" role="dialog" aria-modal="true" aria-label="Pesquisar designs">
+  <input id="searchInput" type="text" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="slist" placeholder="Pesquisar designs, p. ex. corrida, retro, camuflado" autocomplete="off" spellcheck="false" aria-label="Pesquisar designs">
+  <div class="sres" id="sres"><div id="slist" role="listbox" aria-label="Designs"></div><p class="muted" id="sempty" style="padding:14px;margin:0" hidden></p></div>
+  <p class="sr" id="sresCount" role="status" aria-live="polite"></p>
+</div>
+<div class="toast" id="toast"><span id="toastMsg" role="status" aria-live="polite"></span><button type="button" id="toastBtn" tabindex="-1" aria-hidden="true">Ver carrinho</button></div>
+<div class="sr" id="live" role="status" aria-live="polite"></div>
+</body>
+</html>

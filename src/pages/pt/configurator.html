@@ -1,0 +1,88 @@
+<section class="view" data-view="configurator">
+  <div class="cfg">
+    <aside class="side" aria-label="Opções">
+      <a href="{{root}}shop/" class="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M19 12H5m5-5-5 5 5 5"/></svg>Voltar aos designs</a>
+      <h1 class="display">Personalize<br>o seu Ami</h1>
+      <p>Escolha um design, ajuste as cores e veja o seu Ami mudar em tempo real.</p>
+
+      <div class="opt"><span class="num" aria-hidden="true">1</span><div class="opt-body">
+        <div class="opt-title"><span class="label" id="optModelLbl">Versão do Ami</span></div>
+        <div class="seg" id="segModel" data-i="0" role="group" aria-labelledby="optModelLbl"><span class="knob" aria-hidden="true"></span><button type="button" data-v="qs" aria-pressed="true">QuickSilver</button><button type="button" data-v="pop" aria-pressed="false">Pop</button></div>
+      </div></div>
+
+      <div class="opt"><span class="num" aria-hidden="true">2</span><div class="opt-body">
+        <div class="opt-title"><span class="label" id="optDesignLbl">Design</span><button type="button" class="link-btn" id="jumpPicker" aria-label="Explorar designs">Explorar</button></div>
+        <span class="opt-val" id="optDesign">{{d_name}} · {{d_cat}}</span>
+      </div></div>
+
+      <div class="opt"><span class="num" aria-hidden="true">3</span><div class="opt-body">
+        <div class="opt-title"><span class="label">Cores do vinil</span></div>
+        <div class="opt-body" id="swWrap"{{sw_hidden}}>
+          <div class="sub-label"><span id="c1Label">{{c1_label}}</span><span id="c1Name">{{c1_name}}</span></div>
+          <div class="sw-row" id="c1Row" role="radiogroup" aria-labelledby="c1Label">{{c1_swatches}}</div>
+          <div class="sub-label"><span id="c2Label">{{c2_label}}</span><span id="c2Name">{{c2_name}}</span></div>
+          <div class="sw-row" id="c2Row" role="radiogroup" aria-labelledby="c2Label">{{c2_swatches}}</div>
+        </div>
+        <span class="opt-val" id="fixedNote"{{fixed_hidden}}>Esta arte é impressa nas suas próprias cores.</span>
+      </div></div>
+
+      <div class="opt"><span class="num" aria-hidden="true">4</span><div class="opt-body">
+        <div class="opt-title"><span class="label">Acabamento e kit</span></div>
+        <div class="seg" id="segFinish" data-i="0" role="group" aria-label="Acabamento"><span class="knob" aria-hidden="true"></span><button type="button" data-v="matte" aria-pressed="true">Mate</button><button type="button" data-v="gloss" aria-pressed="false">Brilhante</button></div>
+        <div class="seg" id="segKit" data-i="0" role="group" aria-label="Tamanho do kit"><span class="knob" aria-hidden="true"></span><button type="button" data-v="one" aria-pressed="true">Um lado</button><button type="button" data-v="both" aria-pressed="false">Os dois +{{x_second_fmt}}</button></div>
+      </div></div>
+
+      <div class="opt"><span class="num" aria-hidden="true">5</span><div class="opt-body">
+        <div class="opt-title"><span class="label" id="numLbl">Texto do emblema</span><button type="button" class="toggle" id="numToggle" role="switch" aria-checked="false" aria-labelledby="numLbl"></button></div>
+        <label class="opt-val" for="numInput" id="numHint">O seu texto no emblema da porta, +{{x_badge_fmt}}</label>
+        <input class="field" id="numInput" maxlength="8" placeholder="Até 8 caracteres" value="AMI" disabled autocomplete="off" spellcheck="false" autocapitalize="characters" aria-labelledby="numLbl numHint">
+        <p class="err" id="numErr" role="alert" hidden></p>
+      </div></div>
+    </aside>
+
+    <section class="stage" id="stage" aria-label="Pré-visualização">
+      <div class="stage-tag" id="stageTag"><span class="eyebrow" id="stCat">{{d_cat}}</span><strong id="stName">{{d_name}}</strong><span id="stTag">{{d_tag}}</span></div>
+      <div class="stage-car" id="cfgCar"><svg class="car-svg" viewBox="530 250 1080 646" aria-hidden="true" focusable="false"></svg></div>
+      <button type="button" class="stage-arrow prev" id="prevD" aria-label="Design anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="m15 6-6 6 6 6"/></svg></button>
+      <button type="button" class="stage-arrow next" id="nextD" aria-label="Design seguinte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6"/></svg></button>
+      <div class="stage-ctrl">
+        <div class="ctrl-group">
+          <button type="button" id="btnReplay" title="Repetir a entrada do carro" aria-label="Repetir a entrada do carro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4"/></svg></button>
+        </div>
+      </div>
+      <div class="views" id="views" role="group" aria-label="Vista da câmara">
+        <button type="button" data-v="full" aria-pressed="true">Carro inteiro</button><button type="button" data-v="door" aria-pressed="false">Porta</button><button type="button" data-v="window" aria-pressed="false">Vidro traseiro</button>
+      </div>
+      <div class="stage-hint mono" aria-hidden="true">← → para mudar de design</div>
+    </section>
+
+    <aside class="summary" aria-labelledby="sumTitle">
+      <p class="display kicker">Carro pequeno.<br>Grande personalidade.</p>
+      <span class="rule"></span>
+      <p class="muted" style="margin:-6px 0 0">O mesmo Ami. Outra atitude.</p>
+      <h2 class="sr" id="sumTitle">O seu kit</h2>
+      <div class="card">
+        <div><h3 id="sumName">{{d_name}}</h3><span class="muted" style="font-size:12.5px" id="sumSub">{{sum_sub}}</span></div>
+        <ul class="lines" id="sumLines">{{sum_lines}}</ul>
+        <div class="total"><span class="muted">Total</span><strong id="sumTotal" data-v="{{d_price}}">{{d_price_fmt}}</strong></div>
+        <button type="button" class="btn btn-primary" id="addCart">Adicionar ao carrinho</button>
+        <p class="pers-note" id="persNote" hidden>Kit personalizado: é feito de acordo com as suas escolhas, por isso não pode ser <a href="{{root}}refunds/#personalised">devolvido</a> por mudança de opinião. Os kits com defeito estão sempre cobertos.</p>
+        <div class="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7"/><circle cx="6" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/></svg><span>Feito por encomenda<br>Portes e prazos de entrega indicados ao finalizar a compra</span></div>
+      </div>
+      <p class="sr" id="sumLive" role="status" aria-live="polite"></p>
+      <dl class="specs">
+        <dt>Vinil</dt><dd>Vinil de exterior, mate ou brilhante</dd>
+        <dt>Painéis</dt><dd>Painel da porta + vidro traseiro, por lado</dd>
+        <dt>Inclui</dt><dd>Guia de aplicação passo a passo</dd>
+      </dl>
+    </aside>
+
+    <section class="picker" id="picker" aria-labelledby="pickerTitle">
+      <div class="picker-head"><h2 id="pickerTitle">Escolha um design</h2><div class="tabs" role="group" id="cfgTabs" aria-label="Filtrar por categoria">{{cfg_tabs}}</div></div>
+      <div class="strip" id="strip" role="group" aria-label="Designs">
+{{strip_cards}}
+      </div>
+    </section>
+  </div>
+  <div class="mbar"><div><span class="eyebrow" id="mName">{{d_name}}</span><br><strong id="mTotal" data-v="{{d_price}}">{{d_price_fmt}}</strong></div><button type="button" class="btn btn-primary" id="mAdd">Adicionar ao carrinho</button></div>
+</section>

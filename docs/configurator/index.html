@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Security: see SECURITY.md. 'unsafe-inline' is for styles only (style="" attributes in markup and JS templates); scripts are 'self' only. frame-ancestors cannot be set in a meta tag: set it as an HTTP header at the host. connect-src gets the Supabase origin from site.json when the order backend is configured (tools/build.py). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Configurador: crie o kit do seu Ami — OFS/T</title>
+<meta name="description" content="Crie o seu kit de autocolantes para o Citroën Ami em direto, num Ami QuickSilver ou Ami Pop: escolha o design, duas cores de vinil, acabamento mate ou brilhante, um ou os dois lados e texto personalizado no emblema, e adicione-o ao carrinho.">
+<link rel="canonical" href="https://jackfriend383-boop.github.io/OFS-T/configurator/">
+<!-- Languages: pt-PT (default, site root) and English (/en/). Strings: src/i18n/*.json. -->
+<link rel="alternate" hreflang="pt-PT" href="https://jackfriend383-boop.github.io/OFS-T/configurator/">
+<link rel="alternate" hreflang="en" href="https://jackfriend383-boop.github.io/OFS-T/en/configurator/">
+<link rel="alternate" hreflang="x-default" href="https://jackfriend383-boop.github.io/OFS-T/configurator/">
+<meta name="theme-color" content="#0B0D0E" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EEF0EC" media="(prefers-color-scheme: light)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OFS/T">
+<meta property="og:locale" content="pt_PT">
+<meta property="og:locale:alternate" content="en_GB">
+<meta property="og:title" content="Configurador: crie o kit do seu Ami — OFS/T">
+<meta property="og:description" content="Crie o seu kit de autocolantes para o Citroën Ami em direto, num Ami QuickSilver ou Ami Pop: escolha o design, duas cores de vinil, acabamento mate ou brilhante, um ou os dois lados e texto personalizado no emblema, e adicione-o ao carrinho.">
+<meta property="og:url" content="https://jackfriend383-boop.github.io/OFS-T/configurator/">
+<meta property="og:image" content="https://jackfriend383-boop.github.io/OFS-T/assets/img/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Logótipo OFS/T">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Configurador: crie o kit do seu Ami — OFS/T">
+<meta name="twitter:description" content="Crie o seu kit de autocolantes para o Citroën Ami em direto, num Ami QuickSilver ou Ami Pop: escolha o design, duas cores de vinil, acabamento mate ou brilhante, um ou os dois lados e texto personalizado no emblema, e adicione-o ao carrinho.">
+<meta name="twitter:image" content="https://jackfriend383-boop.github.io/OFS-T/assets/img/og-image.png">
+<link rel="icon" href="../favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/img/icons/OFST-icon-white-on-black-32px.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../assets/img/icons/OFST-icon-white-on-black-192px.png">
+<link rel="icon" type="image/png" sizes="512x512" href="../assets/img/icons/OFST-icon-white-on-black-512px.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/img/icons/OFST-icon-white-on-black-180px.png">
+<link rel="manifest" href="../site.webmanifest">
+<!-- Theme preload: must stay synchronous and before the stylesheet to avoid a flash of the wrong theme. -->
+<script src="../assets/js/theme-init.js"></script>
+<!-- FONTS: self-hosted in assets/fonts (SIL OFL 1.1); @font-face rules are in the FONTS block at the top of site.css. No third-party font requests. -->
+<link rel="preload" href="../assets/fonts/archivo-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<!-- /FONTS -->
+<link rel="stylesheet" href="../assets/css/site.css">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "Organization",
+   "@id": "https://jackfriend383-boop.github.io/OFS-T/#organization",
+   "name": "OFS/T",
+   "url": "https://jackfriend383-boop.github.io/OFS-T/",
+   "logo": {
+    "@type": "ImageObject",
+    "url": "https://jackfriend383-boop.github.io/OFS-T/assets/img/icons/OFST-icon-white-on-black-512px.png",
+    "width": 512,
+    "height": 512
+   },
+   "description": "Kits de autocolantes em vinil pré-cortados para a porta e o vidro lateral traseiro do Citroën Ami. Escolha um design, defina duas cores e veja-o no seu carro antes de encomendar."
+  },
+  {
+   "@type": "WebSite",
+   "@id": "https://jackfriend383-boop.github.io/OFS-T/#website",
+   "name": "OFS/T",
+   "url": "https://jackfriend383-boop.github.io/OFS-T/",
+   "inLanguage": [
+    "pt-PT",
+    "en"
+   ],
+   "publisher": {
+    "@id": "https://jackfriend383-boop.github.io/OFS-T/#organization"
+   }
+  },
+  {
+   "@type": "WebPage",
+   "@id": "https://jackfriend383-boop.github.io/OFS-T/configurator/#webpage",
+   "url": "https://jackfriend383-boop.github.io/OFS-T/configurator/",
+   "name": "Configurador: crie o kit do seu Ami — OFS/T",
+   "inLanguage": "pt-PT",
+   "isPartOf": {
+    "@id": "https://jackfriend383-boop.github.io/OFS-T/#website"
+   }
+  },
+  {
+   "@type": "BreadcrumbList",
+   "itemListElement": [
+    {
+     "@type": "ListItem",
+     "position": 1,
+     "name": "Início",
+     "item": "https://jackfriend383-boop.github.io/OFS-T/"
+    },
+    {
+     "@type": "ListItem",
+     "position": 2,
+     "name": "Configurador",
+     "item": "https://jackfriend383-boop.github.io/OFS-T/configurator/"
+    }
+   ]
+  }
+ ]
+}
+</script>
+<link rel="preload" as="image" href="../assets/img/ami-side.webp" type="image/webp">
+<script src="../assets/js/data.js" defer></script>
+<script src="../assets/js/i18n.js" defer></script>
+<script src="../assets/js/config.js" defer></script>
+<script src="../assets/js/backend.js" defer></script>
+<script src="../assets/js/core.js" defer></script>
+<script src="../assets/js/motion.js" defer></script>
+<script src="../assets/js/car.js" defer></script>
+<script src="../assets/js/configurator.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Saltar para o conteúdo</a>
+<header class="top">
+  <a href="../" class="brand" aria-label="OFS/T — página inicial"><img src="../assets/img/OFST-icon-white.svg" alt="" width="34" height="34"><span>OFS/T</span></a>
+  <nav class="nav" id="nav" aria-label="Principal">
+    <a href="../" data-r="home">Início</a>
+    <a href="../shop/" data-r="shop">Loja</a>
+    <a href="../configurator/" data-r="configurator" aria-current="page">Configurador</a>
+    <a href="../about/" data-r="about">Sobre</a>
+    <span class="nav-ink" id="navInk"></span>
+  </nav>
+  <div class="tools">
+    <button type="button" class="icon-btn" id="openSearch" aria-label="Pesquisar designs" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></button>
+    <div class="lang" role="group" aria-label="Idioma"><a href="../configurator/" hreflang="pt-PT" lang="pt-PT" data-lang="pt" aria-current="true">PT<span class="sr"> Português</span></a><span class="sep" aria-hidden="true">|</span><a href="../en/configurator/" hreflang="en" lang="en" data-lang="en">EN<span class="sr"> English</span></a></div>
+    <button type="button" class="icon-btn theme-btn" id="themeBtn" aria-label="Mudar para o tema claro"><svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg><svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg></button>
+    <button type="button" class="icon-btn" id="openCart" aria-label="Abrir carrinho" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h2.2l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.6 8H6.1"/><circle cx="9.5" cy="20" r="1.2"/><circle cx="17" cy="20" r="1.2"/></svg><span class="badge" id="cartCount" aria-hidden="true">0</span></button>
+    <button type="button" class="icon-btn menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+</header>
+<nav class="mnav" id="mnav" aria-label="Menu móvel">
+  <a href="../" data-r="home">Início</a><a href="../shop/" data-r="shop">Loja</a><a href="../configurator/" data-r="configurator" aria-current="page">Configurador</a><a href="../about/" data-r="about">Sobre</a><div class="mlang" role="group" aria-label="Idioma"><a href="../configurator/" hreflang="pt-PT" lang="pt-PT" data-lang="pt" aria-current="true">PT<span class="sr"> Português</span></a><a href="../en/configurator/" hreflang="en" lang="en" data-lang="en">EN<span class="sr"> English</span></a></div>
+</nav>
+
+<main id="main" tabindex="-1">
+<section class="view" data-view="configurator">
+  <div class="cfg">
+    <aside class="side" aria-label="Opções">
+      <a href="../shop/" class="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M19 12H5m5-5-5 5 5 5"/></svg>Voltar aos designs</a>
+      <h1 class="display">Personalize<br>o seu Ami</h1>
+      <p>Escolha um design, ajuste as cores e veja o seu Ami mudar em tempo real.</p>
+
+      <div class="opt"><span class="num" aria-hidden="true">1</span><div class="opt-body">
+        <div class="opt-title"><span class="label" id="optModelLbl">Versão do Ami</span></div>
+        <div class="seg" id="segModel" data-i="0" role="group" aria-labelledby="optModelLbl"><span class="knob" aria-hidden="true"></span><button type="button" data-v="qs" aria-pressed="true">QuickSilver</button><button type="button" data-v="pop" aria-pressed="false">Pop</button></div>
+      </div></div>
+
+      <div class="opt"><span class="num" aria-hidden="true">2</span><div class="opt-body">
+        <div class="opt-title"><span class="label" id="optDesignLbl">Design</span><button type="button" class="link-btn" id="jumpPicker" aria-label="Explorar designs">Explorar</button></div>
+        <span class="opt-val" id="optDesign">Flame Camo · Assinatura</span>
+      </div></div>
+
+      <div class="opt"><span class="num" aria-hidden="true">3</span><div class="opt-body">
+        <div class="opt-title"><span class="label">Cores do vinil</span></div>
+        <div class="opt-body" id="swWrap">
+          <div class="sub-label"><span id="c1Label">Tom claro</span><span id="c1Name">Vermelho Chama</span></div>
+          <div class="sw-row" id="c1Row" role="radiogroup" aria-labelledby="c1Label"><button type="button" class="sw" style="--c:#D4F23A" data-k="volt" role="radio" aria-checked="false" tabindex="-1" title="Lima" aria-label="Lima"></button><button type="button" class="sw" style="--c:#6FDCEB" data-k="ice" role="radio" aria-checked="false" tabindex="-1" title="Gelo" aria-label="Gelo"></button><button type="button" class="sw" style="--c:#FF6A2B" data-k="ember" role="radio" aria-checked="false" tabindex="-1" title="Brasa" aria-label="Brasa"></button><button type="button" class="sw" style="--c:#9B7BFF" data-k="violet" role="radio" aria-checked="false" tabindex="-1" title="Violeta" aria-label="Violeta"></button><button type="button" class="sw" style="--c:#FF5C8D" data-k="rose" role="radio" aria-checked="false" tabindex="-1" title="Rosa" aria-label="Rosa"></button><button type="button" class="sw" style="--c:#F2B83A" data-k="gold" role="radio" aria-checked="false" tabindex="-1" title="Dourado" aria-label="Dourado"></button><button type="button" class="sw" style="--c:#F1F0EA" data-k="chalk" role="radio" aria-checked="false" tabindex="-1" title="Giz" aria-label="Giz"></button><button type="button" class="sw" style="--c:#8C938E" data-k="stone" role="radio" aria-checked="false" tabindex="-1" title="Pedra" aria-label="Pedra"></button><button type="button" class="sw" style="--c:#2B2F33" data-k="graphite" role="radio" aria-checked="false" tabindex="-1" title="Grafite" aria-label="Grafite"></button><button type="button" class="sw" style="--c:#E42404" data-k="flame" role="radio" aria-checked="true" tabindex="0" title="Vermelho Chama" aria-label="Vermelho Chama"></button><button type="button" class="sw" style="--c:#B41C04" data-k="crimson" role="radio" aria-checked="false" tabindex="-1" title="Carmesim" aria-label="Carmesim"></button><button type="button" class="sw" style="--c:#147CFA" data-k="azure" role="radio" aria-checked="false" tabindex="-1" title="Azul Celeste" aria-label="Azul Celeste"></button><button type="button" class="sw" style="--c:#0454E2" data-k="cobalt" role="radio" aria-checked="false" tabindex="-1" title="Cobalto" aria-label="Cobalto"></button></div>
+          <div class="sub-label"><span id="c2Label">Tom escuro</span><span id="c2Name">Carmesim</span></div>
+          <div class="sw-row" id="c2Row" role="radiogroup" aria-labelledby="c2Label"><button type="button" class="sw" style="--c:#D4F23A" data-k="volt" role="radio" aria-checked="false" tabindex="-1" title="Lima" aria-label="Lima"></button><button type="button" class="sw" style="--c:#6FDCEB" data-k="ice" role="radio" aria-checked="false" tabindex="-1" title="Gelo" aria-label="Gelo"></button><button type="button" class="sw" style="--c:#FF6A2B" data-k="ember" role="radio" aria-checked="false" tabindex="-1" title="Brasa" aria-label="Brasa"></button><button type="button" class="sw" style="--c:#9B7BFF" data-k="violet" role="radio" aria-checked="false" tabindex="-1" title="Violeta" aria-label="Violeta"></button><button type="button" class="sw" style="--c:#FF5C8D" data-k="rose" role="radio" aria-checked="false" tabindex="-1" title="Rosa" aria-label="Rosa"></button><button type="button" class="sw" style="--c:#F2B83A" data-k="gold" role="radio" aria-checked="false" tabindex="-1" title="Dourado" aria-label="Dourado"></button><button type="button" class="sw" style="--c:#F1F0EA" data-k="chalk" role="radio" aria-checked="false" tabindex="-1" title="Giz" aria-label="Giz"></button><button type="button" class="sw" style="--c:#8C938E" data-k="stone" role="radio" aria-checked="false" tabindex="-1" title="Pedra" aria-label="Pedra"></button><button type="button" class="sw" style="--c:#2B2F33" data-k="graphite" role="radio" aria-checked="false" tabindex="-1" title="Grafite" aria-label="Grafite"></button><button type="button" class="sw" style="--c:#E42404" data-k="flame" role="radio" aria-checked="false" tabindex="-1" title="Vermelho Chama" aria-label="Vermelho Chama"></button><button type="button" class="sw" style="--c:#B41C04" data-k="crimson" role="radio" aria-checked="true" tabindex="0" title="Carmesim" aria-label="Carmesim"></button><button type="button" class="sw" style="--c:#147CFA" data-k="azure" role="radio" aria-checked="false" tabindex="-1" title="Azul Celeste" aria-label="Azul Celeste"></button><button type="button" class="sw" style="--c:#0454E2" data-k="cobalt" role="radio" aria-checked="false" tabindex="-1" title="Cobalto" aria-label="Cobalto"></button></div>
+        </div>
+        <span class="opt-val" id="fixedNote" hidden>Esta arte é impressa nas suas próprias cores.</span>
+      </div></div>
+
+      <div class="opt"><span class="num" aria-hidden="true">4</span><div class="opt-body">
+        <div class="opt-title"><span class="label">Acabamento e kit</span></div>
+        <div class="seg" id="segFinish" data-i="0" role="group" aria-label="Acabamento"><span class="knob" aria-hidden="true"></span><button type="button" data-v="matte" aria-pressed="true">Mate</button><button type="button" data-v="gloss" aria-pressed="false">Brilhante</button></div>
+        <div class="seg" id="segKit" data-i="0" role="group" aria-label="Tamanho do kit"><span class="knob" aria-hidden="true"></span><button type="button" data-v="one" aria-pressed="true">Um lado</button><button type="button" data-v="both" aria-pressed="false">Os dois +29 €</button></div>
+      </div></div>
+
+      <div class="opt"><span class="num" aria-hidden="true">5</span><div class="opt-body">
+        <div class="opt-title"><span class="label" id="numLbl">Texto do emblema</span><button type="button" class="toggle" id="numToggle" role="switch" aria-checked="false" aria-labelledby="numLbl"></button></div>
+        <label class="opt-val" for="numInput" id="numHint">O seu texto no emblema da porta, +9 €</label>
+        <input class="field" id="numInput" maxlength="8" placeholder="Até 8 caracteres" value="AMI" disabled autocomplete="off" spellcheck="false" autocapitalize="characters" aria-labelledby="numLbl numHint">
+        <p class="err" id="numErr" role="alert" hidden></p>
+      </div></div>
+    </aside>
+
+    <section class="stage" id="stage" aria-label="Pré-visualização">
+      <div class="stage-tag" id="stageTag"><span class="eyebrow" id="stCat">Assinatura</span><strong id="stName">Flame Camo</strong><span id="stTag">Chamas em dois tons, recortes a preto</span></div>
+      <div class="stage-car" id="cfgCar"><svg class="car-svg" viewBox="530 250 1080 646" aria-hidden="true" focusable="false"></svg></div>
+      <button type="button" class="stage-arrow prev" id="prevD" aria-label="Design anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="m15 6-6 6 6 6"/></svg></button>
+      <button type="button" class="stage-arrow next" id="nextD" aria-label="Design seguinte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6"/></svg></button>
+      <div class="stage-ctrl">
+        <div class="ctrl-group">
+          <button type="button" id="btnReplay" title="Repetir a entrada do carro" aria-label="Repetir a entrada do carro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4"/></svg></button>
+        </div>
+      </div>
+      <div class="views" id="views" role="group" aria-label="Vista da câmara">
+        <button type="button" data-v="full" aria-pressed="true">Carro inteiro</button><button type="button" data-v="door" aria-pressed="false">Porta</button><button type="button" data-v="window" aria-pressed="false">Vidro traseiro</button>
+      </div>
+      <div class="stage-hint mono" aria-hidden="true">← → para mudar de design</div>
+    </section>
+
+    <aside class="summary" aria-labelledby="sumTitle">
+      <p class="display kicker">Carro pequeno.<br>Grande personalidade.</p>
+      <span class="rule"></span>
+      <p class="muted" style="margin:-6px 0 0">O mesmo Ami. Outra atitude.</p>
+      <h2 class="sr" id="sumTitle">O seu kit</h2>
+      <div class="card">
+        <div><h3 id="sumName">Flame Camo</h3><span class="muted" style="font-size:12.5px" id="sumSub">Ami QuickSilver · Vermelho Chama / Carmesim · Mate</span></div>
+        <ul class="lines" id="sumLines"><li class=""><span>Kit Flame Camo, um lado</span><span>69 €</span></li></ul>
+        <div class="total"><span class="muted">Total</span><strong id="sumTotal" data-v="69">69 €</strong></div>
+        <button type="button" class="btn btn-primary" id="addCart">Adicionar ao carrinho</button>
+        <p class="pers-note" id="persNote" hidden>Kit personalizado: é feito de acordo com as suas escolhas, por isso não pode ser <a href="../refunds/#personalised">devolvido</a> por mudança de opinião. Os kits com defeito estão sempre cobertos.</p>
+        <div class="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7"/><circle cx="6" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/></svg><span>Feito por encomenda<br>Portes e prazos de entrega indicados ao finalizar a compra</span></div>
+      </div>
+      <p class="sr" id="sumLive" role="status" aria-live="polite"></p>
+      <dl class="specs">
+        <dt>Vinil</dt><dd>Vinil de exterior, mate ou brilhante</dd>
+        <dt>Painéis</dt><dd>Painel da porta + vidro traseiro, por lado</dd>
+        <dt>Inclui</dt><dd>Guia de aplicação passo a passo</dd>
+      </dl>
+    </aside>
+
+    <section class="picker" id="picker" aria-labelledby="pickerTitle">
+      <div class="picker-head"><h2 id="pickerTitle">Escolha um design</h2><div class="tabs" role="group" id="cfgTabs" aria-label="Filtrar por categoria"><button type="button" aria-pressed="true" data-c="All">Todos</button><button type="button" aria-pressed="false" data-c="Signature">Assinatura</button><button type="button" aria-pressed="false" data-c="Street">Urbano</button><button type="button" aria-pressed="false" data-c="Racing">Corrida</button><button type="button" aria-pressed="false" data-c="Retro">Retro</button><button type="button" aria-pressed="false" data-c="Minimal">Minimalista</button></div></div>
+      <div class="strip" id="strip" role="group" aria-label="Designs">
+<button type="button" class="pcard" data-id="flame-red" data-cat="Signature" aria-pressed="true"><span class="mini" data-thumb="flame-red"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Flame Camo</b><small><span>Chamas em dois tons, recortes a preto</span><span class="price">69 €</span></small></button>
+<button type="button" class="pcard" data-id="flame-blue" data-cat="Signature" aria-pressed="false"><span class="mini" data-thumb="flame-blue"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Flame Camo Blue</b><small><span>Chamas em dois tons, recortes a preto</span><span class="price">69 €</span></small></button>
+<button type="button" class="pcard" data-id="flame-stealth" data-cat="Signature" aria-pressed="false"><span class="mini" data-thumb="flame-stealth"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Flame Camo Stealth</b><small><span>Grafite com filetes dourados</span><span class="price">69 €</span></small></button>
+<button type="button" class="pcard" data-id="street-flow" data-cat="Street" aria-pressed="false"><span class="mini" data-thumb="street-flow"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Street Flow</b><small><span>Arrojado e limpo</span><span class="price">49 €</span></small></button>
+<button type="button" class="pcard" data-id="racing-lines" data-cat="Racing" aria-pressed="false"><span class="mini" data-thumb="racing-lines"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Racing Lines</b><small><span>Desportivo e dinâmico</span><span class="price">55 €</span></small></button>
+<button type="button" class="pcard" data-id="neon-wave" data-cat="Street" aria-pressed="false"><span class="mini" data-thumb="neon-wave"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Neon Wave</b><small><span>Energia elétrica</span><span class="price">52 €</span></small></button>
+<button type="button" class="pcard" data-id="retro-stripe" data-cat="Retro" aria-pressed="false"><span class="mini" data-thumb="retro-stripe"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Retro Stripe</b><small><span>Toque clássico</span><span class="price">49 €</span></small></button>
+<button type="button" class="pcard" data-id="urban-camo" data-cat="Street" aria-pressed="false"><span class="mini" data-thumb="urban-camo"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Urban Camo</b><small><span>Estilo discreto</span><span class="price">59 €</span></small></button>
+<button type="button" class="pcard" data-id="pixel" data-cat="Street" aria-pressed="false"><span class="mini" data-thumb="pixel"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Pixel</b><small><span>Futuro digital</span><span class="price">54 €</span></small></button>
+<button type="button" class="pcard" data-id="checker" data-cat="Racing" aria-pressed="false"><span class="mini" data-thumb="checker"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Checkered</b><small><span>Energia de linha de meta</span><span class="price">57 €</span></small></button>
+<button type="button" class="pcard" data-id="halftone" data-cat="Retro" aria-pressed="false"><span class="mini" data-thumb="halftone"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Halftone</b><small><span>Textura de tipografia</span><span class="price">52 €</span></small></button>
+<button type="button" class="pcard" data-id="pinstripe" data-cat="Minimal" aria-pressed="false"><span class="mini" data-thumb="pinstripe"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Pinstripe</b><small><span>Detalhe discreto</span><span class="price">39 €</span></small></button>
+<button type="button" class="pcard" data-id="bolt" data-cat="Street" aria-pressed="false"><span class="mini" data-thumb="bolt"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Bolt</b><small><span>Ousado de propósito</span><span class="price">49 €</span></small></button>
+<button type="button" class="pcard" data-id="contour" data-cat="Minimal" aria-pressed="false"><span class="mini" data-thumb="contour"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Contour</b><small><span>Curvas de nível</span><span class="price">45 €</span></small></button>
+<button type="button" class="pcard" data-id="sunset" data-cat="Retro" aria-pressed="false"><span class="mini" data-thumb="sunset"><svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true"></svg></span><b>Sunset 78</b><small><span>Horizonte dos anos 70</span><span class="price">55 €</span></small></button>
+      </div>
+    </section>
+  </div>
+  <div class="mbar"><div><span class="eyebrow" id="mName">Flame Camo</span><br><strong id="mTotal" data-v="69">69 €</strong></div><button type="button" class="btn btn-primary" id="mAdd">Adicionar ao carrinho</button></div>
+</section>
+</main>
+
+<footer class="foot">
+  <div style="display:grid;gap:10px;align-content:start"><a href="../" class="brand" aria-label="OFS/T — página inicial"><img src="../assets/img/OFST-icon-white.svg" alt="" width="34" height="34"><span>OFS/T</span></a><span style="max-width:40ch">Kits de autocolantes independentes para o Citroën Ami. Sem qualquer ligação à Citroën ou à Stellantis.</span>
+    <!-- Business details: filled in by tools/build.py from src/data/site.json (legalName, nif, address, email). Edit them there (see LEGAL-TODO.md). -->
+    <address style="font-style:normal;font-size:12.5px;line-height:1.55;max-width:44ch">OFS/T é a designação comercial de [NOME LEGAL], NIF [NIF]<br>[MORADA], [CÓDIGO POSTAL] [LOCALIDADE], Portugal<br>Email: [EMAIL DE CONTACTO]</address></div>
+  <div><h2>Loja</h2><a href="../shop/">Todos os designs</a><a href="../configurator/">Configurador</a></div>
+  <div><h2>Ajuda</h2><a href="../about/">Aplicação e cuidados</a><a href="../about/#faq">Perguntas frequentes</a></div>
+  <div><h2>Legal</h2><a href="../privacy/">Privacidade</a><a href="../terms/">Condições de venda</a><a href="../refunds/">Reembolsos e devoluções</a><a href="../cookies/">Cookies</a><a href="https://www.livroreclamacoes.pt" rel="noopener">Livro de Reclamações</a><span style="display:block;margin-top:8px;font-size:12px;max-width:30ch">A plataforma europeia de resolução de litígios em linha (RLL) foi encerrada em julho de 2025. Para a resolução extrajudicial de litígios, consulte as nossas <a href="../terms/#disputes" style="display:inline;padding:0;text-decoration:underline">condições de venda</a>.</span></div>
+</footer>
+
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+  <div class="drawer-head"><h2 id="drawerTitle" tabindex="-1">O seu carrinho</h2><button type="button" class="icon-btn" id="closeCart" aria-label="Fechar carrinho"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="drawer-body" id="cartBody"></div>
+  <div class="drawer-foot" id="cartFoot"></div>
+  <p class="sr" id="cartLive" role="status" aria-live="polite"></p>
+</div>
+<div class="search" id="search" role="dialog" aria-modal="true" aria-label="Pesquisar designs">
+  <input id="searchInput" type="text" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="slist" placeholder="Pesquisar designs, p. ex. corrida, retro, camuflado" autocomplete="off" spellcheck="false" aria-label="Pesquisar designs">
+  <div class="sres" id="sres"><div id="slist" role="listbox" aria-label="Designs"></div><p class="muted" id="sempty" style="padding:14px;margin:0" hidden></p></div>
+  <p class="sr" id="sresCount" role="status" aria-live="polite"></p>
+</div>
+<div class="toast" id="toast"><span id="toastMsg" role="status" aria-live="polite"></span><button type="button" id="toastBtn" tabindex="-1" aria-hidden="true">Ver carrinho</button></div>
+<div class="sr" id="live" role="status" aria-live="polite"></div>
+</body>
+</html>
