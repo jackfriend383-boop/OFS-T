@@ -14,4 +14,5 @@ const app = (
   </StrictMode>
 );
 // Prerendered pages are hydrated; the dev server (and any route that wasn't prerendered) renders from scratch.
-if (root.hasChildNodes()) hydrateRoot(root, app); else createRoot(root).render(app);
+// (The dev index.html leaves a bare <!--app--> comment in #root, so test for an element, not for any child node.)
+if (root.firstElementChild) hydrateRoot(root, app); else createRoot(root).render(app);

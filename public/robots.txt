@@ -18,4 +18,4 @@ User-agent: Bytespider
 User-agent: meta-externalagent
 Allow: /
 
-Sitemap: https://YOUR-USERNAME.github.io/ofst-website/sitemap.xml
+Sitemap: https://ofstdesigns.com/sitemap.xml

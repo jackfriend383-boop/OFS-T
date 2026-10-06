@@ -1,4 +1,4 @@
-/* Cart drawer: items, quantity, checkout form, order confirmation. Orders go to the backend (Supabase) when it is configured;
+/* Cart drawer: items, quantity, checkout form, order confirmation. Orders go to the backend (Cloudflare Worker) when it is configured;
    otherwise the form says so and keeps the cart. Only kit configurations are stored in the browser, never personal data. */
 import { Fragment, useEffect, useRef, useState, type ReactNode, type FormEvent } from 'react';
 import { Link } from 'react-router';

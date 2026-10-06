@@ -47,7 +47,7 @@ and `[CONFIRM: …]` = `[CONFIRMAR: …]`.
 | `[CONFIRM: You pay the direct cost of returning the kit / We pay the return postage.]` | refunds §4 |
 | `[NUMBER]` days (damaged in transit) | refunds §7 |
 | `[CONFIRM: the host sets no cookies on this site.]` | cookies §5 |
-| `SITE_URL` (`https://YOUR-USERNAME.github.io/...`) | `src/data/site.json` |
+| `SITE_URL` (`https://ofstdesigns.com`) | `src/data/site.json` |
 | Order database: name **Cloudflare, Inc.** as processor (orders: name, email, address, country, consent flags; D1 jurisdiction/location hint, e.g. EU; Cloudflare DPA accepted), plus retention and any transfer note | privacy §2, §4, §5, §6 (once `CLOUDFLARE-SETUP.md` is done) |
 
 Note: the footer `<address>` is filled in by `src/seo.ts` from `src/data/site.json` (`legalName`, `nif`, `address`,

@@ -44,6 +44,5 @@ set `VITE_BASE=/` and `VITE_SITE_URL=https://your-domain` there.
 
 - `brand/` logos and icons (the ones the site uses are copied into `public/assets/img/`).
 - `worker/` Cloudflare Worker + D1 database for online orders (`worker/schema.sql`; setup steps: `guides/CLOUDFLARE-SETUP.md`).
-- `supabase/` and `guides/SUPABASE-SETUP.md` are the previous Supabase backend, kept for reference only; the site no longer uses them.
 - `guides/LEGAL-TODO.md` placeholders and legal wording to complete before launch.
 - `SECURITY.md` security notes and headers to set if you add a CDN.

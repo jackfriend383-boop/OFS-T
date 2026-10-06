@@ -57,7 +57,7 @@ everywhere with the *Terminar sessão* button.
 ## 5. Allow your website and publish the API
 
 In `worker/wrangler.jsonc`, set `ALLOWED_ORIGINS` to your site's **origin** (no path, no trailing slash), e.g.
-`"https://YOUR-USERNAME.github.io"` for GitHub Pages project sites, or `"https://your-domain.com"`. Only these websites may
+`"https://ofstdesigns.com"`. Only these websites may
 call the API. Then:
 
 ```bash

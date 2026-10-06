@@ -6,8 +6,7 @@
   "observability": { "enabled": true },
   "vars": {
     // Websites allowed to call this API (comma separated, origins only: no path, no trailing slash).
-    // Set the first one to your real site, e.g. https://YOUR-USERNAME.github.io or https://your-domain.com
-    "ALLOWED_ORIGINS": "https://YOUR-USERNAME.github.io,http://localhost:5173"
+    "ALLOWED_ORIGINS": "https://ofstdesigns.com,http://localhost:5173"
   },
   "d1_databases": [
     {
