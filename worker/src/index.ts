@@ -21,6 +21,7 @@ import { sendMail, signInEmail, paidEmail } from './mail';
 
 export interface Env {
   DB: D1Database;
+  ofst_orders?: D1Database;
   ALLOWED_ORIGINS: string;
   SITE_URL: string;               // public site origin used for Stripe's return links, e.g. https://ofstdesigns.com
   STRIPE_SECRET_KEY: string;      // secret: wrangler secret put STRIPE_SECRET_KEY  (sk_test_... then sk_live_...)
@@ -404,6 +405,7 @@ async function deleteMe(env: Env, uid: string) {
 /* ---------- router ---------- */
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
+    if (!env.DB && env.ofst_orders) env.DB = env.ofst_orders;
     const url = new URL(req.url);
     const path = url.pathname.replace(/\/+$/, '');
     try {
