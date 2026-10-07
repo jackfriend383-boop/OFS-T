@@ -6,6 +6,7 @@ import { useApp } from '../state';
 import { COPY } from '../content';
 import { CATS, type Cfg } from '../lib/kit';
 import { CarStage, Thumb, type StageApi } from '../components/Car';
+import { viewIcon } from '../lib/car';
 import { FilterTabs } from '../components/DesignCard';
 import { useFilterFeedback } from '../lib/filter';
 
@@ -74,6 +75,10 @@ export default function Configurator() {
   const [added, setAdded] = useState(false);
   const [sumLive, setSumLive] = useState('');
   const [view, setView] = useState('full');
+  // Preview background: grey studio or the beach. Remembered for this browser tab only.
+  const [scene, setScene] = useState<'studio' | 'beach'>('studio');
+  useEffect(() => { try { if (sessionStorage.getItem('ofst-scene') === 'beach') setScene('beach'); } catch { /* private mode */ } }, []);
+  const toggleScene = () => setScene((v) => { const n = v === 'beach' ? 'studio' : 'beach'; try { sessionStorage.setItem('ofst-scene', n); } catch { /* private mode */ } return n; });
   const api = useRef<StageApi | null>(null);
   const strip = useRef<HTMLDivElement>(null);
   const numInput = useRef<HTMLInputElement>(null);
@@ -95,7 +100,8 @@ export default function Configurator() {
 
   const scrollToCard = useCallback((id: string, smooth: boolean) => {
     const s = strip.current, card = s?.querySelector<HTMLElement>(`.pcard[data-id="${id}"]`);
-    if (s && card && !card.classList.contains('out')) s.scrollTo({ left: card.offsetLeft - s.offsetLeft - 24, behavior: reduced() || !smooth ? 'auto' : 'smooth' });
+    // Only the phone layout scrolls sideways; on wide screens the designs are a grid and nothing needs to move.
+    if (s && card && !card.classList.contains('out') && s.scrollWidth > s.clientWidth + 4) s.scrollTo({ left: card.offsetLeft - s.offsetLeft - 24, behavior: reduced() || !smooth ? 'auto' : 'smooth' });
   }, []);
   const pickDesign = useCallback((id: string, resetColors: boolean, smooth = true) => {
     const x = kit.D(id); if (!x) return;
@@ -180,32 +186,108 @@ export default function Configurator() {
   const addLabel = added ? T('added') : T('addToCart');
   const colourName = (k: string) => kit.COLORS[k].name;
 
+  const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
+  const colourText = d.fixed ? T('originalColours') : `${colourName(cfg.c1)} / ${colourName(cfg.c2)}`;
+  /* "Your selection" rows: label, value, price, and the options card that "Change" scrolls back to. */
+  const rows: [string, string, string, string][] = [
+    [c.design, d.name, money(d.price), 'optDesignCard'],
+    [c.version, kit.modelName(cfg.model), '', 'optModelCard'],
+    [c.colours, colourText, '', 'optColourCard'],
+    [c.finish, cfg.finish === 'gloss' ? c.gloss : c.matte, '', 'optFinishCard'],
+    [c.kitSize, cfg.kit === 'both' ? T('bothSides') : T('oneSide'), cfg.kit === 'both' ? '+' + money(kit.EXTRA.secondSide) : '', 'optFinishCard'],
+    [c.badge, cfg.numberOn && cfg.number ? cfg.number : '–', cfg.numberOn && cfg.number ? '+' + money(kit.EXTRA.badge) : '', 'optBadgeCard'],
+  ];
+  const toggleFull = () => {
+    const el = document.getElementById('stageWrap') as any; if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen?.(); else (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+  };
+  // Dragging the zoomed picture (mouse or touch); a quick swipe on the full view still changes the design on touch screens.
+  const drag = useRef<{ x: number; y: number; id: number } | null>(null);
+  const icon = (d: string) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d={d} /></svg>;
+
   return (
-    <section className="view" data-view="configurator">
+    <section className="view cfgv" data-view="configurator">
+      <div className="cbar">
+        <div className="cbar-l">
+          <Link to={to('home') + '#versions'} className="cbar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M19 12H5m5-5-5 5 5 5" /></svg>{c.back}</Link>
+        </div>
+        <div className="cbar-r">
+          <div className="cbar-price"><Price id="barTotal" value={total} /><small>{c.total}</small></div>
+          <button type="button" className="btn btn-2" onClick={() => jump('summary')}>{c.summaryBtn}</button>
+          <button type="button" className={'btn btn-primary' + (added ? ' done' : '')} id="barAdd" onClick={addCurrent}>{addLabel}</button>
+        </div>
+      </div>
+
       <div className="cfg">
-        <aside className="side" aria-label={c.options}>
-          <Link to={to('shop')} className="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M19 12H5m5-5-5 5 5 5" /></svg>{c.back}</Link>
-          <h1 className="display">{c.h1[0]}<br />{c.h1[1]}</h1>
-          <p>{c.lead}</p>
+        <div className="cfg-media">
+          <div className="stage-wrap" id="stageWrap">
+          <section className={'stage scene-' + scene} id="stage" aria-label={c.preview}
+            onPointerDown={(e) => {
+              if ((e.target as HTMLElement).closest('button')) return;
+              if (api.current?.zoomed()) { drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId }; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); (e.currentTarget as HTMLElement).classList.add('grabbing'); return; }
+              if (e.pointerType !== 'mouse') swipe.current = { x: e.clientX, y: e.clientY };
+            }}
+            onPointerMove={(e) => { const g = drag.current; if (!g || g.id !== e.pointerId) return; api.current?.pan(e.clientX - g.x, e.clientY - g.y); g.x = e.clientX; g.y = e.clientY; }}
+            onPointerCancel={(e) => { swipe.current = null; drag.current = null; (e.currentTarget as HTMLElement).classList.remove('grabbing'); }}
+            onPointerUp={(e) => {
+              if (drag.current) { drag.current = null; (e.currentTarget as HTMLElement).classList.remove('grabbing'); return; }
+              const s = swipe.current; if (!s) return; swipe.current = null; const dx = e.clientX - s.x, dy = e.clientY - s.y; if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) cycle(dx < 0 ? 1 : -1);
+            }}>
+            <div className="stage-tag" id="stageTag" ref={tagRef}><span className="eyebrow" id="stCat">{d.catName || d.cat}</span><strong id="stName">{d.name}</strong><span id="stTag">{d.tag}</span></div>
+            {ready
+              ? <CarStage id="cfgCar" cfg={cfg} apiRef={api} />
+              : <div id="cfgCar"><svg className="car-svg" viewBox="530 250 1080 646" aria-hidden="true" focusable="false" /></div>}
+            <button type="button" className="stage-arrow prev" id="prevD" aria-label={c.prev} onClick={() => cycle(-1)}>{icon('m15 6-6 6 6 6')}</button>
+            <button type="button" className="stage-arrow next" id="nextD" aria-label={c.next} onClick={() => cycle(1)}>{icon('m9 6 6 6-6 6')}</button>
+            <div className="stage-ctrl" role="group" aria-label={c.camera}>
+              <button type="button" id="btnReplay" title={c.replay} aria-label={c.replay} onClick={() => api.current?.replay()}>{icon('M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4')}<span>{c.replay}</span></button>
+              <span className="ctrl-sep" aria-hidden="true" />
+              <button type="button" id="btnZoomOut" title={c.zoomOut} aria-label={c.zoomOut} onClick={() => api.current?.zoom(1.35)}>{icon('M5 12h14')}</button>
+              <button type="button" id="btnZoomIn" title={c.zoomIn} aria-label={c.zoomIn} onClick={() => api.current?.zoom(1 / 1.35)}>{icon('M12 5v14M5 12h14')}</button>
+              <span className="ctrl-sep" aria-hidden="true" />
+              <button type="button" id="btnFull" title={c.fullscreen} aria-label={c.fullscreen} onClick={toggleFull}>{icon('M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5')}</button>
+            </div>
+            <div className="stage-hint" aria-hidden="true">{c.hint}</div>
+          </section>
+          </div>
+          <div className="views" id="views" role="group" aria-label={c.camera}>
+            {c.views.map(([v, t]) => <button key={v} type="button" data-v={v} aria-pressed={view === v} onClick={() => { setView(v); api.current?.view(v); }}><span className={'vi vi-' + v} dangerouslySetInnerHTML={{ __html: viewIcon(cfg.model, v as 'full' | 'door' | 'window') }} />{t}</button>)}
+            <span className="views-sep" aria-hidden="true" />
+            <button type="button" className="scene-btn" id="btnScene" aria-pressed={scene === 'beach'} title={c.scenery} onClick={toggleScene}>
+              <span className="vi vi-scene" aria-hidden="true"><svg viewBox="0 0 64 40" focusable="false"><rect x="3" y="3" width="58" height="34" rx="3" fill="none" stroke="currentColor" strokeWidth="3" /><path d="M8 32 22 18l8 8 6-5 20 11z" fill="currentColor" /><circle cx="45" cy="13" r="4" fill="currentColor" /></svg></span>
+              {c.scenery}: {scene === 'beach' ? c.beach : c.studio}
+            </button>
+          </div>
+        </div>
 
-          <div className="opt"><span className="num" aria-hidden="true">1</span><div className="opt-body">
-            <div className="opt-title"><span className="label" id="optModelLbl">{c.version}</span></div>
+        <div className="cfg-panel" aria-label={c.options} role="region">
+          <header className="cfg-title">
+            <h1 className="eyebrow">{c.h1[0]} {c.h1[1]}</h1>
+            <p className="cfg-name"><span id="optDesign">{d.name}</span><span className="chip">{d.catName || d.cat}</span></p>
+            <p className="muted cfg-lead">{c.lead}</p>
+          </header>
+
+          <section className="ocard" id="optDesignCard" aria-labelledby="pickerTitle">
+            <div className="ocard-head"><h2 id="pickerTitle">{c.choose}</h2><span className="ocard-price">{money(d.price)}</span></div>
+            <div className="picker" id="picker">
+              <FilterTabs id="cfgTabs" cats={CATS} value={cat} onPick={setCat} label={COPY[lang].shop.filter} />
+              <div className="strip" id="strip" role="group" aria-label={c.designsGroup} ref={strip}>
+                {DESIGNS.map((x) => (
+                  <button key={x.id} type="button" className={'pcard' + (cat !== 'All' && x.cat !== cat ? ' out' : '')} data-id={x.id} data-cat={x.cat} aria-pressed={x.id === cfg.design} onClick={() => pickDesign(x.id, true)}>
+                    <Thumb cfg={kit.defaultCfg(x)} /><b>{x.name}</b><small><span>{x.tag}</span><span className="price">{money(x.price)}</span></small>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="ocard" id="optModelCard" aria-labelledby="optModelLbl">
+            <div className="ocard-head"><h2 id="optModelLbl">{c.version}</h2><span className="ocard-val">{kit.modelName(cfg.model)}</span></div>
             <Seg id="segModel" labelledBy="optModelLbl" value={cfg.model} items={[['qs', 'QuickSilver'], ['pop', 'Pop']]} onPick={(v) => update({ model: v as Cfg['model'] })} />
-          </div></div>
+          </section>
 
-          <div className="opt"><span className="num" aria-hidden="true">2</span><div className="opt-body">
-            <div className="opt-title"><span className="label" id="optDesignLbl">{c.design}</span>
-              <button type="button" className="link-btn" id="jumpPicker" aria-label={c.browseAria} onClick={() => {
-                const p = document.getElementById('picker'); if (!p) return;
-                p.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'center' });
-                const sel = strip.current?.querySelector<HTMLElement>('.pcard[aria-pressed="true"]:not(.out)') || strip.current?.querySelector<HTMLElement>('.pcard:not(.out)');
-                if (sel) try { sel.focus({ preventScroll: true }); } catch { sel.focus(); }
-              }}>{c.browse}</button></div>
-            <span className="opt-val" id="optDesign">{d.name} · {d.catName || d.cat}</span>
-          </div></div>
-
-          <div className="opt"><span className="num" aria-hidden="true">3</span><div className="opt-body">
-            <div className="opt-title"><span className="label">{c.colours}</span></div>
+          <section className="ocard" id="optColourCard" aria-labelledby="optColourLbl">
+            <div className="ocard-head"><h2 id="optColourLbl">{c.colours}</h2></div>
             <div className="opt-body" id="swWrap" hidden={!!d.fixed}>
               <div className="sub-label"><span id="c1Label">{T(tones ? 'lightTone' : 'primary')}</span><span id="c1Name">{colourName(cfg.c1)}</span></div>
               <Swatches slot="c1" labelId="c1Label" cfg={cfg} onPick={(k) => update({ c1: k })} />
@@ -213,16 +295,18 @@ export default function Configurator() {
               <Swatches slot="c2" labelId="c2Label" cfg={cfg} onPick={(k) => update({ c2: k })} />
             </div>
             <span className="opt-val" id="fixedNote" hidden={!d.fixed}>{c.fixed}</span>
-          </div></div>
+          </section>
 
-          <div className="opt"><span className="num" aria-hidden="true">4</span><div className="opt-body">
-            <div className="opt-title"><span className="label">{c.finishKit}</span></div>
+          <section className="ocard" id="optFinishCard" aria-labelledby="optFinishLbl">
+            <div className="ocard-head"><h2 id="optFinishLbl">{c.finishKit}</h2></div>
+            <div className="sub-label"><span>{c.finish}</span></div>
             <Seg id="segFinish" label={c.finish} value={cfg.finish} items={[['matte', c.matte], ['gloss', c.gloss]]} onPick={(v) => update({ finish: v as Cfg['finish'] })} />
+            <div className="sub-label"><span>{c.kitSize}</span></div>
             <Seg id="segKit" label={c.kitSize} value={cfg.kit} items={[['one', c.one], ['both', c.both(money(kit.EXTRA.secondSide))]]} onPick={(v) => update({ kit: v as Cfg['kit'] })} />
-          </div></div>
+          </section>
 
-          <div className="opt"><span className="num" aria-hidden="true">5</span><div className="opt-body">
-            <div className="opt-title"><span className="label" id="numLbl">{c.badge}</span>
+          <section className="ocard" id="optBadgeCard">
+            <div className="opt-title"><h2 className="label" id="numLbl">{c.badge}</h2>
               <button type="button" className="toggle" id="numToggle" role="switch" aria-checked={cfg.numberOn} aria-labelledby="numLbl"
                 onClick={() => { update({ numberOn: !cfg.numberOn }); setNumErr(''); if (!cfg.numberOn) requestAnimationFrame(() => numInput.current?.focus()); }} /></div>
             <label className="opt-val" htmlFor="numInput" id="numHint">{c.badgeHint(money(kit.EXTRA.badge))}</label>
@@ -230,56 +314,52 @@ export default function Configurator() {
               aria-labelledby="numLbl numHint" aria-invalid={numErr && cfg.numberOn ? true : undefined} aria-describedby={numErr && cfg.numberOn ? 'numErr' : undefined}
               onChange={(e) => { const v = kit.cleanNumber(e.target.value); if (v) setNumErr(''); update({ number: v }); }} />
             <p className="err" id="numErr" role="alert" hidden={!numErr || !cfg.numberOn}>{numErr}</p>
-          </div></div>
-        </aside>
+          </section>
+        </div>
+      </div>
 
-        <section className="stage" id="stage" aria-label={c.preview}
-          onPointerDown={(e) => { if (e.pointerType !== 'mouse' && !(e.target as HTMLElement).closest('button')) swipe.current = { x: e.clientX, y: e.clientY }; }}
-          onPointerCancel={() => (swipe.current = null)}
-          onPointerUp={(e) => { const s = swipe.current; if (!s) return; swipe.current = null; const dx = e.clientX - s.x, dy = e.clientY - s.y; if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) cycle(dx < 0 ? 1 : -1); }}>
-          <div className="stage-tag" id="stageTag" ref={tagRef}><span className="eyebrow" id="stCat">{d.catName || d.cat}</span><strong id="stName">{d.name}</strong><span id="stTag">{d.tag}</span></div>
-          {ready
-            ? <CarStage id="cfgCar" cfg={cfg} apiRef={api} />
-            : <div id="cfgCar"><svg className="car-svg" viewBox="530 250 1080 646" aria-hidden="true" focusable="false" /></div>}
-          <button type="button" className="stage-arrow prev" id="prevD" aria-label={c.prev} onClick={() => cycle(-1)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="m15 6-6 6 6 6" /></svg></button>
-          <button type="button" className="stage-arrow next" id="nextD" aria-label={c.next} onClick={() => cycle(1)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6" /></svg></button>
-          <div className="stage-ctrl"><div className="ctrl-group">
-            <button type="button" id="btnReplay" title={c.replay} aria-label={c.replay} onClick={() => api.current?.replay()}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4" /></svg></button>
-          </div></div>
-          <div className="views" id="views" role="group" aria-label={c.camera}>
-            {c.views.map(([v, t]) => <button key={v} type="button" data-v={v} aria-pressed={view === v} onClick={() => { setView(v); api.current?.view(v); }}>{t}</button>)}
+      <section className="csum" id="summary" aria-labelledby="sumTitle">
+        <div className="csum-media">
+          <div className="csum-stage">
+            <p className="csum-kicker">{c.kicker[0]} {c.kicker[1]}</p>
+            <Thumb cfg={cfg} eager className="csum-car" />
           </div>
-          <div className="stage-hint mono" aria-hidden="true">{c.hint}</div>
-        </section>
-
-        <aside className="summary" aria-labelledby="sumTitle">
-          <p className="display kicker">{c.kicker[0]}<br />{c.kicker[1]}</p>
-          <span className="rule" />
-          <p className="muted" style={{ margin: '-6px 0 0' }}>{c.tagline}</p>
-          <h2 className="sr" id="sumTitle">{c.yourKit}</h2>
-          <div className="card">
-            <div><h3 id="sumName">{d.name}</h3><span className="muted" style={{ fontSize: '12.5px' }} id="sumSub">{`${kit.modelName(cfg.model)} · ${kit.colourLabel(cfg)} · ${T(cfg.finish === 'gloss' ? 'gloss' : 'matte')}`}</span></div>
-            <ul className="lines" id="sumLines">{lines.map(([a, b], n) => <li key={a + b} className={fresh[n] && started.current ? 'in' : ''}><span>{a}</span><span>{b}</span></li>)}</ul>
-            <div className="total"><span className="muted">{c.total}</span><Price id="sumTotal" value={total} /></div>
-            <button type="button" className={'btn btn-primary' + (added ? ' done' : '')} id="addCart" onClick={addCurrent}>{addLabel}</button>
-            <p className="pers-note" id="persNote" hidden={!pers}>{c.persBefore}<Link to={to('refunds') + '#personalised'}>{c.persLink}</Link>{c.persAfter}</p>
-            <div className="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7" /><circle cx="6" cy="17.5" r="1.7" /><circle cx="17" cy="17.5" r="1.7" /></svg><span>{c.ship[0]}<br />{c.ship[1]}</span></div>
+          <div className="selcard">
+            <h3>{c.selection}</h3>
+            <ul className="sel">
+              {rows.map(([k, v, p, card]) => (
+                <li key={k}><span className="sel-k">{k}</span><span className="sel-v">{v}</span><span className="sel-p price">{p}</span>
+                  <button type="button" className="sel-c" aria-label={c.changeAria(k)} onClick={() => jump(card)}>{c.change}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6" /></svg></button></li>
+              ))}
+            </ul>
           </div>
+        </div>
+        <aside className="summary">
+          <h2 id="sumTitle">{c.summaryTitle}</h2>
+          <div><h3 id="sumName">{d.name}</h3><span className="muted" id="sumSub">{`${kit.modelName(cfg.model)} · ${kit.colourLabel(cfg)} · ${T(cfg.finish === 'gloss' ? 'gloss' : 'matte')}`}</span></div>
+          <div className="total"><span className="muted">{c.total}</span><Price id="sumTotal" value={total} /></div>
+          <ul className="lines" id="sumLines">{lines.map(([a, b], n) => <li key={a + b} className={fresh[n] && started.current ? 'in' : ''}><span>{a}</span><span>{b}</span></li>)}</ul>
+          <button type="button" className={'btn btn-primary' + (added ? ' done' : '')} id="addCart" onClick={addCurrent}>{addLabel}</button>
+          <button type="button" className="btn btn-2" onClick={() => jump('optDesignCard')}>{c.change}</button>
+          <p className="pers-note" id="persNote" hidden={!pers}>{c.persBefore}<Link to={to('refunds') + '#personalised'}>{c.persLink}</Link>{c.persAfter}</p>
+          <div className="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7" /><circle cx="6" cy="17.5" r="1.7" /><circle cx="17" cy="17.5" r="1.7" /></svg><span>{c.ship[0]}<br />{c.ship[1]}</span></div>
           <p className="sr" id="sumLive" role="status" aria-live="polite">{sumLive}</p>
           <dl className="specs">{c.specs.map(([k, v]) => <div key={k} style={{ display: 'contents' }}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         </aside>
+      </section>
 
-        <section className="picker" id="picker" aria-labelledby="pickerTitle">
-          <div className="picker-head"><h2 id="pickerTitle">{c.choose}</h2><FilterTabs id="cfgTabs" cats={CATS} value={cat} onPick={setCat} label={COPY[lang].shop.filter} /></div>
-          <div className="strip" id="strip" role="group" aria-label={c.designsGroup} ref={strip}>
-            {DESIGNS.map((x) => (
-              <button key={x.id} type="button" className={'pcard' + (cat !== 'All' && x.cat !== cat ? ' out' : '')} data-id={x.id} data-cat={x.cat} aria-pressed={x.id === cfg.design} onClick={() => pickDesign(x.id, true)}>
-                <Thumb cfg={kit.defaultCfg(x)} /><b>{x.name}</b><small><span>{x.tag}</span><span className="price">{money(x.price)}</span></small>
-              </button>
-            ))}
-          </div>
-        </section>
-      </div>
+      <section className="brochure" aria-labelledby="broTitle">
+        <div className="bro-head">
+          <span className="eyebrow">{c.brochure.eyebrow}</span>
+          <h2 id="broTitle" className="display">{c.brochure.title}</h2>
+          <p className="muted">{c.brochure.lead}</p>
+        </div>
+        <div className="bro-grid">
+          <div className="bro-hero"><Thumb cfg={{ ...cfg, numberOn: false }} className="bro-car" /></div>
+          {c.brochure.cards.map(([t, x], i) => <div className="bro-card" key={t}><span className="bro-n">{String(i + 1).padStart(2, '0')}</span><h3>{t}</h3><p>{x}</p></div>)}
+        </div>
+      </section>
+
       <div className="mbar"><div><span className="eyebrow" id="mName">{d.name}</span><br /><Price id="mTotal" value={total} /></div><button type="button" className={'btn btn-primary' + (added ? ' done' : '')} id="mAdd" onClick={addCurrent}>{addLabel}</button></div>
     </section>
   );

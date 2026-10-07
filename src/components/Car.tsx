@@ -24,7 +24,7 @@ export const Thumb = memo(function Thumb({ cfg, decorative = true, eager = false
 });
 
 /* The live car (hero + configurator). The Stage animates its own SVG; React only owns the host element. */
-export interface StageApi { replay: () => void; view: (name: string) => void }
+export interface StageApi { replay: () => void; view: (name: string) => void; zoom: (f: number) => void; pan: (dx: number, dy: number) => void; zoomed: () => boolean }
 export function CarStage({ cfg, id, apiRef, onClick, style }: { cfg: Cfg; id?: string; apiRef?: React.MutableRefObject<StageApi | null>; onClick?: () => void; style?: React.CSSProperties }) {
   const { kit } = useApp();
   const host = useRef<HTMLDivElement>(null);
@@ -33,7 +33,7 @@ export function CarStage({ cfg, id, apiRef, onClick, style }: { cfg: Cfg; id?: s
   useEffect(() => {
     initArt();
     const s = (stage.current = new Stage(host.current!, kit, first.current));
-    if (apiRef) apiRef.current = { replay: () => s.driveIn(), view: (n) => s.view(n) };
+    if (apiRef) apiRef.current = { replay: () => s.driveIn(), view: (n) => s.view(n), zoom: (f) => s.zoom(f), pan: (x, y) => s.pan(x, y), zoomed: () => s.zoomed() };
     s.driveIn();
     return () => { s.destroy(); stage.current = null; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

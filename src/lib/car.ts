@@ -372,7 +372,31 @@ export class Stage {
   view(name: string) {
     const V = viewsOf(this.cfg.model);
     this.vname = V[name] ? name : 'full';
-    const from = this.vb.slice(), to = V[this.vname], t0 = performance.now(), dur = reduced() ? 1 : 800;
+    this.animateTo(V[this.vname], 800);
+  }
+  /* Zoom in (f < 1) or out (f > 1) around the middle of what is on screen, never wider than the full car or closer than 30%. */
+  zoom(f: number) {
+    const full = viewsOf(this.cfg.model).full, [x, y, w, h] = this.vb;
+    const nw = Math.min(full[2], Math.max(full[2] * 0.3, w * f)), nh = nw * (full[3] / full[2]);
+    this.animateTo(this.clampBox([x + w / 2 - nw / 2, y + h / 2 - nh / 2, nw, nh]), 450);
+  }
+  /* Drag the zoomed picture by (dx, dy) screen pixels. */
+  pan(dx: number, dy: number) {
+    const r = this.svg.getBoundingClientRect(); if (!r.width) return;
+    const k = this.vb[2] / r.width;
+    cancelAnimationFrame(this.vRaf);
+    this.vb = this.clampBox([this.vb[0] - dx * k, this.vb[1] - dy * k, this.vb[2], this.vb[3]]);
+    this.svg.setAttribute('viewBox', this.vb.map((n) => n.toFixed(2)).join(' '));
+  }
+  /* True when closer than the full-car view (the picture can then be dragged). */
+  zoomed() { return this.vb[2] < viewsOf(this.cfg.model).full[2] - 1; }
+  /* Keep a camera box inside the full-car frame. */
+  clampBox(b: number[]) {
+    const f = viewsOf(this.cfg.model).full;
+    return [Math.min(Math.max(b[0], f[0]), f[0] + f[2] - b[2]), Math.min(Math.max(b[1], f[1]), f[1] + f[3] - b[3]), b[2], b[3]];
+  }
+  animateTo(to: number[], ms: number) {
+    const from = this.vb.slice(), t0 = performance.now(), dur = reduced() ? 1 : ms;
     cancelAnimationFrame(this.vRaf);
     const step = (now: number) => {
       const k = Math.min(1, (now - t0) / dur), e = easeIO(k);
@@ -390,3 +414,18 @@ export class Stage {
 export const thumbSVG = (kit: Kit, cfg: Cfg, decorative: boolean) => carSVG(kit, { ...cfg, uid: 't' + (++UID), view: 'thumb', decorative: !!decorative });
 /* Same aspect ratio as a thumbnail, so nothing shifts when the real one is drawn. */
 export const THUMB_PLACEHOLDER = '<svg class="car-svg" viewBox="556 272 1032 594" aria-hidden="true" focusable="false"></svg>';
+
+/* ---------- View-button icons (configurator) ----------
+   Drawn from the same data as the car: the Ami's outline (a pre-made solid silhouette of each version's photo),
+   the door sticker zone and the rear-window sticker zone. Filled with currentColor so they follow the theme. */
+export function viewIcon(model: unknown, kind: 'full' | 'door' | 'window') {
+  const M = MOD(model), V = viewsOf(model), m = typeof model === 'string' && MODEL_DEFS[model] ? model : 'qs';
+  if (kind === 'full') {
+    // ami-sil-<version>.png: a solid, smoothed outline made from the car photo (same placement as the photo), tinted with currentColor.
+    const f = 'vi-sil-' + m, img = M.img.replace(/href="[^"]*"/, `href="${IMG_DIR}ami-sil-${m}.png"`);
+    return `<svg viewBox="${V.full.join(' ')}" aria-hidden="true" focusable="false"><defs><filter id="${f}" color-interpolation-filters="sRGB">`
+      + `<feFlood flood-color="currentColor"/><feComposite in2="SourceAlpha" operator="in"/></filter></defs><image ${img} filter="url(#${f})"/></svg>`;
+  }
+  if (kind === 'door') return `<svg viewBox="${V.door.join(' ')}" aria-hidden="true" focusable="false"><rect ${M.door} fill="currentColor"/></svg>`;
+  return `<svg viewBox="${V.window.join(' ')}" aria-hidden="true" focusable="false"><path d="${M.win}" fill="currentColor"/></svg>`;
+}
