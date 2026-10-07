@@ -17,5 +17,8 @@
   },
   "overrides": {
     "sharp": "0.35.5"
+  },
+  "dependencies": {
+    "resend": "^6.32.1"
   }
 }
