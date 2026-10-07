@@ -8,7 +8,7 @@
     // Websites allowed to call this API (comma separated, origins only: no path, no trailing slash).
     "SITE_URL": "https://ofstdesigns.com",
     // Domain must be verified in Resend (guides/CLOUDFLARE-SETUP.md).
-    "MAIL_FROM": "OFS/T <geral@ofstdesigns.com>",
+    "MAIL_FROM": "OFS/T <no-reply@ofstdesigns.com>",
     "ALLOWED_ORIGINS": "https://ofstdesigns.com,https://admin.ofstdesigns.com,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://localhost:4173"
   },
   "d1_databases": [
