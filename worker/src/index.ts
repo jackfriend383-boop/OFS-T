@@ -137,21 +137,32 @@ function validateOrder(b: any) {
 
 /* ---------- handlers ---------- */
 /* Step 1 of paying: store the order as 'unpaid', open a Stripe Checkout Session for exactly that amount and hand back its URL.
-   The order only becomes 'paid' when Stripe's signed webhook says so (see stripeWebhook). */
+   TEST MODE: if STRIPE_SECRET_KEY is not set, the order is inserted and immediately marked 'paid' so admin can be tested
+   without a Stripe account. Never do this in production (set STRIPE_SECRET_KEY). */
 async function startCheckout(req: Request, env: Env) {
-  if (!env.STRIPE_SECRET_KEY || !env.SITE_URL) throw new HttpError(503, 'not_configured');
+  if (!env.SITE_URL) throw new HttpError(503, 'not_configured');
   const o = validateOrder(await readJson(req));
   const { n } = (await env.DB.prepare(
     "SELECT count(*) AS n FROM orders WHERE created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-10 minutes')",
   ).first<{ n: number }>())!;
   if (n >= MAX_ORDERS_PER_10_MIN) throw new HttpError(429, 'rate_limited');
   const uid = await customerId(req, env); // null for guests: checking out never requires an account
+
+  const site = env.SITE_URL.trim().replace(/\/$/, '');
+  const root = o.lang === 'en' ? `${site}/en` : site;
+
+  // TEST MODE: no Stripe key → insert as paid immediately so admin dashboard can be used without payment setup.
+  if (!env.STRIPE_SECRET_KEY) {
+    await env.DB.prepare(
+      "INSERT INTO orders (id, customer, items, total_cents, lang, consent_terms, consent_personalised, user_id, payment_status, paid_at) VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, 'paid', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
+    ).bind(o.id, o.customer, o.items, o.total, o.lang, o.personalised, uid).run();
+    return { id: o.id, url: `${root}/order/?o=${o.id}&test=1`, test: true };
+  }
+
   await env.DB.prepare(
     'INSERT INTO orders (id, customer, items, total_cents, lang, consent_terms, consent_personalised, user_id) VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7)',
   ).bind(o.id, o.customer, o.items, o.total, o.lang, o.personalised, uid).run();
 
-  const site = env.SITE_URL.trim().replace(/\/$/, '');
-  const root = o.lang === 'en' ? `${site}/en` : site;
   let session: { id: string; url: string };
   try {
     session = await createCheckoutSession({
