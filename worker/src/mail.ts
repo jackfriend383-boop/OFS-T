@@ -4,16 +4,20 @@ export interface MailEnv { RESEND_API_KEY: string; MAIL_FROM: string }
 
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/* A small, plain, mobile-friendly HTML shell. `body` must already be escaped. */
+/* A small, mobile-friendly HTML shell in the site's look: light grey page, white rounded card, OFS/T logo, black button.
+   `body` must already be escaped. The logo is a PNG on the site (many email apps block SVG). */
+const LOGO = 'https://ofstdesigns.com/assets/img/email-logo.png';
+const FONT = "'Inter Tight','Helvetica Neue',Helvetica,Arial,sans-serif";
 function shell(title: string, body: string): string {
-  return `<!doctype html><html><body style="margin:0;background:#f2f3f6;font-family:Arial,Helvetica,sans-serif;color:#0a0b10">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:14px;padding:28px">
-<tr><td><p style="margin:0 0 18px;font-weight:700;font-size:20px;letter-spacing:.02em">OFS/T</p>
-<h1 style="margin:0 0 14px;font-size:20px">${esc(title)}</h1>${body}</td></tr></table></td></tr></table></body></html>`;
+  return `<!doctype html><html><body style="margin:0;background:#eeeff2;font-family:${FONT};color:#0e0f12">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#ffffff;border-radius:22px;padding:32px">
+<tr><td><p style="margin:0 0 22px"><img src="${LOGO}" width="40" height="40" alt="OFS/T" style="display:block;border:0"></p>
+<h1 style="margin:0 0 14px;font-size:24px;font-weight:600;letter-spacing:-.01em;line-height:1.2">${esc(title)}</h1>${body}
+<p style="margin:26px 0 0;padding-top:16px;border-top:1px solid #e2e3e7;color:#8e8f96;font-size:12px">OFS/T · ofstdesigns.com</p></td></tr></table></td></tr></table></body></html>`;
 }
 const button = (href: string, label: string) =>
-  `<p style="margin:22px 0"><a href="${esc(href)}" style="background:#ff6a2b;color:#0a0b10;text-decoration:none;font-weight:700;padding:13px 22px;border-radius:999px;display:inline-block">${esc(label)}</a></p>`;
+  `<p style="margin:24px 0"><a href="${esc(href)}" style="background:#0e0f12;color:#ffffff;text-decoration:none;font-weight:500;padding:14px 24px;border-radius:12px;display:inline-block">${esc(label)}</a></p>`;
 
 export async function sendMail(env: MailEnv, to: string, subject: string, html: string, text: string): Promise<void> {
   if (!env.RESEND_API_KEY || !env.MAIL_FROM) throw new Error('mail_not_configured');

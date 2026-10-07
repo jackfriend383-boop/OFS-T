@@ -1,34 +1,6 @@
-/* Frozen copy of the site styles for the admin dashboard (admin.ofstdesigns.com), so the public-site redesign does not change it. */
-/* Additions for the React app (everything else is the original site.css). */
-/* The page shell wraps header, main and footer; it must not change layout. */
-.shell{display:block}
-/* An inert shell (a dialog is open) keeps its look. */
-.shell[inert]{pointer-events:none}
-
-/* Customer account: profile button + menu, account page cards, order list. */
-.acct{display:grid;gap:16px;align-content:start}
-.acct > *{max-width:760px;width:100%}
-.acct-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:12px}
-.acct-card h2{margin:0;font-size:18px}
-.acct-msg{margin:0}
-.acct-actions{display:flex;flex-wrap:wrap;gap:10px}
-.acct-danger{background:var(--err);color:#fff;border-color:transparent}
-.acct-danger-outline{color:var(--err)}
-.acct-orders{list-style:none;margin:0;padding:0;display:grid;gap:14px}
-.acct-orders > li{border-top:1px solid var(--line);padding-top:14px}
-.acct-orders > li:first-child{border-top:0;padding-top:0}
-.acct-order-head{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}
-.acct-order-head .price{margin-left:auto}
-.acct-pill{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--raise);color:var(--fg)}
-.acct-lines{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;font-size:14px}
-.acct-menu{position:relative}
-.acct-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg)}
-.acct-pop{position:absolute;right:0;top:calc(100% + 8px);min-width:230px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:8px;display:grid;gap:2px;box-shadow:0 14px 34px rgba(0,0,0,.35);z-index:60}
-.acct-pop a,.acct-pop button{text-align:left;padding:10px 12px;border-radius:9px;font:inherit;font-size:14px;color:var(--fg)}
-.acct-pop a:hover,.acct-pop button:hover{background:var(--raise)}
-.acct-pop-who{display:grid;gap:2px;margin:0 0 6px;padding:8px 12px 10px;border-bottom:1px solid var(--line);font-size:13px;overflow-wrap:anywhere}
-@media (max-width:560px){.tools .acct-btn{display:none}}
-
+/* Admin dashboard styles (admin.ofstdesigns.com). Loaded after the shared site styles, so the dashboard uses the same
+   fonts, colours, light/dark themes and rounded panels as the public site. Class names are prefixed/unique so they never
+   clash with the site's own components (.dseg is the dashboard's segmented control, .dpanel its report card). */
 /* Admin dashboard: tabs, period filter, KPI tiles, report cards, charts, order filters, customers table. */
 .dash{display:grid;gap:18px}
 .dash-top{justify-content:flex-end}
@@ -41,12 +13,12 @@
 .dtab-badge{font:600 11px var(--mono);min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);display:inline-grid;place-items:center}
 .dpane{display:grid;gap:18px;min-width:0}
 .dfilters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
-.seg{display:inline-flex;max-width:100%;overflow-x:auto;scrollbar-width:none;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
-.seg::-webkit-scrollbar{display:none}
-.seg button{flex:none;white-space:nowrap;min-height:0;padding:7px 13px;border-radius:999px;font:500 12.5px var(--body);color:var(--muted)}
-.seg button:hover{color:var(--fg)}
-.seg button[aria-pressed="true"]{background:var(--raise);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line-2)}
-.seg-sm{justify-self:start}
+.dseg{display:inline-flex;max-width:100%;overflow-x:auto;scrollbar-width:none;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
+.dseg::-webkit-scrollbar{display:none}
+.dseg button{flex:none;white-space:nowrap;min-height:0;padding:7px 13px;border-radius:999px;font:500 12.5px var(--body);color:var(--muted)}
+.dseg button:hover{color:var(--fg)}
+.dseg button[aria-pressed="true"]{background:var(--raise);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line-2)}
+.dseg-sm{justify-self:start}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:6px;align-content:start;min-width:0}
 .kpi b{font-family:var(--display);font-stretch:125%;font-size:clamp(22px,2.6vw,28px);line-height:1.1;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
@@ -60,10 +32,10 @@
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .kpi-d.up{color:#1A7F4B}}
 .kpi-hint{font-size:11.5px;color:var(--dim)}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px}
-.dcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;align-content:start;min-width:0}
-.dgrid .dcard-wide{grid-column:1/-1}
-.dcard header{display:grid;gap:3px}
-.dcard h3{margin:0;font-size:15px}
+.dpanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;align-content:start;min-width:0}
+.dgrid .dpanel-wide{grid-column:1/-1}
+.dpanel header{display:grid;gap:3px}
+.dpanel h3{margin:0;font-size:15px}
 .dmore{justify-self:start;height:38px;padding:0 16px;font-size:11.5px}
 .order-compact{padding:14px 16px;gap:8px;background:var(--bg)}
 .order-compact .order-head p{font-size:12.5px}
@@ -124,3 +96,33 @@
 
 @media (max-width:760px){.ofilters{grid-template-columns:1fr 1fr}.of-q{grid-column:1/-1}}
 @media (max-width:480px){.bl li{grid-template-columns:minmax(70px,34%) minmax(0,1fr) auto}.kpis{grid-template-columns:1fr 1fr}.cols{height:140px}}
+
+/* Same look as the public site: rounded panels, black (light) / white (dark) primary, no orange glow */
+.adm .page-head{padding-top:clamp(20px,3vw,40px)}
+.kpi,.dpanel,.adm-panel,.order,.adm-stats div{border-radius:var(--r-lg)}
+.kpi{background:var(--raise);border:0}
+.kpi-accent{background:var(--fg);color:var(--bg)}
+.kpi-accent .eyebrow,.kpi-accent .kpi-hint{color:color-mix(in srgb,var(--bg) 70%,var(--fg))}
+.kpi-accent b{color:var(--bg)}
+.kpi-accent .kpi-d{color:var(--bg)}
+.dpanel{border-color:var(--line);box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.order{background:var(--panel)}
+.order-compact{background:var(--raise);border:0}
+.dseg{background:var(--raise);border:0}
+.dseg button[aria-pressed="true"]{background:var(--panel);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.dtabs [role="tab"][aria-selected="true"]{border-bottom-color:var(--fg)}
+.dtab-badge{background:var(--fg);color:var(--bg)}
+.ch-area{fill:var(--fg);opacity:.08}
+.ch-line,.ch-dot{stroke:var(--fg)}
+.ch-line{stroke:var(--fg)}
+.ch-dot{fill:var(--fg);stroke:var(--panel)}
+.bl-bar,.col-bar{background:var(--fg)}
+.bl li:hover .bl-bar,.col.on .col-bar{background:var(--muted)}
+.status[data-s="new"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.adm-login{margin-inline:auto}
+/* Admin header: logo centred like the public site, language on the right */
+.adm-top{grid-template-columns:1fr auto 1fr}
+.adm-top .lang-mini{justify-self:end;display:flex;gap:6px;font-size:13px;letter-spacing:.06em}
+.adm-top .lang-mini a{color:var(--muted);padding:10px 2px}
+.adm-top .lang-mini a[aria-current="true"]{color:var(--fg);text-decoration:underline;text-underline-offset:6px}
+.kpi b,.adm-stats b{font-family:var(--body);font-stretch:100%;font-weight:500;letter-spacing:-.01em}

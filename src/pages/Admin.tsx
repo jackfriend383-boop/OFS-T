@@ -48,7 +48,7 @@ function KpiView({ label, value, now, before, hint, invert, accent, vsPrev, loca
   );
 }
 function Card({ title, note, children, wide }: { title: string; note?: string; children: ReactNode; wide?: boolean }) {
-  return <section className={'dcard' + (wide ? ' dcard-wide' : '')}><header><h3>{title}</h3>{note && <p className="adm-note">{note}</p>}</header>{children}</section>;
+  return <section className={'dpanel' + (wide ? ' dpanel-wide' : '')}><header><h3>{title}</h3>{note && <p className="adm-note">{note}</p>}</header>{children}</section>;
 }
 
 export default function Admin() {
@@ -218,7 +218,7 @@ export default function Admin() {
 
   /* ---------- Pieces ---------- */
   const rangeBar = (
-    <div className="seg" role="group" aria-label={d.range}>
+    <div className="dseg" role="group" aria-label={d.range}>
       {RANGES.map((r) => <button key={r} type="button" aria-pressed={range === r} onClick={() => setRange(r)}>{d.ranges[r]}</button>)}
     </div>
   );
@@ -365,7 +365,7 @@ export default function Admin() {
                   <KpiView {...kp} label={d.k.issues} value={nf.format(K.issues)} hint={K.issues ? d.kHint.issues : undefined} />
                 </div>
                 <Card wide title={metric === 'revenue' ? d.trendTitle : d.trendOrders}>
-                  <div className="seg seg-sm" role="group" aria-label={d.metric}>
+                  <div className="dseg dseg-sm" role="group" aria-label={d.metric}>
                     <button type="button" aria-pressed={metric === 'revenue'} onClick={() => setMetric('revenue')}>{d.mRevenue}</button>
                     <button type="button" aria-pressed={metric === 'orders'} onClick={() => setMetric('orders')}>{d.mOrders}</button>
                   </div>
