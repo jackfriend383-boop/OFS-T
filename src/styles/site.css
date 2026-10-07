@@ -567,7 +567,7 @@ html.js-motion .hero-intro .hero-cta .btn + .btn{animation-delay:.5s}
 .adm-panel p{margin:0}
 .adm-panel code,.adm-tool code{font-family:var(--mono);font-size:.92em;background:var(--raise);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
 .adm-steps{margin:0;padding-left:1.3em;display:grid;gap:8px;line-height:1.5}
-.adm-login{max-width:420px}
+.adm-login{max-width:420px;width:100%;margin:0 auto}
 .adm-login .err:empty{display:none}
 .adm-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .adm-bar label{font-size:12px;color:var(--muted)}

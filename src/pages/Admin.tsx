@@ -473,7 +473,6 @@ export default function Admin() {
           </div>
         )}
 
-        {panel !== 'main' && toolSection}
       </div>
     </section>
   );
