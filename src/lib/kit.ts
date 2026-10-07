@@ -96,7 +96,8 @@ function build(lang: Lang) {
   /* Config from a query string (?design=&c1=&c2=&finish=&kit=&number=&model=), validated against the data. */
   function cfgFromQuery(search: string): Cfg | null {
     let q: URLSearchParams; try { q = new URLSearchParams(search); } catch { return null; }
-    const d = D(q.get('design')); if (!d) return null;
+    // A link with only ?model= (from the home page version cards) starts on the first design in that version.
+    const d = D(q.get('design')) || (q.get('model') ? DESIGNS[0] : null); if (!d) return null;
     const num = q.has('number') ? cleanNumber(q.get('number')) : '';
     return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, finish: q.get('finish'), kit: q.get('kit'), number: num || 'AMI', numberOn: !!num });
   }

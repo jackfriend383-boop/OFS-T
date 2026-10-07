@@ -173,21 +173,18 @@ function Header() {
   const cartLabel = cartCount ? T.n('openCart', cartCount) : T('openCartEmpty');
   return (
     <>
+      {/* Menu on the left, the logo centred, tools on the right. The page links live in the menu panel at every width. */}
       <header className="top">
-        <Link to={to('home')} className="brand" aria-label={ui.t_home_aria}><img src={BASE + 'assets/img/OFST-icon-white.svg'} alt="" width="34" height="34" /><span>OFS/T</span></Link>
-        <nav className="nav" id="nav" aria-label={ui.t_nav_main} ref={navRef}
-          onMouseOver={(e) => { const a = (e.target as HTMLElement).closest('a'); if (hoverable() && a && navRef.current?.contains(a)) place(a); }}
-          onMouseLeave={() => { if (hoverable()) placeCurrent(); }}>
-          {links.map((l) => <Link key={l.k} to={l.href} data-r={l.k} aria-current={l.cur ? 'page' : undefined}>{l.label}</Link>)}
-          <span className="nav-ink" id="navInk" style={{ left: ink.left, width: ink.width }} />
-        </nav>
+        <div className="top-l">
+          <button type="button" className="menu-btn" id="menuBtn" ref={menuBtn} aria-expanded={menu} aria-controls="mnav" onClick={() => setMenu((m) => !m)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg><span>{ui.t_menu}</span></button>
+        </div>
+        <Link to={to('home')} className="brand" aria-label={ui.t_home_aria}><Logo /></Link>
         <div className="tools">
           <button type="button" className="icon-btn" id="openSearch" aria-label={ui.t_search} aria-haspopup="dialog" onClick={() => openModal('search')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg></button>
           <LangSwitch cls="lang" />
           <ThemeButton />
           <AccountMenu />
           <button type="button" className="icon-btn" id="openCart" aria-label={cartLabel} aria-haspopup="dialog" onClick={() => openModal('cart')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h2.2l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.6 8H6.1" /><circle cx="9.5" cy="20" r="1.2" /><circle cx="17" cy="20" r="1.2" /></svg><span className="badge" id="cartCount" aria-hidden="true">{cartCount}</span></button>
-          <button type="button" className="icon-btn menu-btn" id="menuBtn" ref={menuBtn} aria-label={ui.t_menu} aria-expanded={menu} aria-controls="mnav" onClick={() => setMenu((m) => !m)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
         </div>
       </header>
       <nav className={'mnav' + (menu ? ' on' : '')} id="mnav" ref={mnav} aria-label={ui.t_nav_mobile}>
@@ -199,6 +196,14 @@ function Header() {
   );
 }
 
+/* The logo in both versions: black on the light theme, white on the dark theme (CSS shows the right one). */
+function Logo() {
+  return (<>
+    <img className="logo-l" src={BASE + 'assets/img/OFST-icon-black.svg'} alt="" width="34" height="34" />
+    <img className="logo-d" src={BASE + 'assets/img/OFST-icon-white.svg'} alt="" width="34" height="34" />
+  </>);
+}
+
 function Footer() {
   const { kit, to } = useApp();
   const L = kit.L, ui = L.ui;
@@ -207,7 +212,7 @@ function Footer() {
   return (
     <footer className="foot">
       <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
-        <Link to={to('home')} className="brand" aria-label={ui.t_home_aria}><img src={BASE + 'assets/img/OFST-icon-white.svg'} alt="" width="34" height="34" /><span>OFS/T</span></Link>
+        <Link to={to('home')} className="brand" aria-label={ui.t_home_aria}><Logo /><span>OFS/T</span></Link>
         <span style={{ maxWidth: '40ch' }}>{ui.t_foot_tag}</span>
         <address style={{ fontStyle: 'normal', fontSize: '12.5px', lineHeight: 1.55, maxWidth: '44ch' }}>
           {fill(ui.t_foot_trading)}<br />{biz.biz_street}, {biz.biz_postcode} {biz.biz_city}, {biz.biz_country}<br />{ui.t_email}: {biz.biz_email}

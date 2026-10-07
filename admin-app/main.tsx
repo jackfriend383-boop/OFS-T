@@ -5,8 +5,8 @@ import { BrowserRouter, Link } from 'react-router';
 import { AppProvider, useApp } from '../src/state';
 import Admin from '../src/pages/Admin';
 import { I18N } from '../src/lib/kit';
-import '../src/styles/site.css';
-import '../src/styles/app.css';
+import '../src/styles/admin-site.css';
+import '../src/styles/admin-app.css';
 
 function Shell() {
   const { lang } = useApp();
