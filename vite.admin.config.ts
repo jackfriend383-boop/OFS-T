@@ -29,7 +29,7 @@ function adminHosting(): Plugin {
       ].join('\n'));
       // Single-page app: the English view lives at /en/, which has no file of its own. Without this, opening or refreshing
       // admin.ofstdesigns.com/en/ returns a 404; with it Cloudflare Pages serves the app and the router shows English.
-      await writeFile(join(out, '_redirects'), '/en /index.html 200\n/en/* /index.html 200\n');
+      await writeFile(join(out, '_redirects'), '/en / 200\n/en/* / 200\n');
       // Public-site files that make no sense on the dashboard host.
       for (const f of ['CNAME', 'llms.txt']) await rm(join(out, f), { force: true });
     },
