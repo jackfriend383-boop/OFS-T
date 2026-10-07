@@ -15,6 +15,7 @@ import { sendMail, signInEmail, paidEmail } from './mail';
             POST   /api/admin/logout           revokes every admin session
             GET    /api/admin/orders           newest 500 orders
             PATCH  /api/admin/orders/:id       {status}
+            POST   /api/admin/resend-paid-emails  send the payment confirmation again to paid orders (max 40 per call)
    Trust boundaries: every byte of a request is untrusted (the site's JS can be modified by anyone). Orders are checked
    against the same limits as worker/schema.sql. Admin identity is a random bearer token issued after a correct password;
    only its SHA-256 hash is stored. Prices are computed here (pricing.ts), never taken from the browser. */
@@ -175,14 +176,31 @@ async function orderStatus(env: Env, id: string) {
 }
 
 /* Payment confirmation email. Best effort: a mail problem must never make the webhook fail (the order is already paid). */
-async function notifyPaid(env: Env, orderId: string) {
+async function notifyPaid(env: Env, orderId: string): Promise<string | null> {
   try {
     const o = await env.DB.prepare('SELECT customer, items, total_cents, lang FROM orders WHERE id = ?1').bind(orderId).first<any>();
-    if (!o) return;
+    if (!o) return 'not_found';
     const email = JSON.parse(o.customer).email as string;
     const m = paidEmail(o.lang === 'en' ? 'en' : 'pt', orderId.slice(-6).toUpperCase(), o.total_cents, JSON.parse(o.items));
     await sendMail(env, email, m.subject, m.html, m.text);
-  } catch (e: any) { console.error('paid email not sent', e && e.message); }
+    return null; // sent
+  } catch (e: any) { console.error('paid email not sent', e && e.message); return String((e && e.message) || 'mail_failed'); }
+}
+
+/* Admin: send the payment confirmation email again to every paid order (newest first). At most RESEND_BATCH per click,
+   because a free Cloudflare Worker may make about 50 outgoing requests per run; `remaining` tells the admin to click again.
+   Spaced out to stay under Resend's rate limit. Returns counts and the first error reason (e.g. mail_not_configured). */
+const RESEND_BATCH = 40;
+async function resendPaidEmails(env: Env) {
+  const { results } = await env.DB.prepare("SELECT id FROM orders WHERE payment_status = 'paid' ORDER BY created_at DESC").all<{ id: string }>();
+  const batch = results.slice(0, RESEND_BATCH);
+  let sent = 0, failed = 0, reason: string | null = null;
+  for (const [i, r] of batch.entries()) {
+    if (i) await new Promise((ok) => setTimeout(ok, 600));
+    const err = await notifyPaid(env, r.id);
+    if (err) { failed++; reason = reason || err; if (err === 'mail_not_configured') break; } else sent++;
+  }
+  return { total: results.length, sent, failed, remaining: Math.max(0, results.length - batch.length), reason };
 }
 
 /* Stripe -> us. The signature is checked before anything in the body is trusted; the amount must match our own total. */
@@ -448,6 +466,7 @@ export default {
           return respond({ ok: true }, 200, req, env);
         }
         if (path === '/api/admin/orders' && req.method === 'GET') return respond(await listOrders(env), 200, req, env);
+        if (path === '/api/admin/resend-paid-emails' && req.method === 'POST') return respond(await resendPaidEmails(env), 200, req, env);
         const m = /^\/api\/admin\/orders\/([^/]+)$/.exec(path);
         if (m && req.method === 'PATCH') return respond(await setStatus(req, env, m[1]), 200, req, env);
       }

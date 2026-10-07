@@ -196,6 +196,11 @@ export function makeBackend(kit: Kit) {
     if (!row || typeof row !== 'object') throw new BackendError(MSG.denied, 'denied');
     return row;
   }
-  return { configured: backendConfigured, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, setStatus };
+  /* Admin: send the payment confirmation email again to paid orders (the server sends at most 40 per call). */
+  async function resendPaidEmails(): Promise<{ total: number; sent: number; failed: number; remaining: number; reason: string | null }> {
+    const r = await authed('/api/admin/resend-paid-emails', { method: 'POST' });
+    return { total: +r?.total || 0, sent: +r?.sent || 0, failed: +r?.failed || 0, remaining: +r?.remaining || 0, reason: typeof r?.reason === 'string' ? r.reason : null };
+  }
+  return { configured: backendConfigured, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, setStatus, resendPaidEmails };
 }
 export type Backend = ReturnType<typeof makeBackend>;

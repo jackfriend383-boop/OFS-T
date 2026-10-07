@@ -129,3 +129,6 @@
 
 /* Admin header tools: language + light/dark switch on the right */
 .adm-tools{justify-self:end;display:flex;align-items:center;gap:8px}
+
+/* Inline confirm for "Email all paid orders" */
+.adm-confirm{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 4px 4px 12px;border-radius:14px;background:var(--raise);font-size:13.5px}

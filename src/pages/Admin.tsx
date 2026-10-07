@@ -191,6 +191,16 @@ export default function Admin() {
   }, [orders, q, fStatus, fPay, sort]);
   useEffect(() => { setLimit(20); }, [q, fStatus, fPay, sort]);
 
+  // "Email all paid orders": first click asks to confirm, second sends through the order server (Resend).
+  const [mailAsk, setMailAsk] = useState(false);
+  const paidCount = orders.filter((o) => o.pay === 'paid').length;
+  async function mailAllPaid() {
+    setMailAsk(false); setBusy('mail'); say(d.mailSending);
+    try {
+      const r = await backend.resendPaidEmails();
+      say(r.reason === 'mail_not_configured' ? d.mailNotConfigured : r.failed && !r.sent ? d.mailFailed : d.mailDone(r.sent, r.failed, r.remaining));
+    } catch (ex) { handleError(ex); } finally { setBusy(null); }
+  }
   function exportCSV() {
     const rows: (string | number)[][] = [d.csvHead];
     shown.forEach((o) => rows.push([
@@ -427,6 +437,11 @@ export default function Admin() {
                 <div className="adm-bar">
                   <span className="adm-note ocount">{d.showing(shown.length, orders.length)} · {openKits ? d.bulkNote(openKits) : d.bulkNone}</span>
                   <button className="btn btn-ghost" type="button" onClick={exportCSV} disabled={!shown.length}>{d.exportCsv}</button>
+                  {!mailAsk
+                    ? <button className="btn btn-ghost" type="button" onClick={() => setMailAsk(true)} disabled={!paidCount || busy === 'mail'} aria-busy={busy === 'mail' || undefined}>{d.mailAll}</button>
+                    : <span className="adm-confirm" role="group" aria-label={d.mailAll}><span>{d.mailConfirm(paidCount)}</span>
+                        <button className="btn btn-primary" type="button" onClick={mailAllPaid}>{d.mailYes}</button>
+                        <button className="btn btn-ghost" type="button" onClick={() => setMailAsk(false)}>{d.mailNo}</button></span>}
                   <button className="btn btn-primary" type="button" onClick={() => bulk('png')} disabled={!openKits || busy === 'bulk'} aria-busy={busy === 'bulk' || undefined}>{d.bulkPng}</button>
                   <button className="btn btn-ghost" type="button" onClick={() => bulk('svg')} disabled={!openKits || busy === 'bulk'}>{d.bulkSvg}</button>
                 </div>
