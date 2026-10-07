@@ -292,7 +292,7 @@ export default function Configurator() {
 
           <section className="ocard" id="optModelCard" aria-labelledby="optModelLbl">
             <div className="ocard-head"><h2 id="optModelLbl">{c.version}</h2><span className="ocard-val">{kit.modelName(cfg.model)}</span></div>
-            <Seg id="segModel" labelledBy="optModelLbl" value={cfg.model} items={[['qs', 'QuickSilver'], ['pop', 'Pop']]} onPick={(v) => update({ model: v as Cfg['model'] })} />
+            <Seg id="segModel" labelledBy="optModelLbl" value={cfg.model} items={[['qs', 'Ami 2025'], ['pop', 'Pop']]} onPick={(v) => update({ model: v as Cfg['model'] })} />
           </section>
 
           <section className="ocard" id="optColourCard" aria-labelledby="optColourLbl">

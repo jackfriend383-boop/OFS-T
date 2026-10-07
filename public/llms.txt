@@ -12,14 +12,14 @@ The site is bilingual: European Portuguese (pt-PT, the default, at https://ofstd
 
 - [Home](https://ofstdesigns.com/en/): overview, popular designs, how ordering and fitting work, compatible cars
 - [Shop](https://ofstdesigns.com/en/shop/): all 15 designs with category and price per side
-- [Configurator](https://ofstdesigns.com/en/configurator/): live preview on the Ami QuickSilver or Ami Pop; pick design, colours, finish, kit size and badge text. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)
+- [Configurator](https://ofstdesigns.com/en/configurator/): live preview on the Ami Ami 2025 or Ami Pop; pick design, colours, finish, kit size and badge text. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)
 - [About & FAQ](https://ofstdesigns.com/en/about/): who makes the kits; fitting time, car washes, removal, compatibility, custom designs
 
 ## Português
 
 - [Início](https://ofstdesigns.com/): apresentação, designs populares, como encomendar e aplicar, carros compatíveis
 - [Loja](https://ofstdesigns.com/shop/): os 15 designs, com categoria e preço por lado
-- [Configurador](https://ofstdesigns.com/configurator/): pré-visualização em direto no Ami QuickSilver ou Ami Pop; design, cores, acabamento, tamanho do kit e texto do emblema. Ligação direta a um design com ?design=<id> (acrescente &model=pop para o Ami Pop)
+- [Configurador](https://ofstdesigns.com/configurator/): pré-visualização em direto no Ami Ami 2025 ou Ami Pop; design, cores, acabamento, tamanho do kit e texto do emblema. Ligação direta a um design com ?design=<id> (acrescente &model=pop para o Ami Pop)
 - [Sobre nós e perguntas frequentes](https://ofstdesigns.com/about/): quem faz os kits; tempo de aplicação, lavagens, remoção, compatibilidade, designs personalizados
 
 ## Designs

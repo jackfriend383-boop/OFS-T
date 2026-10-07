@@ -2,7 +2,7 @@
    (src/data/designs.json), so the amount charged through Stripe is always computed here and never taken from the browser. */
 import DATA from '../../src/data/designs.json';
 
-const MODELS: Record<string, string> = { qs: 'Ami QuickSilver', pop: 'Ami Pop' };
+const MODELS: Record<string, string> = { qs: 'Ami Ami 2025', pop: 'Ami Pop' };
 const COLORS = DATA.colors as Record<string, { name: string; hex: string }>;
 const DESIGNS = DATA.designs as { id: string; name: string; price: number; c1: string; c2: string; fixed?: boolean }[];
 const EXTRA = DATA.extras as { secondSide: number; badge: number };

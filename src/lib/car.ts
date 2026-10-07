@@ -42,13 +42,13 @@ const DOOR_RECT = 'x="876" y="658" width="271" height="104" rx="42"';
 const WIN = 'M1161 345 L1226 355 L1300 489 L1199 489 Z';
 const WHEELS = [[698.5, 747], [1325.5, 747]];
 const VIEWS: Record<string, number[]> = { full: [530, 250, 1080, 646], door: [826, 598, 372, 222], window: [1078, 327, 306, 183], thumb: [556, 272, 1032, 594] };
-/* Ami versions. The QuickSilver is the default everywhere; the Pop is offered in the configurator. The Pop photo is scaled and
-   placed so its door lines up with the QuickSilver door; its rear-window zone is the small orange half ring, so the window
+/* Ami versions. The Ami 2025 is the default everywhere; the Pop is offered in the configurator. The Pop photo is scaled and
+   placed so its door lines up with the Ami 2025 door; its rear-window zone is the small orange half ring, so the window
    artwork is scaled into it (winT), and its light strip (lights mask) takes the first colour. Pop views keep the same aspect ratios. */
 const POP_IMG = IMG_DIR + 'ami-pop.webp', POP_LIGHTS = IMG_DIR + 'ami-pop-lights.png';
 const MODEL_DEFS: Record<string, any> = {
   qs: {
-    name: 'Ami QuickSilver', img: `href="${IMG}" width="2000" height="1125"`,
+    name: 'Ami Ami 2025', img: `href="${IMG}" width="2000" height="1125"`,
     door: DOOR_RECT, win: WIN, winT: '', winStroke: 'stroke="#0A0B0C" stroke-width="3"', rimR: 71, wheels: WHEELS,
     badge: 'x="1016" y="677" width="113" height="56" rx="20"', plate: [1027, 687, 95, 38, 11], dx: 0,
   },
