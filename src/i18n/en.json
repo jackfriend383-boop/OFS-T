@@ -45,7 +45,7 @@
   "pages": {
     "home": {"title": "{brand} — Sticker kits for the Citroën Ami", "description": "Pre-cut vinyl sticker kits for the Citroën Ami door panel and rear quarter window. Pick from {count} designs, set two colours and preview the kit on your car before you order."},
     "shop": {"title": "Shop all designs — {brand}", "crumb": "Shop", "description": "All {count} OFS/T sticker kit designs for the Citroën Ami: signature flame camo, street, racing, retro and minimal. From {min} per side."},
-    "configurator": {"title": "Configurator: design your Ami kit — {brand}", "crumb": "Configurator", "description": "Design your Citroën Ami sticker kit live on an Ami Ami 2025 or Ami Pop: choose a design, two vinyl colours, matte or gloss, one or both sides and custom badge text, then add it to your cart."},
+    "configurator": {"title": "Configurator: design your Ami kit — {brand}", "crumb": "Configurator", "description": "Design your Citroën Ami sticker kit live on an Ami 2025 or Ami Pop: choose a design, two vinyl colours, matte or gloss, one or both sides and custom badge text, then add it to your cart."},
     "about": {"title": "About & FAQ — {brand}", "crumb": "About & FAQ", "description": "Who makes OFS/T sticker kits for the Citroën Ami, how they are cut, and answers on fitting, car washes, removal and compatibility."},
     "privacy": {"title": "Privacy policy — {brand}", "crumb": "Privacy policy", "description": "How OFS/T handles personal data in its online shop for Citroën Ami sticker kits."},
     "terms": {"title": "Terms of sale — {brand}", "crumb": "Terms of sale", "description": "Terms of sale for OFS/T sticker kits for the Citroën Ami."},
@@ -83,7 +83,7 @@
     "pages": [
       ["home", "Home", "overview, popular designs, how ordering and fitting work, compatible cars"],
       ["shop", "Shop", "all {count} designs with category and price per side"],
-      ["configurator", "Configurator", "live preview on the Ami Ami 2025 or Ami Pop; pick design, colours, finish, kit size and badge text. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)"],
+      ["configurator", "Configurator", "live preview on the Ami 2025 or Ami Pop; pick design, colours, finish, kit size and badge text. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)"],
       ["about", "About & FAQ", "who makes the kits; fitting time, car washes, removal, compatibility, custom designs"]
     ],
     "legal": [

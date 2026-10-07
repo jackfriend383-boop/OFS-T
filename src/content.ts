@@ -17,7 +17,7 @@ const en = {
     fitList: [['Citroën Ami', '2020 →'], ['Finish', 'matte or gloss'], ['Sides', 'one or both'], ['Kit contents', 'door panel + rear window']],
     canvas: "More than a car. It's your canvas.", designYours: 'Design yours',
     versionsEyebrow: 'Configurator', versionsTitle: 'Choose your version',
-    versions: [['qs', 'Ami Ami 2025', 'The original Ami, with grey door panels ready for a kit.'], ['pop', 'Ami Pop', 'The sporty Ami with spoiler and orange details.']] as [string, string, string][],
+    versions: [['qs', 'Ami 2025', 'The original Ami, with grey door panels ready for a kit.'], ['pop', 'Ami Pop', 'The sporty Ami with spoiler and orange details.']] as [string, string, string][],
     from: (p: string) => `From ${p}`, configure: 'Configure',
   },
   shop: {
@@ -87,7 +87,7 @@ const pt: typeof en = {
     fitList: [['Citroën Ami', '2020 →'], ['Acabamento', 'mate ou brilhante'], ['Lados', 'um ou os dois'], ['Conteúdo do kit', 'painel da porta + vidro traseiro']],
     canvas: 'Mais do que um carro. É a sua tela.', designYours: 'Crie o seu',
     versionsEyebrow: 'Configurador', versionsTitle: 'Escolhe a tua versão',
-    versions: [['qs', 'Ami Ami 2025', 'O Ami original, com os painéis das portas cinzentos prontos para um kit.'], ['pop', 'Ami Pop', 'O Ami desportivo, com spoiler e detalhes laranja.']] as [string, string, string][],
+    versions: [['qs', 'Ami 2025', 'O Ami original, com os painéis das portas cinzentos prontos para um kit.'], ['pop', 'Ami Pop', 'O Ami desportivo, com spoiler e detalhes laranja.']] as [string, string, string][],
     from: (p: string) => `Desde ${p}`, configure: 'Configurar',
   },
   shop: {

@@ -48,7 +48,7 @@ const VIEWS: Record<string, number[]> = { full: [530, 250, 1080, 646], door: [82
 const POP_IMG = IMG_DIR + 'ami-pop.webp', POP_LIGHTS = IMG_DIR + 'ami-pop-lights.png';
 const MODEL_DEFS: Record<string, any> = {
   qs: {
-    name: 'Ami Ami 2025', img: `href="${IMG}" width="2000" height="1125"`,
+    name: 'Ami 2025', img: `href="${IMG}" width="2000" height="1125"`,
     door: DOOR_RECT, win: WIN, winT: '', winStroke: 'stroke="#0A0B0C" stroke-width="3"', rimR: 71, wheels: WHEELS,
     badge: 'x="1016" y="677" width="113" height="56" rx="20"', plate: [1027, 687, 95, 38, 11], dx: 0,
   },

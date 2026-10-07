@@ -13,7 +13,7 @@ export const I18N: Record<Lang, any> = { pt: PT, en: EN };
 export const CATS: string[] = DATA.cats;
 export const HERO_CYCLE: string[] = DATA.heroCycle;
 export const FEATURED: string[] = DATA.featured;
-export const MODELS = { qs: 'Ami Ami 2025', pop: 'Ami Pop' } as const;
+export const MODELS = { qs: 'Ami  2025', pop: 'Ami Pop' } as const;
 
 const has = (o: object, k: unknown): boolean => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
 const fmt = (s: string, v?: Record<string, unknown>) => (v ? String(s).replace(/\{(\w+)\}/g, (m, k) => (has(v, k) ? String(v[k]) : m)) : s);
