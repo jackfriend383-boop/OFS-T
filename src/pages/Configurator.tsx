@@ -29,11 +29,13 @@ function Price({ value, id }: { value: number; id: string }) {
   return <strong id={id} ref={ref}>{kit.money(value)}</strong>;
 }
 
-/* Colour swatches: a radio group with a roving tabindex. Arrow keys move and select, Home/End jump. */
-function Swatches({ slot, labelId, cfg, onPick }: { slot: 'c1' | 'c2'; labelId: string; cfg: Cfg; onPick: (k: string) => void }) {
+/* Colour swatches: one radio group per slot, shown as two rows (classic colours, then metallic specials).
+   Roving tabindex across both rows: arrow keys move and select, Home/End jump. */
+function Swatches({ slot, labelId, cfg, onPick, groups }: { slot: 'c1' | 'c2'; labelId: string; cfg: Cfg; onPick: (k: string) => void; groups: [string, string] }) {
   const { kit } = useApp();
   const row = useRef<HTMLDivElement>(null);
   const keys = Object.keys(kit.COLORS);
+  const sets: [string, string[]][] = [[groups[0], keys.filter((k) => !kit.COLORS[k].metal)], [groups[1], keys.filter((k) => kit.COLORS[k].metal)]];
   const onKey = (e: React.KeyboardEvent) => {
     const step = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 } as Record<string, number>)[e.key];
     if (step === undefined && e.key !== 'Home' && e.key !== 'End') return;
@@ -44,11 +46,18 @@ function Swatches({ slot, labelId, cfg, onPick }: { slot: 'c1' | 'c2'; labelId: 
     onPick(bs[j].dataset.k!); bs[j].focus();
   };
   return (
-    <div className="sw-row" id={slot + 'Row'} ref={row} role="radiogroup" aria-labelledby={labelId} onKeyDown={onKey}>
-      {keys.map((k) => {
-        const sel = cfg[slot] === k;
-        return <button key={k} type="button" className="sw" style={{ '--c': kit.COLORS[k].hex } as any} data-k={k} role="radio" aria-checked={sel} tabIndex={sel ? 0 : -1} title={kit.COLORS[k].name} aria-label={kit.COLORS[k].name} onClick={() => onPick(k)} />;
-      })}
+    <div className="sw-groups" id={slot + 'Row'} ref={row} role="radiogroup" aria-labelledby={labelId} onKeyDown={onKey}>
+      {sets.map(([title, ks]) => ks.length > 0 && (
+        <div key={title} className="sw-group">
+          <span className="sw-group-t" aria-hidden="true">{title}</span>
+          <div className="sw-row">
+            {ks.map((k) => {
+              const sel = cfg[slot] === k;
+              return <button key={k} type="button" className={'sw' + (kit.COLORS[k].metal ? ' metal' : '')} style={{ '--c': kit.COLORS[k].hex } as any} data-k={k} role="radio" aria-checked={sel} tabIndex={sel ? 0 : -1} title={kit.COLORS[k].name} aria-label={kit.COLORS[k].name} onClick={() => onPick(k)} />;
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -290,9 +299,9 @@ export default function Configurator() {
             <div className="ocard-head"><h2 id="optColourLbl">{c.colours}</h2></div>
             <div className="opt-body" id="swWrap" hidden={!!d.fixed}>
               <div className="sub-label"><span id="c1Label">{T(tones ? 'lightTone' : 'primary')}</span><span id="c1Name">{colourName(cfg.c1)}</span></div>
-              <Swatches slot="c1" labelId="c1Label" cfg={cfg} onPick={(k) => update({ c1: k })} />
+              <Swatches slot="c1" labelId="c1Label" cfg={cfg} groups={[c.classics, c.metallics]} onPick={(k) => update({ c1: k })} />
               <div className="sub-label"><span id="c2Label">{T(tones ? 'darkTone' : 'accent')}</span><span id="c2Name">{colourName(cfg.c2)}</span></div>
-              <Swatches slot="c2" labelId="c2Label" cfg={cfg} onPick={(k) => update({ c2: k })} />
+              <Swatches slot="c2" labelId="c2Label" cfg={cfg} groups={[c.classics, c.metallics]} onPick={(k) => update({ c2: k })} />
             </div>
             <span className="opt-val" id="fixedNote" hidden={!d.fixed}>{c.fixed}</span>
           </section>

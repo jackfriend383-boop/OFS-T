@@ -186,8 +186,8 @@ html:lang(pt) .hero h1{font-size:clamp(1.45rem,4.4vw,4.7rem)}
 .dcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;transition:border-color .3s,transform .4s var(--ease),background .3s,box-shadow .4s var(--ease);cursor:pointer;text-align:left}
 .dcard:hover{border-color:var(--line-2);transform:translateY(-3px);background:var(--raise)}
 .dcard .mini{background:radial-gradient(80% 90% at 50% 40%,var(--mini-hi),var(--mini-lo) 75%);border-radius:10px;padding:6px 4px 2px;transition:transform .5s var(--ease)}
-.dcard:hover .mini svg{transform:translateX(-6px)}
-.dcard .mini svg{transition:transform .6s var(--ease)}
+.dcard:hover .mini > svg{transform:translateX(-6px)}
+.dcard .mini > svg{transition:transform .6s var(--ease)}
 .dcard-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .dcard h3{margin:0;font-size:16px;font-weight:700}
 .dcard .tag{font-size:13px;color:var(--muted)}
@@ -496,7 +496,7 @@ html:lang(pt) .hero h1{font-size:clamp(1.45rem,4.4vw,4.7rem)}
 }
 @media (hover:none){
   .dcard:hover,.pcard:hover{transform:none}
-  .dcard:hover .mini svg{transform:none}
+  .dcard:hover .mini > svg{transform:none}
   .sw:hover{transform:none}
 }
 /* Mobile menu: display was "none" here, which (coming after the max-width:560px rule) kept the menu from ever showing. It is hidden above 560px by the !important rule below; when closed it is also visibility:hidden so it can't peek through the translucent header or take keyboard focus. */
@@ -913,7 +913,8 @@ body{margin:0;font-size:15.5px;letter-spacing:.005em}
 .vgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,1.6vw,20px)}
 .vcard{position:relative;display:grid;grid-template-rows:auto 1fr;border-radius:var(--r-xl);background:var(--raise);overflow:hidden;transition:transform .45s var(--ease),background .3s,box-shadow .45s var(--ease)}
 .vcard-car{display:block;padding:clamp(18px,3vw,40px) clamp(14px,4vw,64px) 0;background:radial-gradient(70% 80% at 50% 70%,var(--stage-hi),transparent 75%)}
-.vcard-car .mini svg{transition:transform .7s var(--ease)}
+/* Only the outer picture moves: the sticker art sits in inner <svg> layers that must move with it, not on their own. */
+.vcard-car .mini > svg{transition:transform .7s var(--ease)}
 .vcard-body{display:grid;gap:8px;padding:clamp(18px,2.4vw,30px)}
 .vcard-name{font-size:clamp(24px,2.4vw,34px);font-weight:500;letter-spacing:-.02em;line-height:1.1}
 .vcard-text{color:var(--muted);font-size:15px;max-width:46ch}
@@ -922,7 +923,7 @@ body{margin:0;font-size:15.5px;letter-spacing:.005em}
 .vcard-go svg{width:18px;height:18px;transition:transform .35s var(--ease)}
 @media (hover:hover){
   .vcard:hover{transform:translateY(-6px);background:var(--btn-2);box-shadow:0 30px 60px -36px rgba(0,0,0,.45)}
-  .vcard:hover .vcard-car .mini svg{transform:translateX(14px) scale(1.03)}
+  .vcard:hover .vcard-car .mini > svg{transform:translateX(14px) scale(1.03)}
   .vcard:hover .vcard-go svg{transform:translateX(4px)}
 }
 .vcard:active{transform:scale(.985)}
@@ -952,8 +953,14 @@ body{margin:0;font-size:15.5px;letter-spacing:.005em}
   .views .vi{width:36px;height:16px}
   .scene-btn{font-size:12px}
 }
-@media (prefers-reduced-motion:reduce){.vcard,.vcard-car .mini svg{transition:none}}
+@media (prefers-reduced-motion:reduce){.vcard,.vcard-car .mini > svg{transition:none}}
 
 /* OFS/T lettering above the home headline */
 .hero-wordmark{display:block;margin-bottom:6px}
 .hero-wordmark img{width:clamp(120px,13vw,190px);height:auto}
+
+/* Colour swatch groups (classic colours, metallic specials); metallic swatches get a brushed-metal sheen */
+.sw-groups{display:grid;gap:12px}
+.sw-group{display:grid;gap:8px}
+.sw-group-t{font-size:12.5px;color:var(--muted)}
+.sw.metal{background:linear-gradient(115deg,color-mix(in srgb,var(--c) 70%,#000) 0%,var(--c) 22%,color-mix(in srgb,var(--c) 45%,#fff) 42%,var(--c) 58%,color-mix(in srgb,var(--c) 75%,#000) 82%,color-mix(in srgb,var(--c) 85%,#fff) 100%)}

@@ -51,8 +51,8 @@ export interface Kit extends ReturnType<typeof build> {}
 function build(lang: Lang) {
   const L = I18N[lang];
   const T = makeT(lang);
-  const COLORS: Record<string, { name: string; hex: string }> = {};
-  Object.entries(DATA.colors as Record<string, { name: string; hex: string }>).forEach(([k, c]) => { COLORS[k] = { ...c, name: has(L.colors, k) ? L.colors[k] : c.name }; });
+  const COLORS: Record<string, { name: string; hex: string; metal?: boolean }> = {};
+  Object.entries(DATA.colors as Record<string, { name: string; hex: string; metal?: boolean }>).forEach(([k, c]) => { COLORS[k] = { ...c, name: has(L.colors, k) ? L.colors[k] : c.name }; });
   const DESIGNS: Design[] = (DATA.designs as any[]).map((d) => ({ ...d, tag: has(L.tags, d.id) ? L.tags[d.id] : d.tag, catName: T.cat(d.cat) }));
   const EXTRA = DATA.extras as { secondSide: number; badge: number };
   const D = (id: unknown): Design | undefined => DESIGNS.find((d) => d.id === id);

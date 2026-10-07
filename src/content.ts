@@ -39,7 +39,7 @@ const en = {
     specs: [['Vinyl', 'Outdoor vinyl, matte or gloss'], ['Panels', 'Door panel + rear window, per side'], ['Includes', 'Step-by-step fitting guide']],
     summaryBtn: 'Summary', summaryTitle: 'Your kit summary', selection: 'Your selection', change: 'Change', changeAria: (x: string) => `Change ${x}`,
     zoomIn: 'Zoom in', zoomOut: 'Zoom out', fullscreen: 'Full screen', dragHint: 'Drag to look around',
-    scenery: 'Scenery', studio: 'Studio', beach: 'Beach',
+    scenery: 'Scenery', studio: 'Studio', beach: 'Beach', classics: 'Classics', metallics: 'Metallic specials',
     brochure: {
       eyebrow: 'The kit', title: 'Made for the Ami, down to the millimetre.',
       lead: 'Every OFS/T kit is cut to the shapes of the Ami door panel and rear window, printed on outdoor vinyl and packed with everything you need to fit it at home.',
@@ -109,7 +109,7 @@ const pt: typeof en = {
     specs: [['Vinil', 'Vinil de exterior, mate ou brilhante'], ['Painéis', 'Painel da porta + vidro traseiro, por lado'], ['Inclui', 'Guia de aplicação passo a passo']],
     summaryBtn: 'Resumo', summaryTitle: 'Resumo do seu kit', selection: 'A sua seleção', change: 'Alterar', changeAria: (x: string) => `Alterar ${x}`,
     zoomIn: 'Aproximar', zoomOut: 'Afastar', fullscreen: 'Ecrã inteiro', dragHint: 'Arraste para explorar',
-    scenery: 'Cenário', studio: 'Estúdio', beach: 'Praia',
+    scenery: 'Cenário', studio: 'Estúdio', beach: 'Praia', classics: 'Clássicas', metallics: 'Especiais metalizadas',
     brochure: {
       eyebrow: 'O kit', title: 'Feito para o Ami, ao milímetro.',
       lead: 'Cada kit OFS/T é cortado à medida do painel da porta e do vidro traseiro do Ami, impresso em vinil de exterior e enviado com tudo o que precisa para o aplicar em casa.',

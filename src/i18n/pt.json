@@ -107,7 +107,8 @@
   "cats": {"All": "Todos", "Signature": "Assinatura", "Street": "Urbano", "Racing": "Corrida", "Retro": "Retro", "Minimal": "Minimalista"},
   "colors": {
     "volt": "Lima", "ice": "Gelo", "ember": "Brasa", "violet": "Violeta", "rose": "Rosa", "gold": "Dourado", "chalk": "Giz",
-    "stone": "Pedra", "graphite": "Grafite", "flame": "Vermelho Chama", "crimson": "Carmesim", "azure": "Azul Celeste", "cobalt": "Cobalto"
+    "stone": "Pedra", "graphite": "Grafite", "flame": "Vermelho Chama", "crimson": "Carmesim", "azure": "Azul Celeste", "cobalt": "Cobalto",
+    "black": "Preto", "snow": "Branco Puro", "mint": "Menta", "racing": "Verde Corrida", "purple": "Roxo Real", "sun": "Amarelo Sol", "teal": "Azul Petróleo", "burgundy": "Bordeaux", "sand": "Areia", "silver": "Prateado", "copper": "Cobre", "midnight": "Azul Noite Metalizado", "gunmetal": "Cinza Metal", "rosegold": "Ouro Rosa", "pearl": "Branco Pérola"
   },
   "tags": {
     "flame-red": "Chamas em dois tons, recortes a preto",
