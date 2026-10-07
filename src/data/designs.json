@@ -1,6 +1,6 @@
 {
   "currency": "EUR",
-  "extras": {"secondSide": 29, "badge": 9},
+  "extras": {"secondSide": 0, "badge": 9},
   "cats": ["All", "Signature", "Street", "Racing", "Retro", "Minimal"],
   "colors": {
     "volt": {"name": "Volt", "hex": "#D4F23A"},

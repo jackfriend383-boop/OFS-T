@@ -57,7 +57,7 @@ function build(lang: Lang) {
   const EXTRA = DATA.extras as { secondSide: number; badge: number };
   const D = (id: unknown): Design | undefined => DESIGNS.find((d) => d.id === id);
   const modelName = (m: unknown) => (has(MODELS, m) ? MODELS[m as keyof typeof MODELS] : MODELS.qs);
-  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'one', numberOn: false, number: 'AMI' });
+  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'AMI' }); // every kit covers both sides
   const cleanNumber = (v: unknown) => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9 .#&!-]/g, '').slice(0, 8);
 
   /* Validate a config from an untrusted source (query string, localStorage, order rows). Returns a full config or null. */
@@ -69,7 +69,7 @@ function build(lang: Lang) {
     if (has(COLORS, c.c1)) out.c1 = c.c1;
     if (has(COLORS, c.c2)) out.c2 = c.c2;
     if (c.finish === 'matte' || c.finish === 'gloss') out.finish = c.finish;
-    if (c.kit === 'one' || c.kit === 'both') out.kit = c.kit;
+    // Kit size is no longer offered: every kit (including older saved carts) is both sides.
     if (typeof c.number === 'string') out.number = cleanNumber(c.number);
     out.numberOn = !!c.numberOn && !!out.number;
     if (!out.numberOn && !out.number) out.number = 'AMI';

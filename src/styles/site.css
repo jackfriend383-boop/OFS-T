@@ -964,3 +964,7 @@ body{margin:0;font-size:15.5px;letter-spacing:.005em}
 .sw-group{display:grid;gap:8px}
 .sw-group-t{font-size:12.5px;color:var(--muted)}
 .sw.metal{background:linear-gradient(115deg,color-mix(in srgb,var(--c) 70%,#000) 0%,var(--c) 22%,color-mix(in srgb,var(--c) 45%,#fff) 42%,var(--c) 58%,color-mix(in srgb,var(--c) 75%,#000) 82%,color-mix(in srgb,var(--c) 85%,#fff) 100%)}
+
+/* Customer account page: one centred column (heading and cards) */
+.view[data-view="account"] .page-head{max-width:calc(760px + 2 * var(--gutter));margin-inline:auto;justify-items:center;text-align:center}
+.view[data-view="account"] .acct{justify-items:center}

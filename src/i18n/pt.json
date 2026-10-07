@@ -68,18 +68,18 @@
     "primary": "Principal",
     "accent": "Destaque",
     "matte": "Mate",
-    "kit_one_side": "Kit {name}, um lado",
+    "kit_one_side": "Kit {name}, os dois lados",
     "logo_alt": "Logótipo {brand}",
     "home": "Início",
     "item_list": "Designs de kits de autocolantes OFS/T",
     "product_name": "Kit de autocolantes {name}",
-    "product_desc": "{name} ({tag}): kit de autocolantes em vinil pré-cortado para o painel inferior da porta e o vidro lateral traseiro do Citroën Ami, um lado.",
+    "product_desc": "{name} ({tag}): kit de autocolantes em vinil pré-cortado para o painel inferior da porta e o vidro lateral traseiro do Citroën Ami, os dois lados.",
     "org_description": "Kits de autocolantes em vinil pré-cortados para a porta e o vidro lateral traseiro do Citroën Ami. Escolha um design, defina duas cores e veja-o no seu carro antes de encomendar."
   },
 
   "llms": {
     "heading": "Português",
-    "intro": "A {brand} vende kits de autocolantes em vinil pré-cortados para o Citroën Ami. Cada kit cobre o painel inferior da porta e o vidro lateral traseiro de um lado. {count} designs, a partir de {min} por lado, preços em EUR.",
+    "intro": "A {brand} vende kits de autocolantes em vinil pré-cortados para o Citroën Ami. Cada kit cobre o painel inferior da porta e o vidro lateral traseiro dos dois lados. {count} designs, a partir de {min} por lado, preços em EUR.",
     "pages": [
       ["home", "Início", "apresentação, designs populares, como encomendar e aplicar, carros compatíveis"],
       ["shop", "Loja", "os {count} designs, com categoria e preço por lado"],
@@ -218,7 +218,7 @@
     "darkTone": "Tom escuro",
     "primary": "Principal",
     "accent": "Destaque",
-    "kitOneSide": "Kit {name}, um lado",
+    "kitOneSide": "Kit {name}, os dois lados",
     "secondSide": "Segundo lado",
     "badgeText": "Texto do emblema “{text}”",
     "cfgSay": "{name}, {model}, {colours}, {finish}, {sides}. Total {total}.",

@@ -163,7 +163,6 @@ export default function Configurator() {
 
   const tones = d.art === 'flame';
   const lines: [string, string][] = [[T('kitOneSide', { name: d.name }), money(d.price)]];
-  if (cfg.kit === 'both') lines.push([T('secondSide'), '+' + money(kit.EXTRA.secondSide)]);
   if (cfg.numberOn && cfg.number) lines.push([T('badgeText', { text: cfg.number }), '+' + money(kit.EXTRA.badge)]);
   const prevLines = useRef<string[]>([]);
   const fresh = lines.map(([a, b]) => !prevLines.current.includes(a + b));
@@ -203,7 +202,6 @@ export default function Configurator() {
     [c.version, kit.modelName(cfg.model), '', 'optModelCard'],
     [c.colours, colourText, '', 'optColourCard'],
     [c.finish, cfg.finish === 'gloss' ? c.gloss : c.matte, '', 'optFinishCard'],
-    [c.kitSize, cfg.kit === 'both' ? T('bothSides') : T('oneSide'), cfg.kit === 'both' ? '+' + money(kit.EXTRA.secondSide) : '', 'optFinishCard'],
     [c.badge, cfg.numberOn && cfg.number ? cfg.number : '–', cfg.numberOn && cfg.number ? '+' + money(kit.EXTRA.badge) : '', 'optBadgeCard'],
   ];
   const toggleFull = () => {
@@ -308,10 +306,7 @@ export default function Configurator() {
 
           <section className="ocard" id="optFinishCard" aria-labelledby="optFinishLbl">
             <div className="ocard-head"><h2 id="optFinishLbl">{c.finishKit}</h2></div>
-            <div className="sub-label"><span>{c.finish}</span></div>
             <Seg id="segFinish" label={c.finish} value={cfg.finish} items={[['matte', c.matte], ['gloss', c.gloss]]} onPick={(v) => update({ finish: v as Cfg['finish'] })} />
-            <div className="sub-label"><span>{c.kitSize}</span></div>
-            <Seg id="segKit" label={c.kitSize} value={cfg.kit} items={[['one', c.one], ['both', c.both(money(kit.EXTRA.secondSide))]]} onPick={(v) => update({ kit: v as Cfg['kit'] })} />
           </section>
 
           <section className="ocard" id="optBadgeCard">

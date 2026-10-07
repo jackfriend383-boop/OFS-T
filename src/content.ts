@@ -22,13 +22,13 @@ const en = {
   },
   shop: {
     eyebrow: 'Shop', h1: 'All designs', designs: 'Designs', filter: 'Filter by category',
-    lead: 'Each kit covers the lower door panel and the rear quarter window. Prices are for one side; add the second side in the configurator.',
+    lead: 'Each kit covers the lower door panel and the rear quarter window. Every kit covers both sides of the car.',
   },
   cfg: {
     options: 'Options', back: 'Back to models', h1: ['Customize', 'your Ami'],
     lead: 'Choose a design, adjust the colours and see your Ami change in real time.',
     version: 'Ami version', design: 'Design', browse: 'Browse', browseAria: 'Browse designs', colours: 'Vinyl colours',
-    fixed: 'This artwork is printed in its own colours.', finishKit: 'Finish & kit', finish: 'Finish', matte: 'Matte', gloss: 'Gloss',
+    fixed: 'This artwork is printed in its own colours.', finishKit: 'Finish', finish: 'Finish', matte: 'Matte', gloss: 'Gloss',
     kitSize: 'Kit size', one: 'One side', both: (p: string) => `Both +${p}`,
     badge: 'Badge text', badgeHint: (p: string) => `Your text on the door badge, +${p}`, badgePh: 'Up to 8 characters',
     preview: 'Preview', prev: 'Previous design', next: 'Next design', replay: 'Replay drive-in', camera: 'Camera view',
@@ -92,13 +92,13 @@ const pt: typeof en = {
   },
   shop: {
     eyebrow: 'Loja', h1: 'Todos os designs', designs: 'Designs', filter: 'Filtrar por categoria',
-    lead: 'Cada kit cobre o painel inferior da porta e o vidro lateral traseiro. Os preços são por lado; acrescente o segundo lado no configurador.',
+    lead: 'Cada kit cobre o painel inferior da porta e o vidro lateral traseiro. Cada kit cobre os dois lados do carro.',
   },
   cfg: {
     options: 'Opções', back: 'Voltar aos modelos', h1: ['Personalize', 'o seu Ami'],
     lead: 'Escolha um design, ajuste as cores e veja o seu Ami mudar em tempo real.',
     version: 'Versão do Ami', design: 'Design', browse: 'Explorar', browseAria: 'Explorar designs', colours: 'Cores do vinil',
-    fixed: 'Esta arte é impressa nas suas próprias cores.', finishKit: 'Acabamento e kit', finish: 'Acabamento', matte: 'Mate', gloss: 'Brilhante',
+    fixed: 'Esta arte é impressa nas suas próprias cores.', finishKit: 'Acabamento', finish: 'Acabamento', matte: 'Mate', gloss: 'Brilhante',
     kitSize: 'Tamanho do kit', one: 'Um lado', both: (p: string) => `Os dois +${p}`,
     badge: 'Texto do emblema', badgeHint: (p: string) => `O seu texto no emblema da porta, +${p}`, badgePh: 'Até 8 caracteres',
     preview: 'Pré-visualização', prev: 'Design anterior', next: 'Design seguinte', replay: 'Repetir a entrada do carro', camera: 'Vista da câmara',

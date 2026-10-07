@@ -28,12 +28,12 @@ export function priceItem(raw: any): PricedItem | null {
   const c1 = has(COLORS, c.c1) ? c.c1 : d.c1;
   const c2 = has(COLORS, c.c2) ? c.c2 : d.c2;
   const finish = c.finish === 'gloss' ? 'gloss' : 'matte';
-  const kit = c.kit === 'both' ? 'both' : 'one';
+  const kit = 'both'; // every kit covers both sides (kit size is no longer offered)
   const number = typeof c.number === 'string' ? cleanNumber(c.number) : '';
   const numberOn = !!c.numberOn && !!number;
-  const unit = d.price + (kit === 'both' ? EXTRA.secondSide : 0) + (numberOn ? EXTRA.badge : 0);
+  const unit = d.price + EXTRA.secondSide + (numberOn ? EXTRA.badge : 0); // secondSide is 0: both sides at the design price
   const colours = d.fixed ? 'Original colours' : `${COLORS[c1].name} / ${COLORS[c2].name}`;
-  const desc = `${MODELS[model]} · ${colours} · ${finish === 'gloss' ? 'Gloss' : 'Matte'} · ${kit === 'both' ? 'Both sides' : 'One side'}${numberOn ? ` · Badge "${number}"` : ''}`;
+  const desc = `${MODELS[model]} · ${colours} · ${finish === 'gloss' ? 'Gloss' : 'Matte'} · Both sides${numberOn ? ` · Badge "${number}"` : ''}`;
   return {
     cfg: { model, design: d.id, c1, c2, finish, kit, numberOn, number: numberOn ? number : '' },
     qty: Math.min(99, qty),

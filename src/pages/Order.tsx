@@ -20,12 +20,15 @@ export default function Order() {
     if (!isUUID(id)) { setView('unknown'); return; }
     setRef(id.slice(-6).toUpperCase());
     if (q.get('cancelled') === '1') { setView('cancelled'); return; }
+    // Stripe only sends the customer here (without ?cancelled) after the checkout was completed, so the cart is done with.
+    // Cleared now rather than waiting for the paid confirmation, which can take a while (or days for Multibanco).
+    clearCart();
     let stop = false, tries = 0, timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
       let status: string | null = null;
       try { status = await backend.orderStatus(id); } catch { /* network blip: keep trying */ }
       if (stop) return;
-      if (status === 'paid') { clearCart(); setView('paid'); return; }
+      if (status === 'paid') { setView('paid'); return; }
       if (status === 'failed' || status === 'expired') { setView('failed'); return; }
       if (status === null && tries === 0) { setView('unknown'); return; }
       setView('pending');

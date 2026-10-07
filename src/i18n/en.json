@@ -68,18 +68,18 @@
     "primary": "Primary",
     "accent": "Accent",
     "matte": "Matte",
-    "kit_one_side": "{name} kit, one side",
+    "kit_one_side": "{name} kit, both sides",
     "logo_alt": "{brand} logo",
     "home": "Home",
     "item_list": "OFS/T sticker kit designs",
     "product_name": "{name} sticker kit",
-    "product_desc": "{name} ({tag}): pre-cut vinyl sticker kit for the Citroën Ami lower door panel and rear quarter window, one side.",
+    "product_desc": "{name} ({tag}): pre-cut vinyl sticker kit for the Citroën Ami lower door panel and rear quarter window, both sides.",
     "org_description": "Pre-cut vinyl sticker kits for the Citroën Ami door panel and rear quarter window. Pick a design, set two colours and preview it on your car before you order."
   },
 
   "llms": {
     "heading": "English",
-    "intro": "{brand} sells pre-cut vinyl sticker kits for the Citroën Ami. Each kit covers the lower door panel and the rear quarter window of one side. {count} designs, from {min} per side, prices in EUR.",
+    "intro": "{brand} sells pre-cut vinyl sticker kits for the Citroën Ami. Each kit covers the lower door panel and the rear quarter window on both sides. {count} designs, from {min} per side, prices in EUR.",
     "pages": [
       ["home", "Home", "overview, popular designs, how ordering and fitting work, compatible cars"],
       ["shop", "Shop", "all {count} designs with category and price per side"],
@@ -191,7 +191,7 @@
     "darkTone": "Dark tone",
     "primary": "Primary",
     "accent": "Accent",
-    "kitOneSide": "{name} kit, one side",
+    "kitOneSide": "{name} kit, both sides",
     "secondSide": "Second side",
     "badgeText": "Badge text “{text}”",
     "cfgSay": "{name}, {model}, {colours}, {finish}, {sides}. Total {total}.",
