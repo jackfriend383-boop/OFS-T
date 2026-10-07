@@ -8,15 +8,14 @@
     // Websites allowed to call this API (comma separated, origins only: no path, no trailing slash).
     "SITE_URL": "https://ofstdesigns.com",
     // Domain must be verified in Resend (guides/CLOUDFLARE-SETUP.md).
-    "MAIL_FROM": "OFS/T <no-reply@ofstdesigns.com>",
+    "MAIL_FROM": "OFS/T <geral@ofstdesigns.com>",
     "ALLOWED_ORIGINS": "https://ofstdesigns.com,https://admin.ofstdesigns.com,http://localhost:5173,http://localhost:5174"
   },
   "d1_databases": [
     {
-      "binding": "DB",
+      "binding": "ofst_orders",
       "database_name": "ofst-orders",
-      // Replaced by `wrangler d1 create ofst-orders` output (see guides/CLOUDFLARE-SETUP.md).
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "04c1483a-9024-4a67-9706-0131e7e94feb"
     }
   ]
 }
