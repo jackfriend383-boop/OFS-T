@@ -30,12 +30,14 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_status       TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'expired', 'mismatch')),
   stripe_session_id    TEXT,
   paid_at              TEXT,
-  user_id              TEXT   -- customer account (users.id) when the buyer was signed in
+  user_id              TEXT,  -- customer account (users.id) when the buyer was signed in
+  invoice_sent_at      TEXT
 );
 CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders (created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_stripe_session_idx ON orders (stripe_session_id);
 CREATE INDEX IF NOT EXISTS orders_user_idx ON orders (user_id, created_at DESC);
 -- (An older database without the payment columns: run migrations/0002_payments.sql first, then this file.)
+
 
 -- Customer accounts. Passwordless: a customer proves they own an email address by clicking a one-time link we send.
 CREATE TABLE IF NOT EXISTS users (

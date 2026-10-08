@@ -1,6 +1,6 @@
 /* Interface text for the dashboard tabs (pt-PT + English). Plain text only, rendered by React as text. */
 const en = {
-  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', customers: 'Customers', tools: 'Print tools' },
+  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', invoices: 'Invoices', customers: 'Customers', tools: 'Print tools' },
   tabsLabel: 'Dashboard sections',
   range: 'Period', ranges: { today: 'Today', '7': '7 days', '30': '30 days', '90': '90 days', all: 'All time' },
   vsPrev: 'vs previous period',
@@ -31,11 +31,12 @@ const en = {
   avgSpend: 'Avg. spend per customer', custCount: 'Customers',
   cName: 'Customer', cOrders: 'Orders', cSpent: 'Spent', cLast: 'Last order', cPlace: 'Location',
   noCustomers: 'No customers in this period.',
+  invoicesTitle: 'Invoices to send', invoicesNote: 'Paid orders without an invoice. Adding a file sends it to the buyer by email.', invoiceEmpty: 'All paid orders have an invoice.', invoiceFile: 'Invoice file', invoiceItems: 'Ordered items', invoiceSend: 'Add invoice and email buyer', invoiceTypes: 'PDF, PNG or JPEG, up to 750 KB', invoicePreview: 'Preview', invoiceHidePreview: 'Hide preview', invoiceSent: 'Invoice sent to the buyer.',
   csvHead: ['Order', 'Date', 'Status', 'Payment', 'Name', 'Email', 'Street', 'Postcode', 'City', 'Country', 'Items', 'Stickers', 'Total (EUR)'],
   limitNote: 'Figures cover the newest 500 paid orders.',
 };
 const pt: typeof en = {
-  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', customers: 'Clientes', tools: 'Ficheiros de impressão' },
+  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', tools: 'Ficheiros de impressão' },
   tabsLabel: 'Secções do painel',
   range: 'Período', ranges: { today: 'Hoje', '7': '7 dias', '30': '30 dias', '90': '90 dias', all: 'Sempre' },
   vsPrev: 'vs período anterior',
@@ -66,6 +67,7 @@ const pt: typeof en = {
   avgSpend: 'Gasto médio por cliente', custCount: 'Clientes',
   cName: 'Cliente', cOrders: 'Encomendas', cSpent: 'Gasto', cLast: 'Última encomenda', cPlace: 'Localização',
   noCustomers: 'Sem clientes neste período.',
+  invoicesTitle: 'Faturas por enviar', invoicesNote: 'Encomendas pagas sem fatura. Ao adicionar um ficheiro, este é enviado por email ao comprador.', invoiceEmpty: 'Todas as encomendas pagas têm fatura.', invoiceFile: 'Ficheiro da fatura', invoiceItems: 'Artigos pedidos', invoiceSend: 'Adicionar fatura e enviar email', invoiceTypes: 'PDF, PNG ou JPEG, até 750 KB', invoicePreview: 'Pré-visualizar', invoiceHidePreview: 'Fechar pré-visualização', invoiceSent: 'Fatura enviada ao comprador.',
   csvHead: ['Encomenda', 'Data', 'Estado', 'Pagamento', 'Nome', 'Email', 'Morada', 'Código postal', 'Cidade', 'País', 'Artigos', 'Autocolantes', 'Total (EUR)'],
   limitNote: 'Os valores incluem as 500 encomendas pagas mais recentes.',
 };

@@ -1,6 +1,6 @@
 import { priceItem, isPersonalised, type PricedItem } from './pricing';
 import { createCheckoutSession, verifyWebhook } from './stripe';
-import { sendMail, signInEmail, paidEmail } from './mail';
+import { sendMail, signInEmail, paidEmail, invoiceEmail, type MailAttachment } from './mail';
 
 /* OFS/T order API (Cloudflare Worker + D1). The only code that touches the database.
    Public:  POST   /api/checkout               validate + price an order on the server, return a Stripe Checkout URL
@@ -41,6 +41,8 @@ const MAX_LINKS_PER_EMAIL_15_MIN = 3;
 const MAX_LINKS_GLOBAL_15_MIN = 100;
 const PROFILE_LIMITS: Record<string, number> = { name: 200, phone: 40, street: 300, postcode: 20, city: 120, country: 60 };
 const MAX_BODY = 40000;
+const MAX_INVOICE_BYTES = 750000;
+const INVOICE_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
 const STATUSES = ['new', 'printed', 'shipped'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -92,12 +94,12 @@ function respond(data: unknown, status: number, req: Request, env: Env, extra: R
   return new Response(data === null ? null : JSON.stringify(data), { status, headers });
 }
 
-async function readJson(req: Request): Promise<any> {
+async function readJson(req: Request, max = MAX_BODY): Promise<any> {
   if (!/^application\/json\b/i.test(req.headers.get('Content-Type') || '')) throw new HttpError(415, 'unsupported_media_type');
   const len = Number(req.headers.get('Content-Length') || 0);
-  if (len > MAX_BODY) throw new HttpError(413, 'too_large');
+  if (len > max) throw new HttpError(413, 'too_large');
   const text = await req.text();
-  if (text.length > MAX_BODY) throw new HttpError(413, 'too_large');
+  if (text.length > max) throw new HttpError(413, 'too_large');
   try { return JSON.parse(text); } catch { throw new HttpError(400, 'invalid'); }
 }
 
@@ -286,6 +288,46 @@ async function listOrders(env: Env) {
   }));
 }
 
+async function listInvoices(env: Env) {
+  const { results } = await env.DB.prepare(
+    `SELECT o.id, o.created_at, o.status, o.customer, o.items, o.total_cents, o.payment_status
+    FROM orders o
+    WHERE o.payment_status IN ('paid', 'mismatch') AND o.invoice_sent_at IS NULL
+    ORDER BY o.created_at ASC LIMIT 500`,
+  ).all<any>();
+  return results.map((r) => ({ ...r, customer: JSON.parse(r.customer), items: JSON.parse(r.items) }));
+}
+
+function safeFilename(value: unknown) {
+  const name = String(value || '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+  return name || 'invoice.pdf';
+}
+
+async function addInvoice(req: Request, env: Env, id: string) {
+  if (!UUID.test(id)) throw new HttpError(400, 'invalid');
+  const b = await readJson(req, MAX_INVOICE_BYTES * 2);
+  if (!isObj(b) || typeof b.filename !== 'string' || typeof b.content_type !== 'string' || typeof b.data !== 'string') throw new HttpError(400, 'invalid');
+  const contentType = b.content_type.toLowerCase();
+  if (!INVOICE_TYPES.includes(contentType) || !/^[A-Za-z0-9+/]*={0,2}$/.test(b.data) || b.data.length < 1 || b.data.length > 1100000) throw new HttpError(400, 'invalid');
+  const bytes = Math.floor(b.data.length * 3 / 4) - (b.data.endsWith('==') ? 2 : b.data.endsWith('=') ? 1 : 0);
+  if (bytes < 1 || bytes > MAX_INVOICE_BYTES) throw new HttpError(413, 'too_large');
+  const order = await env.DB.prepare(`SELECT id, customer, items, total_cents, lang FROM orders WHERE id = ?1 AND payment_status IN ('paid', 'mismatch')`).bind(id.toLowerCase()).first<any>();
+  if (!order) throw new HttpError(404, 'not_found');
+  const filename = safeFilename(b.filename);
+  const customer = JSON.parse(order.customer);
+  const lines = JSON.parse(order.items).map((i: any) => ({ name: String(i.name || 'OFS/T kit').slice(0, 200), desc: String(i.desc || '').slice(0, 300), qty: Math.max(1, Math.min(99, Math.floor(+i.qty) || 1)) }));
+  const m = invoiceEmail(order.lang === 'en' ? 'en' : 'pt', order.id.slice(-6).toUpperCase(), order.total_cents, lines);
+  const attachment: MailAttachment = { filename, content: b.data, content_type: contentType };
+  try {
+    await sendMail(env, customer.email, m.subject, m.html, m.text, [attachment]);
+    const marked = await env.DB.prepare(`UPDATE orders SET invoice_sent_at = ${NOW} WHERE id = ?1 AND invoice_sent_at IS NULL RETURNING id`).bind(order.id).first();
+    if (!marked) throw new Error('invoice_already_sent');
+  } catch {
+    throw new HttpError(502, 'mail_unavailable');
+  }
+  return { order_id: order.id, filename, email_sent: true };
+}
+
 async function setStatus(req: Request, env: Env, id: string) {
   const b = await readJson(req);
   if (!UUID.test(id) || !isObj(b) || !STATUSES.includes(b.status)) throw new HttpError(400, 'invalid');
@@ -467,8 +509,11 @@ export default {
         }
         if (path === '/api/admin/orders' && req.method === 'GET') return respond(await listOrders(env), 200, req, env);
         if (path === '/api/admin/resend-paid-emails' && req.method === 'POST') return respond(await resendPaidEmails(env), 200, req, env);
+        if (path === '/api/admin/invoices' && req.method === 'GET') return respond(await listInvoices(env), 200, req, env);
         const m = /^\/api\/admin\/orders\/([^/]+)$/.exec(path);
         if (m && req.method === 'PATCH') return respond(await setStatus(req, env, m[1]), 200, req, env);
+        const invoice = /^\/api\/admin\/orders\/([^/]+)\/invoice$/.exec(path);
+        if (invoice && req.method === 'POST') return respond(await addInvoice(req, env, invoice[1]), 201, req, env);
       }
       throw new HttpError(404, 'not_found');
     } catch (e: any) {

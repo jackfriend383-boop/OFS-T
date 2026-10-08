@@ -43,6 +43,19 @@ npm run db:remote
 Safe to run again; it never deletes data. Check: `npx wrangler d1 execute ofst-orders --remote --command "SELECT name FROM sqlite_master WHERE type='table'"`
 should list `orders`, `admin_sessions` and `login_attempts`.
 
+For a database that already existed before invoices were added, also run the migration once:
+
+```bash
+cd worker
+npx wrangler d1 execute ofst-orders --remote --file=./migrations/0003_invoices.sql
+```
+
+If the earlier file-storage version of invoices was already applied, run the cleanup after that:
+
+```bash
+npx wrangler d1 execute ofst-orders --remote --file=./migrations/0004_remove_invoice_files.sql
+```
+
 ## 4. Set your admin login (secrets, never in git)
 
 ```bash
@@ -81,6 +94,8 @@ should show `{"ok":true}`.
 - **Always check the total** against your price list before asking for payment: the website runs in the customer's browser,
   so the total in an order can be tampered with. The dashboard warns when it differs from the list price.
 - Sessions last 8 hours and live only in that browser tab.
+- The **Faturas / Invoices** tab lists paid orders without an invoice. Select a PDF, PNG or JPEG (up to 750 KB) to store it
+  with the order and email it to the buyer as an attachment. The Resend email configuration from the payment setup is required.
 
 ## Test locally first (optional)
 

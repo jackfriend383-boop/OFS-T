@@ -1,6 +1,7 @@
 /* Transactional email through Resend's HTTP API (https://resend.com). RESEND_API_KEY is a Worker secret; MAIL_FROM is a plain var
    such as "OFS/T <no-reply@ofstdesigns.com>" whose domain must be verified in Resend (SPF/DKIM records). */
 export interface MailEnv { RESEND_API_KEY: string; MAIL_FROM: string }
+export interface MailAttachment { filename: string; content: string; content_type?: string }
 
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -19,12 +20,12 @@ function shell(title: string, body: string): string {
 const button = (href: string, label: string) =>
   `<p style="margin:24px 0"><a href="${esc(href)}" style="background:#0e0f12;color:#ffffff;text-decoration:none;font-weight:500;padding:14px 24px;border-radius:12px;display:inline-block">${esc(label)}</a></p>`;
 
-export async function sendMail(env: MailEnv, to: string, subject: string, html: string, text: string): Promise<void> {
+export async function sendMail(env: MailEnv, to: string, subject: string, html: string, text: string, attachments?: MailAttachment[]): Promise<void> {
   if (!env.RESEND_API_KEY || !env.MAIL_FROM) throw new Error('mail_not_configured');
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, html, text }),
+    body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, html, text, ...(attachments?.length ? { attachments } : {}) }),
   });
   if (!res.ok) { console.error('resend failed', res.status); throw new Error('mail_failed'); }
 }
@@ -55,4 +56,15 @@ export function paidEmail(lang: 'pt' | 'en', ref: string, totalCents: number, li
   const html = shell(c.paidTitle, `<p style="margin:0 0 14px;line-height:1.5">${esc(c.paidBody.replace('{ref}', ref))}</p><ul style="padding-left:18px;margin:0 0 14px">${rows}</ul><p style="margin:0"><strong>${esc(c.total)}: ${esc(money)}</strong></p>`);
   const text = `${c.paidBody.replace('{ref}', ref)}\n\n${lines.map((l) => `- ${l.name} x ${l.qty} (${l.desc})`).join('\n')}\n\n${c.total}: ${money}`;
   return { subject: `${c.paidSubject} (${ref})`, html, text };
+}
+
+export function invoiceEmail(lang: 'pt' | 'en', ref: string, totalCents: number, lines: { name: string; desc: string; qty: number }[]) {
+  const c = lang === 'pt'
+    ? { subject: `A sua fatura OFS/T (${ref})`, title: 'A sua fatura', body: `Segue em anexo a fatura da encomenda ${ref}.`, total: 'Total', footer: 'Esta é uma mensagem automática. Não responda a este email. Em caso de dúvida, contacte geral@ofstdesigns.com.' }
+    : { subject: `Your OFS/T invoice (${ref})`, title: 'Your invoice', body: `Attached is the invoice for order ${ref}.`, total: 'Total', footer: 'This is an automated message. Please do not reply to this email. For questions, contact geral@ofstdesigns.com.' };
+  const money = new Intl.NumberFormat(lang === 'pt' ? 'pt-PT' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(totalCents / 100);
+  const rows = lines.map((l) => `<li style="margin:0 0 8px"><strong>${esc(l.name)}</strong> × ${l.qty}<br><span style="color:#555;font-size:13px">${esc(l.desc)}</span></li>`).join('');
+  const html = shell(c.title, `<p style="margin:0 0 14px;line-height:1.5">${esc(c.body)}</p><ul style="padding-left:18px;margin:0 0 14px">${rows}</ul><p style="margin:0 0 14px"><strong>${esc(c.total)}: ${esc(money)}</strong></p><p style="margin:0;color:#555;font-size:13px;line-height:1.5">${esc(c.footer)}</p>`);
+  const text = `${c.body}\n\n${lines.map((l) => `- ${l.name} x ${l.qty} (${l.desc})`).join('\n')}\n\n${c.total}: ${money}\n\n${c.footer}`;
+  return { subject: c.subject, html, text };
 }

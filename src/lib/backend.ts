@@ -190,6 +190,22 @@ export function makeBackend(kit: Kit) {
     const rows = await authed('/api/admin/orders');
     return Array.isArray(rows) ? rows : [];
   }
+  async function listInvoices(): Promise<any[]> {
+    const rows = await authed('/api/admin/invoices');
+    return Array.isArray(rows) ? rows : [];
+  }
+  async function addInvoice(id: string, file: File) {
+    if (!UUID.test(String(id)) || !file) throw new BackendError(MSG.invalid, 'invalid');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let data = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) data += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    const encoded = btoa(data);
+    const row = await authed('/api/admin/orders/' + encodeURIComponent(id) + '/invoice', {
+      method: 'POST', body: { filename: file.name, content_type: file.type, data: encoded },
+    });
+    return row;
+  }
   async function setStatus(id: string, status: string) {
     if (!UUID.test(String(id)) || !STATUSES.includes(status)) throw new BackendError(MSG.invalid, 'invalid');
     const row = await authed('/api/admin/orders/' + encodeURIComponent(id), { method: 'PATCH', body: { status } });
@@ -201,6 +217,6 @@ export function makeBackend(kit: Kit) {
     const r = await authed('/api/admin/resend-paid-emails', { method: 'POST' });
     return { total: +r?.total || 0, sent: +r?.sent || 0, failed: +r?.failed || 0, remaining: +r?.remaining || 0, reason: typeof r?.reason === 'string' ? r.reason : null };
   }
-  return { configured: backendConfigured, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, setStatus, resendPaidEmails };
+  return { configured: backendConfigured, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus, resendPaidEmails };
 }
 export type Backend = ReturnType<typeof makeBackend>;

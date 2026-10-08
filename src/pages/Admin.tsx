@@ -15,8 +15,8 @@ import { RANGES, customers as groupCustomers, dayKey, delta, inRange, kpis, rang
 import { BarList, Columns, TrendChart } from './admin/Charts';
 
 type Panel = 'boot' | 'setup' | 'login' | 'locked' | 'main';
-type Tab = 'overview' | 'reports' | 'orders' | 'customers' | 'tools';
-const TABS: Tab[] = ['overview', 'reports', 'orders', 'customers', 'tools'];
+type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'tools';
+const TABS: Tab[] = ['overview', 'reports', 'orders', 'invoices', 'customers', 'tools'];
 const TAB_KEY = 'ofst-admin-tab', RANGE_KEY = 'ofst-admin-range';
 const remember = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* private mode */ } };
 const recall = (k: string) => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } };
@@ -30,6 +30,18 @@ function Mold({ cfg, label, className }: { cfg: Cfg; label: string; className?: 
   const { kit } = useApp();
   const html = useMemo(() => moldSVG(kit, cfg, { guide: true, label }), [kit, cfg, label]);
   return <div className={className || 'moldp'} dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+function InvoicePreview({ file }: { file: File }) {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    const next = URL.createObjectURL(file); setUrl(next);
+    return () => URL.revokeObjectURL(next);
+  }, [file]);
+  if (!url) return null;
+  return file.type === 'application/pdf'
+    ? <iframe className="invoice-preview" title={file.name} src={url} />
+    : <img className="invoice-preview" alt={file.name} src={url} />;
 }
 
 /* Presentational pieces, defined once at module level so they keep their state across re-renders. */
@@ -60,6 +72,9 @@ export default function Admin() {
   const ACTION: Record<string, string> = { new: T('actNew'), printed: T('actPrinted'), shipped: T('actShipped') };
   const [panel, setPanel] = useState<Panel>('boot');
   const [orders, setOrders] = useState<Order[]>([]);
+  const [invoiceOrders, setInvoiceOrders] = useState<Order[]>([]);
+  const [invoiceFiles, setInvoiceFiles] = useState<Record<string, File | undefined>>({});
+  const [invoicePreviews, setInvoicePreviews] = useState<Record<string, boolean>>({});
   const [msg, setMsgState] = useState('');
   const [who, setWho] = useState('');
   const [loginErr, setLoginErr] = useState('');
@@ -95,7 +110,12 @@ export default function Admin() {
   }, [say, T]);
   const loadOrders = useCallback(async () => {
     say(T('loadingOrders'));
-    try { const rows = (await backend.listOrders()).map(cleanOrder).filter(Boolean) as Order[]; setOrders(rows); say(T.n('loaded', rows.length)); }
+    try {
+      const [orderRows, invoiceRows] = await Promise.all([backend.listOrders(), backend.listInvoices()]);
+      const rows = orderRows.map(cleanOrder).filter(Boolean) as Order[];
+      const pending = invoiceRows.map(cleanOrder).filter(Boolean) as Order[];
+      setOrders(rows); setInvoiceOrders(pending); say(T.n('loaded', rows.length));
+    }
     catch (e) { handleError(e); }
   }, [backend]); // eslint-disable-line react-hooks/exhaustive-deps
   const enter = useCallback(async (focus: boolean) => {
@@ -119,7 +139,19 @@ export default function Admin() {
     finally { setBusy(null); }
   }
   async function signOut() {
-    setBusy('out'); await backend.signOut(); setBusy(null); setOrders([]); setPanel('login'); setLoginErr(''); focusLater('admEmail'); announce(T('signedOut'));
+    setBusy('out'); await backend.signOut(); setBusy(null); setOrders([]); setInvoiceOrders([]); setPanel('login'); setLoginErr(''); focusLater('admEmail'); announce(T('signedOut'));
+  }
+  function selectInvoice(order: Order, input: HTMLInputElement) {
+    const file = input.files?.[0];
+    input.value = '';
+    if (file) { setInvoiceFiles((files) => ({ ...files, [order.id]: file })); setInvoicePreviews((previews) => ({ ...previews, [order.id]: false })); }
+  }
+  async function uploadInvoice(order: Order) {
+    const file = invoiceFiles[order.id];
+    if (!file) return;
+    setBusy('invoice' + order.id);
+    try { await backend.addInvoice(order.id, file); setInvoiceOrders((os) => os.filter((o) => o.id !== order.id)); setInvoiceFiles((files) => { const next = { ...files }; delete next[order.id]; return next; }); setInvoicePreviews((previews) => { const next = { ...previews }; delete next[order.id]; return next; }); say(c.invoiceSent); }
+    catch (e) { handleError(e); } finally { setBusy(null); }
   }
   const testCfgV = useMemo(() => kit.defaultCfg(kit.D(testId) || kit.DESIGNS[0]), [kit, testId]);
   const testCfg = () => testCfgV;
@@ -355,7 +387,7 @@ export default function Admin() {
             <div className="dtabs" role="tablist" aria-label={d.tabsLabel}>
               {TABS.map((t, i) => (
                 <button key={t} ref={(el) => { tabRefs.current[t] = el; }} role="tab" type="button" id={'tab-' + t} aria-selected={tab === t} aria-controls={'pane-' + t} tabIndex={tab === t ? 0 : -1} onClick={() => setTab(t)} onKeyDown={(e) => tabKeys(e, i)}>
-                  {d.tabs[t]}{t === 'orders' && allOpen.length > 0 && <span className="dtab-badge" aria-label={`, ${allOpen.length} ${STATUS.new}`}>{allOpen.length}</span>}
+                  {d.tabs[t]}{t === 'orders' && allOpen.length > 0 && <span className="dtab-badge" aria-label={`, ${allOpen.length} ${STATUS.new}`}>{allOpen.length}</span>}{t === 'invoices' && invoiceOrders.length > 0 && <span className="dtab-badge" aria-label={`, ${invoiceOrders.length} ${d.invoicesTitle}`}>{invoiceOrders.length}</span>}
                 </button>
               ))}
             </div>
@@ -451,6 +483,24 @@ export default function Admin() {
                   {shown.length > limit && <button className="btn btn-ghost dmore" type="button" onClick={() => setLimit((n) => n + 20)}>{d.more(Math.min(20, shown.length - limit))}</button>}
                 </div>
               </>)}
+
+              {tab === 'invoices' && (
+                <section className="invoice-queue" aria-labelledby="admInvoicesTitle">
+                  <header className="invoice-head"><div><h2 id="admInvoicesTitle">{d.invoicesTitle}</h2><p className="adm-note">{d.invoicesNote}</p></div></header>
+                  {!invoiceOrders.length ? <p className="adm-empty">{d.invoiceEmpty}</p> : (
+                    <div className="orders">
+                      {invoiceOrders.map((o) => (
+                        <article className="order invoice-order" key={o.id}>
+                          <div className="order-head"><div><h3>#{o.ref} <span className="muted">{o.name}</span></h3><p>{o.email}<br />{isNaN(o.created.getTime()) ? '' : o.created.toLocaleString(locale)} · <span className="price">{euro(o.total)}</span></p></div><span className="status" data-s="new">{d.invoiceFile}</span></div>
+                          <div className="invoice-items"><strong>{d.invoiceItems}</strong><ul>{o.items.map((it, i) => <li key={i}>{it.qty} × {kit.D(it.cfg.design)?.name || it.cfg.design} · {kit.descOf(it.cfg)}</li>)}</ul></div>
+                          <div className="invoice-upload"><label className="btn btn-ghost" htmlFor={'invoice-' + o.id}>{d.invoiceFile}</label><input className="sr" id={'invoice-' + o.id} type="file" accept="application/pdf,image/png,image/jpeg" disabled={busy === 'invoice' + o.id} onChange={(e) => selectInvoice(o, e.currentTarget)} /><span className="invoice-name">{invoiceFiles[o.id]?.name || d.invoiceTypes}</span>{invoiceFiles[o.id] && <><button className="btn btn-ghost" type="button" onClick={() => setInvoicePreviews((previews) => ({ ...previews, [o.id]: !previews[o.id] }))}>{invoicePreviews[o.id] ? d.invoiceHidePreview : d.invoicePreview}</button><button className="btn btn-primary" type="button" disabled={busy === 'invoice' + o.id} onClick={() => uploadInvoice(o)}>{d.invoiceSend}</button></>}</div>
+                          {invoiceFiles[o.id] && invoicePreviews[o.id] && <div className="invoice-file-preview"><InvoicePreview file={invoiceFiles[o.id]!} /></div>}
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
 
               {tab === 'customers' && (<>
                 <div className="kpis">
