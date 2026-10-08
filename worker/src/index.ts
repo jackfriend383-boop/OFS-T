@@ -46,6 +46,7 @@ const INVOICE_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
 const STATUSES = ['new', 'printed', 'shipped'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CUSTOMER_LIMITS: Record<string, [number, number]> = {
   name: [1, 200], email: [3, 254], street: [1, 300], postcode: [1, 20], city: [1, 120], country: [1, 60],
 };
@@ -354,14 +355,31 @@ async function requireCustomer(req: Request, env: Env): Promise<string> {
 }
 const publicUser = (u: any) => ({ id: u.id, email: u.email, name: u.name, phone: u.phone, street: u.street, postcode: u.postcode, city: u.city, country: u.country, lang: u.lang });
 
+function validBirthDate(value: unknown): string {
+  const birthDate = typeof value === 'string' ? value : '';
+  if (!DATE.test(birthDate)) throw new HttpError(400, 'invalid');
+  const date = new Date(`${birthDate}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== birthDate || date > new Date()) throw new HttpError(400, 'invalid');
+  const now = new Date();
+  let age = now.getUTCFullYear() - date.getUTCFullYear();
+  const birthdayPassed = now.getUTCMonth() > date.getUTCMonth() || (now.getUTCMonth() === date.getUTCMonth() && now.getUTCDate() >= date.getUTCDate());
+  if (!birthdayPassed) age--;
+  if (age < 13) throw new HttpError(403, 'age_restricted');
+  return birthDate;
+}
+
 /* Emails a one-time sign-in link. Whether or not the address has an account, and whether or not it was throttled, the answer is
    the same {ok:true}, so this cannot be used to discover who has an account. The token travels in the URL #fragment (never sent
    to any server, and not consumed by mail scanners that merely fetch the link); only its hash is stored. */
 async function requestLink(req: Request, env: Env) {
-  if (!env.RESEND_API_KEY || !env.MAIL_FROM || !env.SITE_URL) throw new HttpError(503, 'not_configured');
   const b = await readJson(req);
   const email = isObj(b) && typeof b.email === 'string' ? b.email.trim().toLowerCase().slice(0, 254) : '';
   if (!EMAIL.test(email) || /[\u0000-\u001f\u007f<>"]/.test(email)) throw new HttpError(400, 'invalid');
+  const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?1').bind(email).first<{ id: string }>();
+  const rawBirthDate = isObj(b) && typeof b.birth_date === 'string' ? b.birth_date : '';
+  if (!existing && !rawBirthDate) return { ok: true, needs_birth_date: true };
+  const birthDate = existing ? (rawBirthDate ? validBirthDate(rawBirthDate) : null) : validBirthDate(rawBirthDate);
+  if (!env.RESEND_API_KEY || !env.MAIL_FROM || !env.SITE_URL) throw new HttpError(503, 'not_configured');
   const lang: 'pt' | 'en' = isObj(b) && b.lang === 'en' ? 'en' : 'pt';
 
   await env.DB.prepare(`DELETE FROM link_requests WHERE at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')`).run();
@@ -376,8 +394,8 @@ async function requestLink(req: Request, env: Env) {
   await env.DB.batch([
     env.DB.prepare('INSERT INTO link_requests (email) VALUES (?1)').bind(email),
     env.DB.prepare(`DELETE FROM login_links WHERE expires_at < ${NOW}`),
-    env.DB.prepare(`INSERT INTO login_links (token_hash, email, expires_at) VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+15 minutes'))`)
-      .bind(hex(await sha256(token)), email),
+    env.DB.prepare(`INSERT INTO login_links (token_hash, email, birth_date, expires_at) VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+15 minutes'))`)
+      .bind(hex(await sha256(token)), email, birthDate),
   ]);
   const site = env.SITE_URL.trim().replace(/\/$/, '');
   const m = signInEmail(lang, `${site}${lang === 'en' ? '/en' : ''}/account/#token=${token}`);
@@ -392,15 +410,15 @@ async function verifyLink(req: Request, env: Env) {
   const token = isObj(b) && typeof b.token === 'string' ? b.token : '';
   if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) throw new HttpError(401, 'invalid_link');
   const link = await env.DB.prepare(
-    `UPDATE login_links SET used_at = ${NOW} WHERE token_hash = ?1 AND used_at IS NULL AND expires_at > ${NOW} RETURNING email`,
-  ).bind(hex(await sha256(token))).first<{ email: string }>();
+    `UPDATE login_links SET used_at = ${NOW} WHERE token_hash = ?1 AND used_at IS NULL AND expires_at > ${NOW} RETURNING email, birth_date`,
+  ).bind(hex(await sha256(token))).first<{ email: string; birth_date: string }>();
   if (!link) throw new HttpError(401, 'invalid_link');
 
   const lang = isObj(b) && b.lang === 'en' ? 'en' : 'pt';
   const user = await env.DB.prepare(
-    `INSERT INTO users (id, email, last_login_at, lang) VALUES (?1, ?2, ${NOW}, ?3)
-     ON CONFLICT(email) DO UPDATE SET last_login_at = excluded.last_login_at RETURNING *`,
-  ).bind(crypto.randomUUID(), link.email, lang).first<any>();
+     `INSERT INTO users (id, email, birth_date, last_login_at, lang) VALUES (?1, ?2, ?3, ${NOW}, ?4)
+      ON CONFLICT(email) DO UPDATE SET last_login_at = excluded.last_login_at, birth_date = COALESCE(users.birth_date, excluded.birth_date) RETURNING *`,
+    ).bind(crypto.randomUUID(), link.email, link.birth_date, lang).first<any>();
 
   const session = newToken();
   await env.DB.batch([

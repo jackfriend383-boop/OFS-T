@@ -44,7 +44,7 @@ export function makeBackend(kit: Kit) {
   const T = kit.T;
   /* Messages in the page language. */
   const MSG = {
-    config: T('beConfig'), network: T('beNetwork'), timeout: T('beTimeout'), rate: T('beRate'), server: T('beServer'),
+    config: T('beConfig'), network: T('beNetwork'), timeout: T('beTimeout'), rate: T('beRate'), server: T('beServer'), age: T('beAgeRestricted'),
     payment: T('bePayment'), link: T('beLink'), mail: T('beMail'), invalid: T('beInvalid'), credentials: T('beCredentials'), session: T('beSession'), denied: T('beDenied'), generic: T('beGeneric'),
   };
 
@@ -73,6 +73,7 @@ export function makeBackend(kit: Kit) {
     const code = String(d && typeof d === 'object' ? d.error || '' : '');
     if (status === 429 || code === 'rate_limited') return new BackendError(MSG.rate, 'rate_limited');
     if (code === 'invalid_link') return new BackendError(MSG.link, 'invalid_link');
+    if (code === 'age_restricted') return new BackendError(MSG.age, 'age_restricted');
     if (code === 'mail_unavailable') return new BackendError(MSG.mail, 'mail_unavailable');
     if (code === 'invalid_credentials') return new BackendError(MSG.credentials, 'invalid_credentials');
     if (code === 'session_expired' || status === 401) return new BackendError(MSG.session, 'session_expired');
@@ -160,10 +161,11 @@ export function makeBackend(kit: Kit) {
     catch (e: any) { if (e.code === 'session_expired') ls.clear(); throw e; }
   }
   /* Emails a one-time sign-in link (the answer is the same whether or not the address already has an account). */
-  async function requestLink(email: string) {
+  async function requestLink(email: string, birthDate: string): Promise<{ needsBirthDate: boolean }> {
     email = String(email || '').trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BackendError(T('badEmail'), 'invalid');
-    await request('/api/auth/request', { method: 'POST', body: { email, lang: kit.lang } });
+    const r = await request('/api/auth/request', { method: 'POST', body: { email, birth_date: birthDate, lang: kit.lang } });
+    return { needsBirthDate: r && r.needs_birth_date === true };
   }
   /* Uses the token from the emailed link; on success the customer is signed in. */
   async function verifyLink(token: string): Promise<Customer> {

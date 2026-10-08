@@ -11,9 +11,10 @@ const slot = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g
 
 export default function Account() {
   const { T, kit, backend, account, setCustomer, signOutCustomer, to } = useApp();
-  const [phase, setPhase] = useState<'idle' | 'verifying' | 'sent'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'age' | 'verifying' | 'sent'>('idle');
   const [err, setErr] = useState('');
   const [email, setEmail] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [busy, setBusy] = useState(false);
   const used = useRef('');
   const { hash } = useLocation();
@@ -34,8 +35,19 @@ export default function Account() {
     e.preventDefault();
     if (busy) return;
     setErr(''); setBusy(true);
-    try { await backend.requestLink(email); setPhase('sent'); }
+    try { await backend.requestLink(email, birthDate); setPhase('sent'); }
     catch (x: any) { setErr(x.message || T('beGeneric')); }
+    finally { setBusy(false); }
+  }
+
+  async function continueWithEmail(e: FormEvent) {
+    e.preventDefault();
+    if (!email.trim() || busy) return;
+    setErr(''); setBusy(true);
+    try {
+      const result = await backend.requestLink(email, '');
+      if (result.needsBirthDate) setPhase('age'); else setPhase('sent');
+    } catch (x: any) { setErr(x.message || T('beGeneric')); }
     finally { setBusy(false); }
   }
 
@@ -61,14 +73,28 @@ export default function Account() {
               <p className="muted">{slot(T('acctSentText'), { email })}</p>
               <button type="button" className="btn btn-ghost" onClick={() => { setPhase('idle'); setErr(''); }}>{T('acctOtherEmail')}</button>
             </div>
-          ) : (
+          ) : phase === 'age' ? (
             <form className="acct-card co" noValidate onSubmit={sendLink}>
+              <p className="muted">{email}</p>
+              <div className="co-f">
+                <label htmlFor="acBirthDate">{T('acctBirthDate')}</label>
+                <input className="field" id="acBirthDate" type="date" autoComplete="bday" required max={new Date().toISOString().slice(0, 10)}
+                  value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+                <p className="muted">{T('acctAgeNote')}</p>
+              </div>
+              <div className="acct-actions">
+                <button className="btn btn-primary" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? T('acctSendingLink') : T('acctSendLink')}</button>
+                <button className="btn btn-ghost" type="button" onClick={() => setPhase('idle')} disabled={busy}>{T('acctOtherEmail')}</button>
+              </div>
+            </form>
+          ) : (
+            <form className="acct-card co" noValidate onSubmit={continueWithEmail}>
               <div className="co-f">
                 <label htmlFor="acEmail">{T('acctEmail')}</label>
                 <input className="field" id="acEmail" type="email" autoComplete="email" inputMode="email" autoCapitalize="off" spellCheck={false} required
                   value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
-              <button className="btn btn-primary" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? T('acctSendingLink') : T('acctSendLink')}</button>
+              <button className="btn btn-primary" type="submit" disabled={busy} aria-busy={busy || undefined}>{T('acctContinue')}</button>
             </form>
           )
         )}

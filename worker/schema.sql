@@ -43,6 +43,7 @@ CREATE INDEX IF NOT EXISTS orders_user_idx ON orders (user_id, created_at DESC);
 CREATE TABLE IF NOT EXISTS users (
   id            TEXT PRIMARY KEY CHECK (length(id) = 36),
   email         TEXT NOT NULL UNIQUE CHECK (length(email) BETWEEN 3 AND 254 AND email = lower(email)),
+  birth_date    TEXT CHECK (birth_date IS NULL OR birth_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
   created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   last_login_at TEXT,
   name          TEXT CHECK (name IS NULL OR length(name) <= 200),
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS login_links (
   token_hash TEXT PRIMARY KEY,
   email      TEXT NOT NULL,
+  birth_date TEXT CHECK (birth_date IS NULL OR birth_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
   expires_at TEXT NOT NULL,
   used_at    TEXT
 );

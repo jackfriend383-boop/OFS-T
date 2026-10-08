@@ -141,7 +141,7 @@ Still to do:
 - [ ] Generic error messages (no user enumeration); log and alert on repeated failures.
 
 ### Privacy and compliance
-- [ ] **Data minimisation**: collect only name, email, shipping address and country (plus phone only if the carrier needs it). No date of birth, no account required to buy.
+- [ ] **Data minimisation**: collect only name, email, shipping address and country (plus phone only if the carrier needs it). For customer accounts, collect date of birth only for the minimum-age check; no account is required to buy.
 - [ ] **Consent logging**: when a form has a consent checkbox (terms/privacy acceptance, marketing opt-in), store what was agreed, the policy version/date, the timestamp and the order/user id. Marketing consent must be a separate, unticked opt-in.
 - [ ] Retention: delete or anonymise data after the periods in the privacy policy; keep invoices 10 years as required.
 - [ ] Data processing agreements with every processor (host, database, email, payments, carrier); record of processing activities.
