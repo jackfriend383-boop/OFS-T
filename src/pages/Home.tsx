@@ -12,6 +12,53 @@ import { DesignCard } from '../components/DesignCard';
 
 const BASE = import.meta.env.BASE_URL;
 
+/* Cut shapes of each kit piece, traced from the sticker templates (CitroenAMI.pdf / MedidasPDFAMI.pdf), drawn to scale
+   inside their own box. Holes use the even-odd fill rule. */
+const PIECE_SHAPES: Record<string, { vb: string; d: string }> = {
+  // Door panel around the badge (74.6 × 28.5 cm): rounded panel with the badge cut-out, and the two lower strips.
+  door: { vb: '0 0 300 116', d: 'M34 3C110-1 190-1 266 3C288 5 297 22 297 48C297 70 294 84 288 92H12C6 84 3 70 3 48C3 22 12 5 34 3Z'
+    + 'M194 22h60a16 16 0 0 1 16 16v16a16 16 0 0 1-16 16h-60a16 16 0 0 1-16-16V38a16 16 0 0 1 16-16Z'
+    + 'M10 97H146V113H26C16 113 12 106 10 97Z M154 97H290C288 106 284 113 274 113H154Z' },
+  // Ami 2025 rear quarter window: wide rounded panel with softly bowed top and bottom edges.
+  window: { vb: '0 0 200 110', d: 'M30 6C70 2 130 2 170 6C188 8 196 22 196 40V70C196 92 186 104 166 104C120 108 80 108 34 104C14 104 4 92 4 70V40C4 22 12 8 30 6Z' },
+  // Ami Pop front accent (15.8 × 3.1 cm): two thin brackets, one per headlight.
+  accent: { vb: '0 0 200 40', d: 'M8 2H192A6 6 0 0 1 198 8V17H190V10H10V17H2V8A6 6 0 0 1 8 2Z M8 38H192A6 6 0 0 0 198 32V23H190V30H10V23H2V32A6 6 0 0 0 8 38Z' },
+  // Rim sticker: a ring that sits on the wheel.
+  rims: { vb: '0 0 100 100', d: 'M4 50A46 46 0 1 1 96 50A46 46 0 1 1 4 50Z M22 50A28 28 0 1 0 78 50A28 28 0 1 0 22 50Z' },
+};
+
+/* One flashcard. Front: the cut shape, name and quantity. Back: size and a short line.
+   Hover flips it on devices with a mouse; a tap, click, Enter or Space flips it everywhere (aria-pressed).
+   Both faces stay in the page for screen readers; with reduced motion it fades instead of turning. */
+function KitCard({ code, name, qty, tag, size, text, sizeLabel, qtyLabel }: { code: string; name: string; qty: string; tag: string; size: string; text: string; sizeLabel: string; qtyLabel: string }) {
+  const [open, setOpen] = useState(false);
+  const shape = PIECE_SHAPES[code];
+  return (
+    <li>
+      <button type="button" className={'kc kc-' + code} aria-pressed={open} onClick={() => setOpen((o) => !o)}>
+        <span className="kc-in">
+          <span className="kc-face kc-front">
+            <span className="kc-plate" aria-hidden="true">
+              <svg viewBox={shape.vb} focusable="false"><path d={shape.d} fillRule="evenodd" /></svg>
+            </span>
+            <span className="kc-tag">{tag}</span>
+            <span className="kc-name">{name}</span>
+            <span className="kc-qty">{qty}</span>
+            <span className="kc-turn" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4" /></svg></span>
+          </span>
+          <span className="kc-face kc-back">
+            <span className="kc-tag">{tag}</span>
+            <span className="kc-name">{name}</span>
+            <span className="kc-row"><span>{sizeLabel}</span><b>{size}</b></span>
+            <span className="kc-row"><span>{qtyLabel}</span><b>{qty}</b></span>
+            <span className="kc-text">{text}</span>
+          </span>
+        </span>
+      </button>
+    </li>
+  );
+}
+
 export default function Home() {
   const { kit, lang, to } = useApp();
   const c = COPY[lang].home;
@@ -103,6 +150,15 @@ export default function Home() {
         <div className="sec-head"><h2 className="display">{c.how}</h2></div>
         <div className="steps">{c.steps.map(([h, p], n) => <div className="step-card" key={h}><span className="n">{String(n + 1).padStart(2, '0')}</span><h3>{h}</h3><p>{p}</p></div>)}</div>
       </div>
+
+      {/* What's in the kit: one flashcard per piece (door, window, front accent, rims). */}
+      <section className="section kit-cards" style={{ paddingTop: 0 }} aria-labelledby="kitCardsTitle">
+        <div className="sec-head"><div><span className="eyebrow">{c.kitEyebrow}</span><h2 className="display" id="kitCardsTitle">{c.kitTitle}</h2></div></div>
+        <p className="muted kc-lead">{c.kitLead} <span className="kc-hint">{c.kitHint}</span></p>
+        <ul className="kc-grid">
+          {c.kitCards.map(([code, name, qty, tag, size, text]) => <KitCard key={code} code={code} name={name} qty={qty} tag={tag} size={size} text={text} sizeLabel={c.kitSize} qtyLabel={c.kitQty} />)}
+        </ul>
+      </section>
 
       <div className="section" style={{ paddingTop: 0 }}>
         <div className="fit">

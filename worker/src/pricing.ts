@@ -6,11 +6,30 @@ const MODELS: Record<string, string> = { qs: 'Ami 2025', pop: 'Ami Pop' };
 const COLORS = DATA.colors as Record<string, { name: string; hex: string }>;
 const DESIGNS = DATA.designs as { id: string; name: string; price: number; c1: string; c2: string; fixed?: boolean }[];
 const EXTRA = DATA.extras as { secondSide: number; badge: number };
+const PIECE_PRICE = DATA.pieces as Record<'door' | 'window' | 'accent' | 'rims', number>;
+/* Kit pieces: same rules as normPieces / piecesPrice in src/lib/kit.ts (keep the two in step).
+   Full kit = design price; individual pieces are left + right pairs (rims a set of 4) at fixed prices; accents only on the Pop. */
+const PIECES = ['full', 'door', 'window', 'accent', 'rims'];
+const PIECE_NAMES: Record<string, string> = { full: 'Full kit', door: 'Door stickers (pair)', window: 'Window stickers (pair)', accent: 'Front accents (pair)', rims: 'Rim stickers (set of 4)' };
+const fullPieces = (model: string) => (model === 'pop' ? ['door', 'window', 'accent'] : ['door', 'window']);
+function normPieces(raw: unknown, model: string, designPrice = 0): string[] {
+  const list: unknown[] = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : [];
+  const set = new Set(list.filter((x): x is string => typeof x === 'string' && PIECES.includes(x)));
+  if (model !== 'pop') set.delete('accent');
+  const full = fullPieces(model);
+  const partsCost = full.reduce((t, p) => t + PIECE_PRICE[p as 'door'], 0);
+  // Every piece of the full kit becomes the full kit only when that is not dearer (same rule as kit.ts).
+  if (set.has('full') || (full.every((p) => set.has(p)) && designPrice <= partsCost)) { full.forEach((p) => set.delete(p)); set.add('full'); }
+  if (!set.size) set.add('full'); // older site versions send no pieces: the full kit
+  return [...set].sort();
+}
+const piecesPrice = (pieces: string[], designPrice: number) =>
+  (pieces.includes('full') ? designPrice : pieces.reduce((s, p) => s + (p === 'full' || p === 'rims' ? 0 : PIECE_PRICE[p as 'door']), 0)) + (pieces.includes('rims') ? PIECE_PRICE.rims : 0);
 const has = (o: object, k: unknown): boolean => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
 const cleanNumber = (v: unknown) => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9 .#&!-]/g, '').slice(0, 8);
 
 export interface PricedItem {
-  cfg: { model: string; design: string; c1: string; c2: string; finish: string; kit: string; numberOn: boolean; number: string };
+  cfg: { model: string; design: string; c1: string; c2: string; finish: string; kit: string; numberOn: boolean; number: string; pieces: string[] };
   qty: number;
   unit_cents: number;
   name: string;
@@ -30,12 +49,13 @@ export function priceItem(raw: any): PricedItem | null {
   const finish = c.finish === 'gloss' ? 'gloss' : 'matte';
   const kit = 'both'; // every kit covers both sides (kit size is no longer offered)
   const number = typeof c.number === 'string' ? cleanNumber(c.number) : '';
-  const numberOn = !!c.numberOn && !!number;
-  const unit = d.price + EXTRA.secondSide + (numberOn ? EXTRA.badge : 0); // secondSide is 0: both sides at the design price
+  const numberOn = !!c.numberOn && !!number && model !== 'pop'; // the custom badge is only offered on the Ami 2025
+  const pieces = normPieces(c.pieces, model, d.price);
+  const unit = piecesPrice(pieces, d.price) + EXTRA.secondSide + (numberOn ? EXTRA.badge : 0); // secondSide is 0: both sides included
   const colours = d.fixed ? 'Original colours' : `${COLORS[c1].name} / ${COLORS[c2].name}`;
-  const desc = `${MODELS[model]} · ${colours} · ${finish === 'gloss' ? 'Gloss' : 'Matte'} · Both sides${numberOn ? ` · Badge "${number}"` : ''}`;
+  const desc = `${MODELS[model]} · ${colours} · ${finish === 'gloss' ? 'Gloss' : 'Matte'} · ${PIECES.filter((p) => pieces.includes(p)).map((p) => PIECE_NAMES[p]).join(' · ')}${numberOn ? ` · Badge "${number}"` : ''}`;
   return {
-    cfg: { model, design: d.id, c1, c2, finish, kit, numberOn, number: numberOn ? number : '' },
+    cfg: { model, design: d.id, c1, c2, finish, kit, numberOn, number: numberOn ? number : '', pieces },
     qty: Math.min(99, qty),
     unit_cents: Math.round(unit * 100),
     name: d.name,

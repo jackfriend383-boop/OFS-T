@@ -23,17 +23,19 @@ export const Thumb = memo(function Thumb({ cfg, decorative = true, eager = false
   return <span ref={ref} className={className || undefined} style={{ display: 'block' }} dangerouslySetInnerHTML={{ __html: html }} />;
 });
 
-/* The live car (hero + configurator). The Stage animates its own SVG; React only owns the host element. */
-export interface StageApi { replay: () => void; view: (name: string) => void; zoom: (f: number) => void; pan: (dx: number, dy: number) => void; zoomed: () => boolean; angle: (name: Angle) => void; currentAngle: () => Angle }
+/* The live car (hero + configurator). The Stage animates its own SVG; React only owns the host element.
+   setNight(on): night scene (car lights on), used by the configurator in the dark theme. */
+export interface StageApi { replay: () => void; view: (name: string) => void; zoom: (f: number) => void; pan: (dx: number, dy: number) => void; zoomed: () => boolean; angle: (name: Angle) => void; currentAngle: () => Angle; setNight: (on: boolean) => void }
 export function CarStage({ cfg, id, apiRef, onClick, style }: { cfg: Cfg; id?: string; apiRef?: React.MutableRefObject<StageApi | null>; onClick?: () => void; style?: React.CSSProperties }) {
   const { kit } = useApp();
   const host = useRef<HTMLDivElement>(null);
   const stage = useRef<Stage | null>(null);
   const first = useRef(cfg);
+  const night = useRef(false); // last setNight() value, kept so a re-created stage (e.g. React dev double mount) starts the same
   useEffect(() => {
     initArt();
-    const s = (stage.current = new Stage(host.current!, kit, first.current));
-    if (apiRef) apiRef.current = { replay: () => s.driveIn(), view: (n) => s.view(n), zoom: (f) => s.zoom(f), pan: (x, y) => s.pan(x, y), zoomed: () => s.zoomed(), angle: (a) => s.angle(a), currentAngle: () => s.currentAngle() };
+    const s = (stage.current = new Stage(host.current!, kit, first.current, night.current));
+    if (apiRef) apiRef.current = { replay: () => s.driveIn(), view: (n) => s.view(n), zoom: (f) => s.zoom(f), pan: (x, y) => s.pan(x, y), zoomed: () => s.zoomed(), angle: (a) => s.angle(a), currentAngle: () => s.currentAngle(), setNight: (on) => { night.current = on; s.setNight(on); } };
     s.driveIn();
     // Only the configurator (which controls the camera) turns the car: fetch the other angles once the page has settled.
     const t = apiRef ? setTimeout(() => s.preload(true), 1200) : 0;

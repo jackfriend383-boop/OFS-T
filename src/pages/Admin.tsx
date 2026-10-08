@@ -21,7 +21,7 @@ const TAB_KEY = 'ofst-admin-tab', RANGE_KEY = 'ofst-admin-range';
 const remember = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* private mode */ } };
 const recall = (k: string) => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } };
 const pct = (v: number, locale: string) => new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 }).format(v);
-interface Order { id: string; ref: string; status: string; created: Date; name: string; email: string; street: string; postcode: string; city: string; country: string; items: { cfg: Cfg; qty: number; list: number }[]; dropped: number; total: number; listTotal: number; pers: boolean; pay: string }
+interface Order { id: string; ref: string; status: string; created: Date; name: string; email: string; street: string; postcode: string; city: string; country: string; nif: string; items: { cfg: Cfg; qty: number; list: number }[]; dropped: number; total: number; listTotal: number; pers: boolean; pay: string }
 const NEXT: Record<string, string> = { new: 'printed', printed: 'shipped', shipped: 'new' };
 const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
 const Rich = ({ html, as: Tag = 'span', ...p }: { html: string; as?: any } & Record<string, any>) => <Tag {...p} dangerouslySetInnerHTML={{ __html: html }} />; // our own copy, never user input
@@ -99,6 +99,7 @@ export default function Admin() {
     return {
       id: String(o.id), ref: String(o.id).slice(-6).toUpperCase(), status: STATUS[o.status] ? o.status : 'new', created: new Date(o.created_at),
       name: str(cu.name, 200), email: str(cu.email, 254), street: str(cu.street, 300), postcode: str(cu.postcode, 20), city: str(cu.city, 120), country: str(cu.country, 60),
+      nif: /^\d{9}$/.test(String(cu.nif || '')) ? String(cu.nif) : '', // optional Portuguese tax number
       items, dropped: raw.length - items.length, total, listTotal: items.reduce((s, i) => s + i.list * i.qty, 0), pers: o.consent_personalised === true,
       pay: o.payment_status === 'paid' ? 'paid' : o.payment_status === 'mismatch' ? 'mismatch' : 'unpaid', // set only by Stripe's signed webhook
     };
@@ -237,7 +238,7 @@ export default function Admin() {
     const rows: (string | number)[][] = [d.csvHead];
     shown.forEach((o) => rows.push([
       '#' + o.ref, isNaN(o.created.getTime()) ? '' : o.created.toISOString(), STATUS[o.status], o.pay === 'paid' ? d.paid : d.mismatch,
-      o.name, o.email, o.street, o.postcode, o.city, o.country,
+      o.name, o.email, o.street, o.postcode, o.city, o.country, o.nif,
       o.items.map((i) => `${i.qty}x ${kit.D(i.cfg.design)?.name || i.cfg.design} (${kit.descOf(i.cfg)})`).join(' | '),
       o.items.reduce((s, i) => s + sheetsOf(i), 0), (o.total / 100).toFixed(2),
     ]));
@@ -284,7 +285,7 @@ export default function Admin() {
             <h3 id={'ord-' + o.ref}>{o.name || T('customer')} <span className="muted mono adm-ref">#{o.ref}</span></h3>
             {compact
               ? <p>{when} · {d.kits(kits)} · <span className="price">{euro(o.total)}</span>{o.city ? ' · ' + o.city : ''}</p>
-              : <p>{o.email}<br />{o.street}, {o.postcode} {o.city}, {o.country}<br />{when} · <span className="price">{euro(o.listTotal)}</span>{o.pay === 'paid' ? ' · ' + T('payPaid') : ''}{o.pers ? ' · ' + T('persAck') : ''}</p>}
+              : <p>{o.email}<br />{o.street}, {o.postcode} {o.city}, {o.country}{o.nif ? <> · NIF <span className="mono">{o.nif}</span></> : null}<br />{when} · <span className="price">{euro(o.listTotal)}</span>{o.pay === 'paid' ? ' · ' + T('payPaid') : ''}{o.pers ? ' · ' + T('persAck') : ''}</p>}
             {warn.map((w) => <p className="err" key={w}>{w}</p>)}
           </div>
           <div className="adm-st">
@@ -491,7 +492,7 @@ export default function Admin() {
                     <div className="orders">
                       {invoiceOrders.map((o) => (
                         <article className="order invoice-order" key={o.id}>
-                          <div className="order-head"><div><h3>#{o.ref} <span className="muted">{o.name}</span></h3><p>{o.email}<br />{isNaN(o.created.getTime()) ? '' : o.created.toLocaleString(locale)} · <span className="price">{euro(o.total)}</span></p></div><span className="status" data-s="new">{d.invoiceFile}</span></div>
+                          <div className="order-head"><div><h3>#{o.ref} <span className="muted">{o.name}</span></h3><p>{o.email}{o.nif ? <> · NIF <span className="mono">{o.nif}</span></> : null}<br />{isNaN(o.created.getTime()) ? '' : o.created.toLocaleString(locale)} · <span className="price">{euro(o.total)}</span></p></div><span className="status" data-s="new">{d.invoiceFile}</span></div>
                           <div className="invoice-items"><strong>{d.invoiceItems}</strong><ul>{o.items.map((it, i) => <li key={i}>{it.qty} × {kit.D(it.cfg.design)?.name || it.cfg.design} · {kit.descOf(it.cfg)}</li>)}</ul></div>
                           <div className="invoice-upload"><label className="btn btn-ghost" htmlFor={'invoice-' + o.id}>{d.invoiceFile}</label><input className="sr" id={'invoice-' + o.id} type="file" accept="application/pdf,image/png,image/jpeg" disabled={busy === 'invoice' + o.id} onChange={(e) => selectInvoice(o, e.currentTarget)} /><span className="invoice-name">{invoiceFiles[o.id]?.name || d.invoiceTypes}</span>{invoiceFiles[o.id] && <><button className="btn btn-ghost" type="button" onClick={() => setInvoicePreviews((previews) => ({ ...previews, [o.id]: !previews[o.id] }))}>{invoicePreviews[o.id] ? d.invoiceHidePreview : d.invoicePreview}</button><button className="btn btn-primary" type="button" disabled={busy === 'invoice' + o.id} onClick={() => uploadInvoice(o)}>{d.invoiceSend}</button></>}</div>
                           {invoiceFiles[o.id] && invoicePreviews[o.id] && <div className="invoice-file-preview"><InvoicePreview file={invoiceFiles[o.id]!} /></div>}

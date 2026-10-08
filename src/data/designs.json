@@ -1,6 +1,7 @@
 {
   "currency": "EUR",
   "extras": {"secondSide": 0, "badge": 9},
+  "pieces": {"door": 39, "window": 19, "accent": 12, "rims": 25},
   "cats": ["All", "Signature", "Street", "Racing", "Retro", "Minimal"],
   "colors": {
     "volt": {"name": "Volt", "hex": "#D4F23A"},

@@ -50,6 +50,22 @@ export async function createCheckoutSession(p: CheckoutParams): Promise<{ id: st
   return { id: data.id, url: data.url };
 }
 
+/* Closes a Checkout Session the customer walked away from, so it can no longer be paid. Returns the session's status afterwards
+   ('expired', 'complete' or 'open'), or null if Stripe could not be reached. A session that was already paid cannot be expired;
+   then Stripe answers with an error and we look the session up instead. */
+export async function expireCheckoutSession(secretKey: string, sessionId: string): Promise<string | null> {
+  const url = `${API}/checkout/sessions/${encodeURIComponent(sessionId)}`;
+  const auth = { Authorization: `Bearer ${secretKey}` };
+  try {
+    const res = await fetch(`${url}/expire`, { method: 'POST', headers: auth });
+    const data: any = await res.json().catch(() => null);
+    if (res.ok && data && typeof data.status === 'string') return data.status;
+    const look = await fetch(url, { headers: auth });
+    const s: any = await look.json().catch(() => null);
+    return look.ok && s && typeof s.status === 'string' ? s.status : null;
+  } catch { return null; }
+}
+
 const enc = new TextEncoder();
 const unhex = (s: string) => new Uint8Array((s.match(/../g) || []).map((h) => parseInt(h, 16)));
 

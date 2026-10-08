@@ -1,11 +1,14 @@
 import { priceItem, isPersonalised, type PricedItem } from './pricing';
-import { createCheckoutSession, verifyWebhook } from './stripe';
+import { createCheckoutSession, expireCheckoutSession, verifyWebhook } from './stripe';
 import { sendMail, signInEmail, paidEmail, invoiceEmail, type MailAttachment } from './mail';
 
 /* OFS/T order API (Cloudflare Worker + D1). The only code that touches the database.
-   Public:  POST   /api/checkout               validate + price an order on the server, return a Stripe Checkout URL
+   Public:  POST   /api/checkout               (signed-in customers only) validate + price an order on the server, keep it as a
+                                               draft in pending_checkouts and return a Stripe Checkout URL
+            POST   /api/checkout/:id/cancel    the customer came back from Stripe without paying: close the session, drop the draft
             GET    /api/orders/:id/status      payment status of one order (by its unguessable id)
-            POST   /api/stripe/webhook         Stripe -> us (signature verified); the only thing that marks an order paid
+            POST   /api/stripe/webhook         Stripe -> us (signature verified); the only thing that creates a paid order
+   An order only exists in the `orders` table once Stripe says it was paid; until then it is a draft in `pending_checkouts`.
    Account: POST   /api/auth/request           {email,lang} -> emails a one-time sign-in link (always answers ok: no account enumeration)
             POST   /api/auth/verify            {token} -> {access_token,expires_in,user}   (link tokens are single-use, 15 minutes)
             POST   /api/auth/logout            ends this customer session
@@ -33,7 +36,7 @@ export interface Env {
   ADMIN_PASSWORD: string;   // secret: wrangler secret put ADMIN_PASSWORD  (12+ characters)
 }
 
-const MAX_ORDERS_PER_10_MIN = 30;     // global flood cap (same as the old schema); raise if you ever get more real orders
+const MAX_ORDERS_PER_10_MIN = 30;     // global flood cap on checkouts started (same as the old schema); raise if you ever get more real orders
 const MAX_FAILED_LOGINS_PER_15_MIN = 10;
 const SESSION_SECONDS = 8 * 3600;
 const CUSTOMER_SESSION_SECONDS = 30 * 86400;
@@ -49,6 +52,16 @@ const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const CUSTOMER_LIMITS: Record<string, [number, number]> = {
   name: [1, 200], email: [3, 254], street: [1, 300], postcode: [1, 20], city: [1, 120], country: [1, 60],
 };
+const OPTIONAL_CUSTOMER = ['nif']; // optional extra fields (validated separately below)
+
+/* Portuguese tax number (NIF): 9 digits, the last one is a mod-11 check digit. Same rule as the checkout form (backend.ts). */
+function validNif(v: string): boolean {
+  if (!/^\d{9}$/.test(v)) return false;
+  let sum = 0;
+  for (let i = 0; i < 8; i++) sum += Number(v[i]) * (9 - i);
+  const r = sum % 11;
+  return Number(v[8]) === (r < 2 ? 0 : 11 - r);
+}
 
 class HttpError extends Error {
   constructor(public status: number, public code: string) { super(code); }
@@ -111,13 +124,19 @@ function validateOrder(b: any) {
   const c = b.customer;
   if (!isObj(c)) throw new HttpError(400, 'invalid');
   const customer: Record<string, string> = {};
-  for (const k of Object.keys(c)) if (!(k in CUSTOMER_LIMITS)) throw new HttpError(400, 'invalid'); // no extra personal data
+  for (const k of Object.keys(c)) if (!(k in CUSTOMER_LIMITS) && !OPTIONAL_CUSTOMER.includes(k)) throw new HttpError(400, 'invalid'); // no extra personal data
   for (const [k, [min, max]] of Object.entries(CUSTOMER_LIMITS)) {
     const v = c[k];
     if (typeof v !== 'string' || v.length < min || v.length > max || /[\u0000-\u001f\u007f]/.test(v)) throw new HttpError(400, 'invalid');
     customer[k] = v;
   }
   if (!EMAIL.test(customer.email)) throw new HttpError(400, 'invalid');
+  // NIF is optional; when given it must be a valid Portuguese tax number (spaces are allowed and removed).
+  if (c.nif !== undefined && c.nif !== null && c.nif !== '') {
+    const nif = typeof c.nif === 'string' ? c.nif.replace(/\s+/g, '') : '';
+    if (!validNif(nif)) throw new HttpError(400, 'invalid_nif');
+    customer.nif = nif;
+  }
 
   // Every line is re-validated and priced here from the shared price list; any total the browser sends is ignored.
   if (!Array.isArray(b.items) || b.items.length < 1 || b.items.length > 50) throw new HttpError(400, 'invalid');
@@ -139,18 +158,31 @@ function validateOrder(b: any) {
 }
 
 /* ---------- handlers ---------- */
-/* Step 1 of paying: store the order as 'unpaid', open a Stripe Checkout Session for exactly that amount and hand back its URL.
-   The order only becomes 'paid' when Stripe's signed webhook says so (see stripeWebhook). */
+/* Checkout drafts the customer never paid for are removed after this long. A Stripe session expires after 31 minutes and Stripe
+   normally tells us at once (checkout.session.expired), so this is only a safety net. It is kept generous because Stripe retries a
+   failed webhook for up to 3 days: if the paid notice is late (e.g. the Worker was down), the draft must still be there.
+   Drafts waiting for a slow payment method (Multibanco) are kept for 30 days. */
+const STALE_DRAFT = '-24 hours';
+const STALE_AWAITING = '-30 days';
+
+/* Step 1 of paying: keep the order as a draft in pending_checkouts, open a Stripe Checkout Session for exactly that amount and
+   hand back its URL. Nothing is written to `orders` until Stripe's signed webhook says it was paid (see stripeWebhook). */
 async function startCheckout(req: Request, env: Env) {
   if (!env.STRIPE_SECRET_KEY || !env.SITE_URL) throw new HttpError(503, 'not_configured');
+  const uid = await customerId(req, env);
+  if (!uid) throw new HttpError(401, 'sign_in_required'); // only signed-in customers can buy
   const o = validateOrder(await readJson(req));
+  // Opportunistic clean-up of abandoned drafts, then the global flood cap.
+  await env.DB.prepare(
+    `DELETE FROM pending_checkouts WHERE (awaiting_payment = 0 AND created_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?1))
+       OR created_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?2)`,
+  ).bind(STALE_DRAFT, STALE_AWAITING).run();
   const { n } = (await env.DB.prepare(
-    "SELECT count(*) AS n FROM orders WHERE created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-10 minutes')",
+    "SELECT count(*) AS n FROM pending_checkouts WHERE created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-10 minutes')",
   ).first<{ n: number }>())!;
   if (n >= MAX_ORDERS_PER_10_MIN) throw new HttpError(429, 'rate_limited');
-  const uid = await customerId(req, env); // null for guests: checking out never requires an account
   await env.DB.prepare(
-    'INSERT INTO orders (id, customer, items, total_cents, lang, consent_terms, consent_personalised, user_id) VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7)',
+    'INSERT INTO pending_checkouts (id, customer, items, total_cents, lang, consent_personalised, user_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)',
   ).bind(o.id, o.customer, o.items, o.total, o.lang, o.personalised, uid).run();
 
   const site = env.SITE_URL.trim().replace(/\/$/, '');
@@ -162,19 +194,38 @@ async function startCheckout(req: Request, env: Env) {
       successUrl: `${root}/order/?o=${o.id}`, cancelUrl: `${root}/order/?o=${o.id}&cancelled=1`,
     });
   } catch {
-    await env.DB.prepare("UPDATE orders SET payment_status = 'failed' WHERE id = ?1").bind(o.id).run();
+    await env.DB.prepare('DELETE FROM pending_checkouts WHERE id = ?1').bind(o.id).run();
     throw new HttpError(502, 'payment_unavailable');
   }
-  await env.DB.prepare('UPDATE orders SET stripe_session_id = ?1 WHERE id = ?2').bind(session.id, o.id).run();
+  await env.DB.prepare('UPDATE pending_checkouts SET stripe_session_id = ?1 WHERE id = ?2').bind(session.id, o.id).run();
   return { id: o.id, url: session.url };
 }
 
-/* Public, read-only: lets the "thank you" page ask whether an order (by its unguessable id) has been paid. */
+/* The customer pressed "back" on Stripe's page (Stripe sends them to /order/?o=..&cancelled=1). Close the Stripe session so it
+   can't be paid later, then drop the draft. The draft is only dropped once Stripe confirms the session is expired, so an order
+   can never be lost if the customer actually paid in another tab. Answers ok either way (nothing to reveal). */
+async function cancelCheckout(env: Env, id: string) {
+  if (!UUID.test(id)) throw new HttpError(400, 'invalid');
+  const row = await env.DB.prepare('SELECT stripe_session_id FROM pending_checkouts WHERE id = ?1 AND awaiting_payment = 0')
+    .bind(id.toLowerCase()).first<{ stripe_session_id: string | null }>();
+  if (!row) return { ok: true };
+  const status = row.stripe_session_id && env.STRIPE_SECRET_KEY ? await expireCheckoutSession(env.STRIPE_SECRET_KEY, row.stripe_session_id) : null;
+  if (status === 'expired' || !row.stripe_session_id) {
+    await env.DB.prepare('DELETE FROM pending_checkouts WHERE id = ?1 AND awaiting_payment = 0').bind(id.toLowerCase()).run();
+  }
+  return { ok: true };
+}
+
+/* Public, read-only: lets the "thank you" page ask whether an order (by its unguessable id) has been paid.
+   A draft that is still waiting for Stripe answers 'unpaid'. */
 async function orderStatus(env: Env, id: string) {
   if (!UUID.test(id)) throw new HttpError(400, 'invalid');
-  const row = await env.DB.prepare('SELECT payment_status FROM orders WHERE id = ?1').bind(id.toLowerCase()).first<{ payment_status: string }>();
-  if (!row) throw new HttpError(404, 'not_found');
-  return { id: id.toLowerCase(), payment_status: row.payment_status };
+  const key = id.toLowerCase();
+  const row = await env.DB.prepare('SELECT payment_status FROM orders WHERE id = ?1').bind(key).first<{ payment_status: string }>();
+  if (row) return { id: key, payment_status: row.payment_status };
+  const draft = await env.DB.prepare('SELECT 1 AS ok FROM pending_checkouts WHERE id = ?1').bind(key).first();
+  if (draft) return { id: key, payment_status: 'unpaid' };
+  throw new HttpError(404, 'not_found');
 }
 
 /* Payment confirmation email. Best effort: a mail problem must never make the webhook fail (the order is already paid). */
@@ -205,7 +256,9 @@ async function resendPaidEmails(env: Env) {
   return { total: results.length, sent, failed, remaining: Math.max(0, results.length - batch.length), reason };
 }
 
-/* Stripe -> us. The signature is checked before anything in the body is trusted; the amount must match our own total. */
+/* Stripe -> us. The signature is checked before anything in the body is trusted; the amount must match our own total.
+   Paid: the draft is copied into `orders` (once: Stripe retries are ignored) and deleted. Expired / failed: the draft is deleted.
+   Orders created by the previous version of this Worker (stored in `orders` as 'unpaid') are still updated in place. */
 async function stripeWebhook(req: Request, env: Env) {
   const body = await req.text();
   if (body.length > 200000 || !(await verifyWebhook(body, req.headers.get('Stripe-Signature'), env.STRIPE_WEBHOOK_SECRET))) throw new HttpError(400, 'invalid');
@@ -216,6 +269,40 @@ async function stripeWebhook(req: Request, env: Env) {
   const orderId = String(s.client_reference_id || (s.metadata && s.metadata.order_id) || '').toLowerCase();
   if (!UUID.test(orderId)) return { received: true };
 
+  const draft = await env.DB.prepare('SELECT total_cents FROM pending_checkouts WHERE id = ?1 AND stripe_session_id = ?2')
+    .bind(orderId, s.id).first<{ total_cents: number }>();
+  if (draft) {
+    const dropDraft = () => env.DB.prepare('DELETE FROM pending_checkouts WHERE id = ?1').bind(orderId).run();
+    switch (ev.type) {
+      case 'checkout.session.completed':
+      case 'checkout.session.async_payment_succeeded':
+        if (s.payment_status === 'paid') {
+          const ok = s.amount_total === draft.total_cents && String(s.currency).toLowerCase() === 'eur';
+          // Copy the draft into orders and delete it in one transaction. INSERT OR IGNORE: a retried event changes nothing.
+          const [ins] = await env.DB.batch([
+            env.DB.prepare(
+              `INSERT OR IGNORE INTO orders (id, customer, items, total_cents, lang, consent_terms, consent_personalised, payment_status, stripe_session_id, paid_at, user_id)
+               SELECT id, customer, items, total_cents, lang, 1, consent_personalised, ?2, stripe_session_id, ${ok ? NOW : 'NULL'}, user_id
+               FROM pending_checkouts WHERE id = ?1`,
+            ).bind(orderId, ok ? 'paid' : 'mismatch'),
+            // Only drop the draft once the order really is in `orders` (never lose a paid order if the insert was skipped).
+            env.DB.prepare('DELETE FROM pending_checkouts WHERE id = ?1 AND EXISTS (SELECT 1 FROM orders WHERE id = ?1)').bind(orderId),
+          ]);
+          if (ok && ins.meta.changes === 1) await notifyPaid(env, orderId); // first time only
+        } else if (ev.type === 'checkout.session.completed') {
+          // Slow payment method (e.g. Multibanco): the customer finished on Stripe but the money arrives later. Keep the draft.
+          await env.DB.prepare('UPDATE pending_checkouts SET awaiting_payment = 1 WHERE id = ?1').bind(orderId).run();
+        }
+        break;
+      case 'checkout.session.async_payment_failed':
+      case 'checkout.session.expired':
+        await dropDraft();
+        break;
+    }
+    return { received: true };
+  }
+
+  // Older orders (created before drafts existed) or a retried event for an order that is already in `orders`.
   const order = await env.DB.prepare('SELECT total_cents, payment_status FROM orders WHERE id = ?1 AND stripe_session_id = ?2')
     .bind(orderId, s.id).first<{ total_cents: number; payment_status: string }>();
   if (!order) return { received: true };
@@ -457,6 +544,7 @@ async function deleteMe(env: Env, uid: string) {
   await env.DB.batch([
     env.DB.prepare('DELETE FROM customer_sessions WHERE user_id = ?1').bind(uid),
     env.DB.prepare('UPDATE orders SET user_id = NULL WHERE user_id = ?1').bind(uid),
+    env.DB.prepare('UPDATE pending_checkouts SET user_id = NULL WHERE user_id = ?1').bind(uid),
     env.DB.prepare('DELETE FROM users WHERE id = ?1').bind(uid),
   ]);
   return { ok: true };
@@ -497,6 +585,8 @@ export default {
         throw new HttpError(404, 'not_found');
       }
       if (path === '/api/checkout' && req.method === 'POST') return respond(await startCheckout(req, env), 201, req, env);
+      const cancel = /^\/api\/checkout\/([^/]+)\/cancel$/.exec(path);
+      if (cancel && req.method === 'POST') return respond(await cancelCheckout(env, cancel[1]), 200, req, env);
       const st = /^\/api\/orders\/([^/]+)\/status$/.exec(path);
       if (st && req.method === 'GET') return respond(await orderStatus(env, st[1]), 200, req, env);
       if (path === '/api/admin/login' && req.method === 'POST') return respond(await login(req, env), 200, req, env);

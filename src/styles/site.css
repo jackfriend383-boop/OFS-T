@@ -943,9 +943,122 @@ body{margin:0;font-size:15.5px;letter-spacing:.005em}
 /* Colour swatch groups (classic colours, metallic specials); metallic swatches get a brushed-metal sheen */
 .sw-groups{display:grid;gap:12px}
 .sw-group{display:grid;gap:8px}
-.sw-group-t{font-size:12.5px;color:var(--muted)}
+.sw-group-t{font-size:13.5px;font-weight:500;color:var(--muted)}
 .sw.metal{background:linear-gradient(115deg,color-mix(in srgb,var(--c) 70%,#000) 0%,var(--c) 22%,color-mix(in srgb,var(--c) 45%,#fff) 42%,var(--c) 58%,color-mix(in srgb,var(--c) 75%,#000) 82%,color-mix(in srgb,var(--c) 85%,#fff) 100%)}
 
 /* Customer account page: one centred column (heading and cards) */
 .view[data-view="account"] .page-head{max-width:calc(760px + 2 * var(--gutter));margin-inline:auto;justify-items:center;text-align:center}
 .view[data-view="account"] .acct{justify-items:center}
+
+/* Configurator: vinyl palettes as two separated blocks (Colour 1, divider, Colour 2) */
+.pals{display:grid;gap:0}
+.pal{display:grid;gap:12px;padding:4px 0 18px}
+.pal + .pal{border-top:1px solid var(--line-2);padding-top:18px;padding-bottom:4px}
+.pal-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.pal-head h3{margin:0;font-size:16px;font-weight:600;display:flex;align-items:baseline;gap:8px}
+.pal-head h3 small{font-size:12.5px;font-weight:400;color:var(--muted)}
+.pal-name{display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:500}
+.pal-name i{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px var(--sw-edge)}
+
+/* Configurator: pieces list (full kit or individual pairs, rims as an add-on) */
+.pcs{display:grid;gap:8px}
+.pc{display:grid;grid-template-columns:48px minmax(0,1fr) auto 20px;align-items:center;gap:12px;min-height:56px;padding:10px 12px;border-radius:var(--r-md);background:var(--raise);border:2px solid transparent;text-align:left;color:var(--muted);transition:border-color .2s,color .2s}
+.pc:hover{color:var(--fg)}
+.pc[aria-checked="true"]{border-color:var(--fg);color:var(--fg)}
+.pc-ic{display:grid;place-items:center;width:48px;height:24px}
+.pc-ic svg{width:100%;height:100%;display:block}
+.pc-t{display:grid;gap:2px;min-width:0}
+.pc-t b{font-size:14.5px;font-weight:600;color:var(--fg)}
+.pc-t small{font-size:12.5px;color:var(--muted)}
+.pc-p{font-size:14px;font-variant-numeric:tabular-nums;color:var(--fg);white-space:nowrap}
+.pc-ck{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line-2);display:grid;place-items:center}
+.pc[aria-checked="true"] .pc-ck{border-color:var(--fg);background:var(--fg)}
+.pc[aria-checked="true"] .pc-ck::after{content:"";width:6px;height:6px;border-radius:50%;background:#C8A24A}
+.pc-add{margin-top:6px}
+.pcs-note{margin:0;font-size:13px}
+
+/* Configurator: extras list */
+.xtra{display:grid;gap:10px}
+.xtra-n{font-size:15px;font-weight:600}
+.xtra-r{display:inline-flex;align-items:center;gap:12px}
+.xtra.off .xtra-n,.xtra.off .pc-p{color:var(--dim)}
+.xtra .toggle:disabled{opacity:.45;cursor:not-allowed}
+
+/* Configurator summary: what's included */
+.incl{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+.incl h4{margin:0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.incl ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.incl li{display:flex;align-items:center;gap:10px}
+.incl li::before{content:"";width:5px;height:5px;border-radius:50%;background:#C8A24A;flex:none}
+@media (max-width:640px){
+  .pc{grid-template-columns:40px minmax(0,1fr) auto 20px;gap:10px;padding:10px}
+  .pc-ic{width:40px}
+}
+
+/* ---------- Night scene on the configurator stage (dark theme) ----------
+   A night city street behind the car (its road sits under the wheels, like the beach); the car's lights are drawn by the renderer.
+   Text and controls on the picture stay light so they read on the dark sky. */
+.stage.scene-night{background:#070A14;isolation:isolate}
+.stage.scene-night::before{content:"";position:absolute;inset:0;z-index:-1;background:url(/assets/img/city-night.svg) center 78%/cover no-repeat;pointer-events:none;animation:ofst-night-in .6s ease both}
+.stage.scene-night .stage-tag{color:#F2F2F4}
+.stage.scene-night .stage-tag .eyebrow,.stage.scene-night .stage-tag span:last-child{color:#B9BCC8}
+.stage.scene-night .stage-angle,.stage.scene-night .stage-hint{color:#B9BCC8}
+.stage.scene-night .stage-arrow{background:rgba(20,22,30,.72);color:#F2F2F4;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.stage.scene-night .stage-arrow:hover{background:rgba(36,38,48,.9)}
+.stage-wrap:fullscreen .stage.scene-night{background:#070A14}
+@keyframes ofst-night-in{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.stage.scene-night::before{animation:none}}
+
+/* ===== Home: "What's in the kit" flashcards (Home.tsx KitCard) =====
+   Each card turns over (3D flip) on hover with a mouse, or on tap/click/Enter. Both faces share one grid cell so the
+   card is as tall as its longest face. Front plate: charcoal with the cut shape outlined in thin gold, in both themes. */
+.kc-lead{margin:-12px 0 22px;max-width:62ch}
+.kc-hint{color:var(--dim)}
+.kc-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.kc-grid li{display:flex}
+.kc{all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;perspective:1100px;border-radius:var(--r-lg);-webkit-tap-highlight-color:transparent}
+.kc:focus-visible{outline:2px solid #C8A24A;outline-offset:3px}
+.kc-in{display:grid;height:100%;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.kc-face{grid-area:1/1;display:flex;flex-direction:column;gap:6px;padding:14px 14px 18px;border-radius:var(--r-lg);background:var(--raise);color:var(--fg);-webkit-backface-visibility:hidden;backface-visibility:hidden;position:relative}
+.kc-back{transform:rotateY(180deg);justify-content:flex-start;padding:20px 18px;border:1px solid rgba(200,162,74,.45)}
+.kc[aria-pressed="true"] .kc-in{transform:rotateY(180deg)}
+@media (hover:hover){.kc:hover .kc-in{transform:rotateY(180deg)}}
+.kc-plate{display:grid;place-items:center;aspect-ratio:16/10;border-radius:var(--r-md);background:#16171B;margin-bottom:8px;position:relative}
+.kc-plate::before,.kc-plate::after{content:"";position:absolute;width:4px;height:4px;border-radius:50%;background:#C8A24A;top:10px;left:10px}
+.kc-plate::after{left:auto;right:10px}
+/* Fixed drawing box; each shape scales to fit inside it, so every plate keeps the same 16:10 size. */
+.kc-plate svg{position:absolute;inset:16% 11%;width:78%;height:68%;overflow:visible}
+.kc-plate path{fill:#2B2C33;stroke:#C8A24A;stroke-width:1.2;vector-effect:non-scaling-stroke}
+.kc-tag{font:500 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kc-tag::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#C8A24A;margin-right:7px;vertical-align:1px}
+.kc-name{font-weight:600;font-size:17px;line-height:1.25}
+.kc-qty{color:var(--muted);font-size:14px}
+.kc-turn{position:absolute;right:14px;bottom:16px;width:18px;height:18px;color:var(--dim)}
+.kc-turn svg{width:100%;height:100%}
+.kc-row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.kc-row span{color:var(--muted)}
+.kc-row b{font-weight:600;text-align:right}
+.kc-text{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.45}
+/* Tablets: 2 columns. Phones: 2 columns with tighter text. */
+@media (max-width:980px){.kc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){
+  .kc-grid{gap:10px}
+  .kc-face{padding:10px 10px 14px}
+  .kc-back{padding:14px 12px}
+  .kc-name{font-size:15px}
+  .kc-qty,.kc-text{font-size:13px}
+  .kc-row{flex-direction:column;gap:2px;font-size:12.5px;padding:7px 0}
+  .kc-row b{text-align:left}
+  .kc-turn{right:10px;bottom:12px}
+}
+/* Reduced motion: no turning, the faces simply swap (opacity, so screen readers still read both). */
+@media (prefers-reduced-motion:reduce){
+  .kc .kc-in,.kc:hover .kc-in{transform:none!important;transition:none}
+  .kc-back{transform:none;opacity:0}
+  .kc[aria-pressed="true"] .kc-front{opacity:0}
+  .kc[aria-pressed="true"] .kc-back{opacity:1}
+}
+@media (prefers-reduced-motion:reduce) and (hover:hover){
+  .kc:hover .kc-front{opacity:0}
+  .kc:hover .kc-back{opacity:1}
+}

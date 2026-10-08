@@ -32,7 +32,7 @@ const en = {
   cName: 'Customer', cOrders: 'Orders', cSpent: 'Spent', cLast: 'Last order', cPlace: 'Location',
   noCustomers: 'No customers in this period.',
   invoicesTitle: 'Invoices to send', invoicesNote: 'Paid orders without an invoice. Adding a file sends it to the buyer by email.', invoiceEmpty: 'All paid orders have an invoice.', invoiceFile: 'Invoice file', invoiceItems: 'Ordered items', invoiceSend: 'Add invoice and email buyer', invoiceTypes: 'PDF, PNG or JPEG, up to 750 KB', invoicePreview: 'Preview', invoiceHidePreview: 'Hide preview', invoiceSent: 'Invoice sent to the buyer.',
-  csvHead: ['Order', 'Date', 'Status', 'Payment', 'Name', 'Email', 'Street', 'Postcode', 'City', 'Country', 'Items', 'Stickers', 'Total (EUR)'],
+  csvHead: ['Order', 'Date', 'Status', 'Payment', 'Name', 'Email', 'Street', 'Postcode', 'City', 'Country', 'NIF', 'Items', 'Stickers', 'Total (EUR)'],
   limitNote: 'Figures cover the newest 500 paid orders.',
 };
 const pt: typeof en = {
@@ -68,7 +68,7 @@ const pt: typeof en = {
   cName: 'Cliente', cOrders: 'Encomendas', cSpent: 'Gasto', cLast: 'Última encomenda', cPlace: 'Localização',
   noCustomers: 'Sem clientes neste período.',
   invoicesTitle: 'Faturas por enviar', invoicesNote: 'Encomendas pagas sem fatura. Ao adicionar um ficheiro, este é enviado por email ao comprador.', invoiceEmpty: 'Todas as encomendas pagas têm fatura.', invoiceFile: 'Ficheiro da fatura', invoiceItems: 'Artigos pedidos', invoiceSend: 'Adicionar fatura e enviar email', invoiceTypes: 'PDF, PNG ou JPEG, até 750 KB', invoicePreview: 'Pré-visualizar', invoiceHidePreview: 'Fechar pré-visualização', invoiceSent: 'Fatura enviada ao comprador.',
-  csvHead: ['Encomenda', 'Data', 'Estado', 'Pagamento', 'Nome', 'Email', 'Morada', 'Código postal', 'Cidade', 'País', 'Artigos', 'Autocolantes', 'Total (EUR)'],
+  csvHead: ['Encomenda', 'Data', 'Estado', 'Pagamento', 'Nome', 'Email', 'Morada', 'Código postal', 'Cidade', 'País', 'NIF', 'Artigos', 'Autocolantes', 'Total (EUR)'],
   limitNote: 'Os valores incluem as 500 encomendas pagas mais recentes.',
 };
 export const DASH = { en, pt };

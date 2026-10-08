@@ -5,7 +5,9 @@
 --   Production : npm run db:remote
 --
 -- Model
---   orders          : one row per checkout. Written ONLY by the Worker (POST /api/orders), which validates every field.
+--   pending_checkouts : a checkout in progress (customer is on Stripe's page). Deleted on cancel / expiry / failure.
+--   orders          : one row per PAID order. Created ONLY by the Worker when Stripe's signed webhook confirms the payment
+--                     (copied from pending_checkouts). Every field was validated when the checkout started.
 --   admin_sessions  : sign-in sessions for the owner. Only a SHA-256 hash of the token is stored, never the token.
 --   login_attempts  : failed sign-ins, used to throttle password guessing.
 --
@@ -37,6 +39,23 @@ CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders (created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_stripe_session_idx ON orders (stripe_session_id);
 CREATE INDEX IF NOT EXISTS orders_user_idx ON orders (user_id, created_at DESC);
 -- (An older database without the payment columns: run migrations/0002_payments.sql first, then this file.)
+
+-- Checkouts in progress (same checks as orders). Moved into orders by the Stripe webhook once paid. See migrations/0005.
+CREATE TABLE IF NOT EXISTS pending_checkouts (
+  id                   TEXT PRIMARY KEY CHECK (length(id) = 36),
+  created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  customer             TEXT NOT NULL CHECK (json_valid(customer) AND json_type(customer) = 'object' AND length(customer) <= 2000),
+  items                TEXT NOT NULL CHECK (json_valid(items) AND json_type(items) = 'array'
+                                            AND json_array_length(items) BETWEEN 1 AND 50 AND length(items) <= 30000),
+  total_cents          INTEGER NOT NULL CHECK (total_cents BETWEEN 1 AND 1000000),
+  lang                 TEXT CHECK (lang IS NULL OR length(lang) BETWEEN 2 AND 5),
+  consent_personalised INTEGER CHECK (consent_personalised IS NULL OR consent_personalised = 1),
+  user_id              TEXT,
+  stripe_session_id    TEXT,
+  -- 1 = the customer finished on Stripe with a slow payment method (e.g. Multibanco) and the money has not arrived yet.
+  awaiting_payment     INTEGER NOT NULL DEFAULT 0 CHECK (awaiting_payment IN (0, 1))
+);
+CREATE INDEX IF NOT EXISTS pending_checkouts_created_idx ON pending_checkouts (created_at);
 
 
 -- Customer accounts. Passwordless: a customer proves they own an email address by clicking a one-time link we send.
