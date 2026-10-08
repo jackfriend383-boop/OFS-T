@@ -3,14 +3,14 @@
    at once and exchanged for a session by the Worker. */
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'react-router';
-import { useApp } from '../state';
+import { useApp, hasPendingAdd } from '../state';
 import { COUNTRIES_EN } from '../components/Cart';
 import type { Customer } from '../lib/backend';
 
 const slot = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
 
 export default function Account() {
-  const { T, kit, backend, account, setCustomer, signOutCustomer, to } = useApp();
+  const { T, kit, backend, account, setCustomer, signOutCustomer, to, finishPendingAdd } = useApp();
   const [phase, setPhase] = useState<'idle' | 'age' | 'verifying' | 'sent'>('idle');
   const [err, setErr] = useState('');
   const [email, setEmail] = useState('');
@@ -18,6 +18,9 @@ export default function Account() {
   const [busy, setBusy] = useState(false);
   const used = useRef('');
   const { hash } = useLocation();
+  // Sent here from "Add to cart" / checkout as a guest: explain why (read after mount: localStorage is browser-only).
+  const [mustSignIn, setMustSignIn] = useState(false);
+  useEffect(() => { setMustSignIn(hasPendingAdd(kit)); }, [kit]);
 
   // Arriving from the emailed link: trade the token in the #fragment for a session, then clean the address bar.
   // (A token is only ever sent once, even though React runs effects twice in development.)
@@ -27,9 +30,10 @@ export default function Account() {
     used.current = m[1];
     history.replaceState(null, '', location.pathname + location.search);
     setPhase('verifying');
-    backend.verifyLink(m[1]).then((u) => { setCustomer(u); setPhase('idle'); })
+    // Signed in: if they came from "Add to cart", the kit is added and they go back to where they were with the cart open.
+    backend.verifyLink(m[1]).then((u) => { setCustomer(u); setPhase('idle'); finishPendingAdd(); })
       .catch((e) => { setErr(e.message || T('beGeneric')); setPhase('idle'); });
-  }, [hash, backend, setCustomer, T]);
+  }, [hash, backend, setCustomer, T, finishPendingAdd]);
 
   async function sendLink(e: FormEvent) {
     e.preventDefault();
@@ -59,6 +63,7 @@ export default function Account() {
       <div className="page-head">
         <span className="eyebrow">{T('acctEyebrow')}</span>
         <h1 className="display" role="status" aria-live="polite">{h1}</h1>
+        {!user && phase !== 'verifying' && mustSignIn && <p className="note" role="status" style={{ margin: 0, maxWidth: '56ch' }}>{T('acctSignInFirst')}</p>}
         {!user && phase === 'idle' && <p className="muted" style={{ margin: 0, maxWidth: '56ch' }}>{T('acctLeadOut')}</p>}
         {user && <p className="muted" style={{ margin: 0 }}>{T('acctSignedInAs')} <b>{user.email}</b></p>}
       </div>

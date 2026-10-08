@@ -6,6 +6,7 @@ import { useApp } from '../state';
 import { Thumb } from './Car';
 import { dec } from './Html';
 import { easeInCartItems } from '../lib/motion';
+import { validNif } from '../lib/backend';
 
 /* "text {slot} text" with a React node in place of {slot}. */
 function slot(str: string, name: string, node: ReactNode): ReactNode {
@@ -104,7 +105,9 @@ const FIELDS = [
 ] as const;
 
 function Checkout({ onBack }: { onBack: () => void }) {
-  const { kit, T, to, cart, backend, account } = useApp();
+  const { kit, T, to, cart, backend, account, setCustomer, goSignIn } = useApp();
+  // Only signed-in customers can check out (the Worker refuses guests too).
+  const needSignIn = backend.configured && account.ready && !account.user;
   const u = account.user; // signed-in customer: checkout starts pre-filled from their saved details
   const saved: Record<string, string> = { coName: u?.name || '', coEmail: u?.email || '', coAddr: u?.street || '', coPost: u?.postcode || '', coCity: u?.city || '' };
   const [errs, setErrs] = useState<Record<string, string>>({});
@@ -133,6 +136,8 @@ function Checkout({ onBack }: { onBack: () => void }) {
       if (!v) msg = MSG[el.id] || T('required');
       else if ((el as HTMLInputElement).type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) msg = T('badEmail');
     }
+    // NIF is optional: empty is fine, otherwise 9 digits with a valid check digit.
+    if (el.id === 'coNif') { const v = el.value.replace(/\s+/g, ''); msg = !v || validNif(v) ? '' : T('badNif'); }
     setErrs((e) => ({ ...e, [el.id]: msg }));
     return !msg;
   }
@@ -141,7 +146,7 @@ function Checkout({ onBack }: { onBack: () => void }) {
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    const bad = [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input[required],select[required]')].filter((el) => !validate(el));
+    const bad = [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input[required],select[required],#coNif')].filter((el) => !validate(el));
     if (bad.length) { bad[0].focus(); return; }
     if (!backend.configured) { setStatus({ cls: 'note', node: notSetUp() }); return; }
     if (sending) return;
@@ -149,7 +154,7 @@ function Checkout({ onBack }: { onBack: () => void }) {
     setSending(true); setStatus(null);
     try {
       const res = await backend.startCheckout({
-        customer: { name: val('coName'), email: val('coEmail'), street: val('coAddr'), postcode: val('coPost'), city: val('coCity'), country: val('coCountry') },
+        customer: { name: val('coName'), email: val('coEmail'), street: val('coAddr'), postcode: val('coPost'), city: val('coCity'), country: val('coCountry'), nif: val('coNif') },
         items: cart.map((i) => ({ cfg: { ...i.cfg }, qty: i.qty })),
         consentTerms: !!(form.querySelector('#coTerms') as HTMLInputElement | null)?.checked,
         consentPersonalised: pers ? !!(form.querySelector('#coPers') as HTMLInputElement | null)?.checked : null,
@@ -157,6 +162,7 @@ function Checkout({ onBack }: { onBack: () => void }) {
       // Off to Stripe's hosted payment page. The cart stays saved until the order page sees the payment succeed.
       window.location.assign(res.url);
     } catch (err: any) {
+      if (err && err.code === 'sign_in_required') { setCustomer(null); setSending(false); return; } // session ended: the sign-in notice shows
       const msg = err && err.code === 'denied' ? T('orderDenied') : (err && err.message) || T('somethingWrong');
       setStatus({ cls: 'err', node: slot(T('orderFailed', { msg, email: '{email}' }), 'email', mail()) });
       setSending(false);
@@ -186,6 +192,14 @@ function Checkout({ onBack }: { onBack: () => void }) {
     return parts.map((p, i) => <Fragment key={i}>{p === '{terms}' ? legal('terms/', T('termsLink')) : p === '{refunds}' ? legal('refunds/', T('refundsLink')) : p === '{privacy}' ? legal('privacy/', T('privacyLink')) : p}</Fragment>);
   })();
 
+  if (needSignIn) return (
+    <div className="co" id="coForm">
+      <p className="note" role="status">{T('coSignInNeeded')}</p>
+      <button className="btn btn-primary" type="button" onClick={goSignIn}>{T('coSignInBtn')}</button>
+      <button className="btn btn-ghost" type="button" id="coBack" onClick={onBack}>{T('backToCart')}</button>
+    </div>
+  );
+
   return (
     <form className="co" id="coForm" ref={formRef} noValidate aria-describedby="coNote" onSubmit={submit} onInput={recheck} onChange={recheck}>
       {field(FIELDS[0])}{field(FIELDS[1])}{field(FIELDS[2])}
@@ -193,6 +207,13 @@ function Checkout({ onBack }: { onBack: () => void }) {
       <div className="co-f">
         <label htmlFor="coCountry">{T('fCountry')}</label>
         <select className="field" id="coCountry" name="country" autoComplete="country-name" required defaultValue={u?.country && COUNTRIES_EN.includes(u.country) ? u.country : undefined}>{COUNTRIES_EN.map((c, i) => <option key={c} value={c}>{countryLabels[i]}</option>)}</select>
+      </div>
+      <div className="co-f">
+        <label htmlFor="coNif">{T('fNif')}</label>
+        <input className="field" id="coNif" name="nif" type="text" inputMode="numeric" autoComplete="off" maxLength={11} spellCheck={false}
+          aria-invalid={errs.coNif ? true : undefined} aria-describedby={'coNifHint' + (errs.coNif ? ' coNifErr' : '')} />
+        <p className="muted" id="coNifHint" style={{ margin: 0, fontSize: 12 }}>{T('fNifHint')}</p>
+        <p className="err" id="coNifErr" hidden={!errs.coNif}>{errs.coNif}</p>
       </div>
       {check('coTerms', termsLabel)}
       {pers && check('coPers', T('persCheck'))}

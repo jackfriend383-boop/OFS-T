@@ -19,7 +19,8 @@ export default function Order() {
     const id = q.get('o') || '';
     if (!isUUID(id)) { setView('unknown'); return; }
     setRef(id.slice(-6).toUpperCase());
-    if (q.get('cancelled') === '1') { setView('cancelled'); return; }
+    // Came back from Stripe without paying: close that payment session so no unpaid order is kept.
+    if (q.get('cancelled') === '1') { setView('cancelled'); void backend.cancelCheckout(id); return; }
     // Stripe only sends the customer here (without ?cancelled) after the checkout was completed, so the cart is done with.
     // Cleared now rather than waiting for the paid confirmation, which can take a while (or days for Multibanco).
     clearCart();

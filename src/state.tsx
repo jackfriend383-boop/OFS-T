@@ -1,8 +1,8 @@
 /* App-wide state: language/kit, cart (localStorage), modal dialogs (cart drawer, search), toast and screen-reader announcements.
    Replaces core.js. The cart is shared between languages and tabs, exactly as before (same storage key). */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useLocation } from 'react-router';
-import { getKit, langOfPath, pagePath, type Cfg, type CartItem, type Kit, type Lang, type PageKey } from './lib/kit';
+import { useLocation, useNavigate } from 'react-router';
+import { getKit, langOfPath, pageOfPath, pagePath, type Cfg, type CartItem, type Kit, type Lang, type PageKey } from './lib/kit';
 import { makeBackend, type Backend, type Customer } from './lib/backend';
 
 export type ModalName = 'cart' | 'search' | null;
@@ -16,7 +16,12 @@ interface Ctx {
   /** The signed-in customer (null for guests). `ready` is false until the stored session has been checked. */
   account: { user: Customer | null; ready: boolean }; setCustomer: (u: Customer | null) => void; signOutCustomer: () => Promise<void>;
   cart: CartItem[]; cartCount: number; cartReady: boolean;
-  addToCart: (c: Cfg) => void; changeQty: (ix: number, d: number) => void; removeItem: (ix: number) => void; clearCart: () => void;
+  /** Adds a kit. Guests are sent to the sign-in page first (returns false); the kit is added once they have signed in. */
+  addToCart: (c: Cfg) => boolean;
+  /** Sends a guest to the sign-in page; afterwards they come back here with the cart open. */
+  goSignIn: () => void;
+  /** Called after a successful sign-in: adds the kit the guest tried to add, goes back and opens the cart. False if none. */
+  finishPendingAdd: () => boolean; changeQty: (ix: number, d: number) => void; removeItem: (ix: number) => void; clearCart: () => void;
   modal: ModalName; openModal: (m: Exclude<ModalName, null>) => void; closeModal: (restoreFocus?: boolean) => void;
   drawerMode: DrawerMode; setDrawerMode: (m: DrawerMode) => void;
   toast: { msg: string; on: boolean }; hideToast: () => void;
@@ -33,10 +38,27 @@ const AppCtx = createContext<Ctx>(null as unknown as Ctx);
 export const useApp = () => useContext(AppCtx);
 
 const CART_KEY = 'amig-cart';
+/* A guest who tries to add a kit is sent to sign in first. What they tried to add and where they were is kept here
+   (this browser only, for an hour) so it can be added and they can be brought back once signed in. cfg is null when they
+   only need to sign in to check out. */
+const PENDING_KEY = 'ofst-pending-add';
+const PENDING_MS = 3600 * 1000;
+interface PendingAdd { cfg: Cfg | null; ret: string; at: number }
 const store = {
   get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+  del: (k: string) => { try { localStorage.removeItem(k); } catch { /* private mode */ } },
 };
+
+/* The waiting "add after sign-in", or null (none, too old or not valid). Only same-site paths are ever returned to. */
+function readPending(kit: Kit): PendingAdd | null {
+  let p: any = null;
+  try { p = JSON.parse(store.get(PENDING_KEY) || 'null'); } catch { p = null; }
+  if (!p || typeof p !== 'object' || typeof p.ret !== 'string' || !/^\/(?!\/)/.test(p.ret) || !(Date.now() - +p.at < PENDING_MS)) return null;
+  return { cfg: p.cfg ? kit.sanitizeCfg(p.cfg) : null, ret: p.ret, at: +p.at };
+}
+/** True when a guest was sent to the sign-in page from "Add to cart" or checkout (the account page shows a short notice). */
+export function hasPendingAdd(kit: Kit): boolean { return !!readPending(kit); }
 
 function loadCart(kit: Kit): CartItem[] {
   let raw: any[] = [];
@@ -53,7 +75,9 @@ function loadCart(kit: Kit): CartItem[] {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
+  const here = useRef(''); here.current = pathname + search;
   const lang = langOfPath(pathname);
   const kit = getKit(lang);
   const T = kit.T;
@@ -109,14 +133,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toastT.current = setTimeout(tick, 4000);
   }, [hideToast]);
 
-  const addToCart = useCallback((c0: Cfg) => {
-    const k = kitRef.current, c = k.sanitizeCfg(c0); if (!c) return;
-    const key = k.keyOf(c), cur = cartRef.current, hit = cur.find((i) => i.key === key);
+  /* Puts one kit in the cart (no sign-in check). */
+  const putInCart = useCallback((c: Cfg) => {
+    const k = kitRef.current, key = k.keyOf(c), cur = cartRef.current, hit = cur.find((i) => i.key === key);
     commit(hit ? cur.map((i) => (i === hit ? { ...i, qty: Math.min(i.qty + 1, 99) } : i)) : [...cur, { key, cfg: { ...c }, qty: 1 }]);
+  }, [commit]);
+  const accountRef = useRef(account); accountRef.current = account;
+  /* Signed in, or a saved session that is still being checked. Without a backend nobody can sign in, so nothing is blocked. */
+  const signedIn = () => {
+    const b = backendRef.current, a = accountRef.current;
+    return !b.configured || !!a.user || (!a.ready && b.hasCustomerSession());
+  };
+  /* Remember what the guest wanted, then go to the sign-in page. In the configurator the kit goes in the address too,
+     so they come back to the same design. */
+  const sendToSignIn = useCallback((c: Cfg | null) => {
+    const k = kitRef.current;
+    const ret = c && pageOfPath(pathname) === 'configurator' ? pagePath(lang, 'configurator') + '?' + k.cfgQuery(c) : here.current;
+    store.set(PENDING_KEY, JSON.stringify({ cfg: c, ret, at: Date.now() }));
+    navigate(pagePath(lang, 'account'));
+  }, [navigate, pathname, lang]);
+  const goSignIn = useCallback(() => sendToSignIn(null), [sendToSignIn]);
+  const openCartNext = useRef(false);
+  const finishPendingAdd = useCallback(() => {
+    const p = readPending(kitRef.current);
+    store.del(PENDING_KEY);
+    if (!p) return false;
+    if (p.cfg) putInCart(p.cfg);
+    const samePage = p.ret.split(/[?#]/)[0] === pathname;
+    openCartNext.current = !samePage; // opened once the page has changed (see the pathname effect below)
+    navigate(p.ret);
+    if (samePage) openModal('cart');
+    return true;
+  }, [putInCart, navigate, pathname]); // openModal (declared below) never changes
+
+  const addToCart = useCallback((c0: Cfg) => {
+    const k = kitRef.current, c = k.sanitizeCfg(c0); if (!c) return false;
+    if (!signedIn()) { sendToSignIn(c); return false; }
+    putInCart(c);
     showToast(k.T('addedToCart', { name: k.D(c.design)!.name }));
     const b = document.getElementById('cartCount');
     if (b) { b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }
-  }, [commit, showToast]);
+    return true;
+  }, [putInCart, sendToSignIn, showToast]);
   const changeQty = useCallback((ix: number, d: number) => {
     const cur = cartRef.current, i = cur[ix]; if (!i) return;
     const qty = Math.min(99, i.qty + d);
@@ -144,16 +202,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     restoreRef.current = restore && m.opener && document.contains(m.opener) ? m.opener : null;
   }, []);
   // Navigating (a link inside a dialog, language switch) closes the dialog without stealing focus.
-  useEffect(() => { if (modalRef.current) { modalRef.current = null; setModal(null); } }, [pathname]);
+  // Coming back after signing in to add a kit: open the cart on the page they came from.
+  useEffect(() => {
+    if (modalRef.current) { modalRef.current = null; setModal(null); }
+    if (openCartNext.current) { openCartNext.current = false; openModal('cart'); }
+  }, [pathname]);
 
   const cfgProvider = useRef<(() => Cfg | null) | null>(null);
   const onPickDesign = useRef<((id: string) => void) | null>(null);
   const onEditConfig = useRef<((c: Cfg) => void) | null>(null);
 
   const value = useMemo<Ctx>(() => ({
-    lang, kit, T, backend, to, account, setCustomer, signOutCustomer, cart, cartCount: cart.reduce((s, i) => s + i.qty, 0), cartReady, addToCart, changeQty, removeItem, clearCart,
+    lang, kit, T, backend, to, account, setCustomer, signOutCustomer, cart, cartCount: cart.reduce((s, i) => s + i.qty, 0), cartReady, addToCart, goSignIn, finishPendingAdd, changeQty, removeItem, clearCart,
     modal, openModal, closeModal, drawerMode, setDrawerMode, toast, hideToast, live, announce, cfgProvider, onPickDesign, onEditConfig, restoreRef,
-  }), [lang, kit, T, backend, to, account, setCustomer, signOutCustomer, cart, cartReady, addToCart, changeQty, removeItem, clearCart, modal, openModal, closeModal, drawerMode, toast, hideToast, live, announce]);
+  }), [lang, kit, T, backend, to, account, setCustomer, signOutCustomer, cart, cartReady, addToCart, goSignIn, finishPendingAdd, changeQty, removeItem, clearCart, modal, openModal, closeModal, drawerMode, toast, hideToast, live, announce]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

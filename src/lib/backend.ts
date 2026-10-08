@@ -16,6 +16,15 @@ const SESSION_KEY = 'ofst-admin-session';
 const TIMEOUT = 15000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUUID = (s: unknown) => UUID.test(String(s));
+
+/* Portuguese tax number (NIF): exactly 9 digits and the last one is a mod-11 check digit. The Worker checks the same rule. */
+export function validNif(v: string): boolean {
+  if (!/^\d{9}$/.test(v)) return false;
+  let sum = 0;
+  for (let i = 0; i < 8; i++) sum += Number(v[i]) * (9 - i);
+  const r = sum % 11;
+  return Number(v[8]) === (r < 2 ? 0 : 11 - r);
+}
 const STATUSES = ['new', 'printed', 'shipped'];
 
 export class BackendError extends Error {
@@ -45,7 +54,7 @@ export function makeBackend(kit: Kit) {
   /* Messages in the page language. */
   const MSG = {
     config: T('beConfig'), network: T('beNetwork'), timeout: T('beTimeout'), rate: T('beRate'), server: T('beServer'), age: T('beAgeRestricted'),
-    payment: T('bePayment'), link: T('beLink'), mail: T('beMail'), invalid: T('beInvalid'), credentials: T('beCredentials'), session: T('beSession'), denied: T('beDenied'), generic: T('beGeneric'),
+    payment: T('bePayment'), signIn: T('beSignIn'), nif: T('badNif'), link: T('beLink'), mail: T('beMail'), invalid: T('beInvalid'), credentials: T('beCredentials'), session: T('beSession'), denied: T('beDenied'), generic: T('beGeneric'),
   };
 
   /* ---------- HTTP ---------- */
@@ -73,6 +82,8 @@ export function makeBackend(kit: Kit) {
     const code = String(d && typeof d === 'object' ? d.error || '' : '');
     if (status === 429 || code === 'rate_limited') return new BackendError(MSG.rate, 'rate_limited');
     if (code === 'invalid_link') return new BackendError(MSG.link, 'invalid_link');
+    if (code === 'sign_in_required') return new BackendError(MSG.signIn, 'sign_in_required');
+    if (code === 'invalid_nif') return new BackendError(MSG.nif, 'invalid_nif');
     if (code === 'age_restricted') return new BackendError(MSG.age, 'age_restricted');
     if (code === 'mail_unavailable') return new BackendError(MSG.mail, 'mail_unavailable');
     if (code === 'invalid_credentials') return new BackendError(MSG.credentials, 'invalid_credentials');
@@ -124,12 +135,18 @@ export function makeBackend(kit: Kit) {
   /* ---------- Orders ---------- */
   const clip = (v: unknown, n: number) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n);
   /* Sends the cart and form to the Worker, which re-validates every kit, prices it itself (nothing price-related is trusted from
-     here) and opens a Stripe Checkout Session. Returns the Stripe-hosted payment page to send the customer to. */
+     here) and opens a Stripe Checkout Session. Returns the Stripe-hosted payment page to send the customer to.
+     Only signed-in customers can check out: the Worker answers 'sign_in_required' otherwise. */
   async function startCheckout(order: { customer: Record<string, string>; items: { cfg: Cfg; qty: number }[]; consentTerms: boolean; consentPersonalised: boolean | null }) {
     if (!backendConfigured) throw new BackendError(MSG.config, 'not_configured');
     const c = (order && order.customer) || {};
-    const customer = { name: clip(c.name, 200), email: clip(c.email, 254), street: clip(c.street, 300), postcode: clip(c.postcode, 20), city: clip(c.city, 120), country: clip(c.country, 60) };
+    const customer: Record<string, string> = { name: clip(c.name, 200), email: clip(c.email, 254), street: clip(c.street, 300), postcode: clip(c.postcode, 20), city: clip(c.city, 120), country: clip(c.country, 60) };
     if (Object.values(customer).some((v) => !v) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) throw new BackendError(MSG.invalid, 'invalid');
+    // NIF (tax number) is optional; only sent when filled in, and it must be valid.
+    const nif = clip(c.nif, 20).replace(/\s+/g, '');
+    if (nif) { if (!validNif(nif)) throw new BackendError(MSG.nif, 'invalid_nif'); customer.nif = nif; }
+    const session = ls.get();
+    if (!session) throw new BackendError(MSG.signIn, 'sign_in_required');
     const items: { cfg: Cfg; qty: number }[] = [];
     (Array.isArray(order.items) ? order.items : []).slice(0, 50).forEach((i) => {
       const cfg = i && kit.sanitizeCfg(i.cfg), qty = Math.min(99, Math.floor(+(i && i.qty)));
@@ -138,8 +155,10 @@ export function makeBackend(kit: Kit) {
     if (!items.length) throw new BackendError(T('cartEmpty'), 'empty');
     if (order.consentTerms !== true) throw new BackendError(MSG.invalid, 'invalid');
     const body = { customer, items, lang: kit.lang, consent_terms: true, consent_personalised: order.consentPersonalised === true ? true : null };
-    // A signed-in customer's order is attached to their account; the Worker ignores an invalid token and treats it as a guest.
-    const r = await request('/api/checkout', { method: 'POST', body, token: ls.get()?.access_token });
+    // The order is attached to the signed-in customer's account. An expired token means signing in again.
+    let r: any;
+    try { r = await request('/api/checkout', { method: 'POST', body, token: session.access_token }); }
+    catch (e: any) { if (e.code === 'sign_in_required' || e.code === 'session_expired') ls.clear(); throw e; }
     // Only ever follow a link to Stripe's own checkout domain.
     let url: URL | null = null;
     try { url = new URL(String(r && r.url)); } catch { url = null; }
@@ -151,6 +170,12 @@ export function makeBackend(kit: Kit) {
     if (!UUID.test(String(id))) return null;
     try { const r = await request('/api/orders/' + encodeURIComponent(id) + '/status'); return r && typeof r.payment_status === 'string' ? r.payment_status : null; }
     catch (e: any) { if (e.code === 'invalid') return null; throw e; }
+  }
+  /* The customer came back from Stripe without paying: closes that payment session and discards the draft order.
+     Best effort (nothing to show if it fails: an unpaid draft is never turned into an order and is cleaned up later). */
+  async function cancelCheckout(id: string) {
+    if (!UUID.test(String(id))) return;
+    try { await request('/api/checkout/' + encodeURIComponent(id) + '/cancel', { method: 'POST' }); } catch { /* ignore */ }
   }
   /* ---------- Customer account ---------- */
   const hasCustomerSession = () => backendConfigured && !!ls.get();
@@ -219,6 +244,6 @@ export function makeBackend(kit: Kit) {
     const r = await authed('/api/admin/resend-paid-emails', { method: 'POST' });
     return { total: +r?.total || 0, sent: +r?.sent || 0, failed: +r?.failed || 0, remaining: +r?.remaining || 0, reason: typeof r?.reason === 'string' ? r.reason : null };
   }
-  return { configured: backendConfigured, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus, resendPaidEmails };
+  return { configured: backendConfigured, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus, resendPaidEmails };
 }
 export type Backend = ReturnType<typeof makeBackend>;
