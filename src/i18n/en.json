@@ -186,6 +186,9 @@
     "carInOrig": " in its original colours, {finish}",
     "carOn": " on a Citroën {model}",
     "carBadge": ", badge text “{text}”",
+    "carAngle_front": ", seen from the front",
+    "carAngle_front34": ", seen from the front three-quarter",
+    "carAngle_back": ", seen from the rear three-quarter",
 
     "lightTone": "Light tone",
     "darkTone": "Dark tone",

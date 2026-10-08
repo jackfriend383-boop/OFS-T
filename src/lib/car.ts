@@ -3,7 +3,7 @@
    thumbnails); the Stage animates the live copy imperatively and is wrapped by the <CarStage> React component. Browser-only
    work (artwork preparation, the Stage) never runs on the server. */
 import DATA from '../data/designs.json';
-import type { Cfg, Kit } from './kit';
+import { TRIMS, type Cfg, type Kit } from './kit';
 
 const NS = 'http://www.w3.org/2000/svg';
 const COLORS = DATA.colors as Record<string, { hex: string }>;
@@ -64,6 +64,120 @@ const MOD = (m: unknown) => (typeof m === 'string' && Object.prototype.hasOwnPro
 const viewsOf = (m: unknown): Record<string, number[]> => MOD(m).views || VIEWS;
 const fillDoor = (c: string) => `<rect x="860" y="645" width="300" height="130" fill="${c}"/>`;
 const fillWin = (c: string) => `<rect x="1150" y="335" width="160" height="165" fill="${c}"/>`;
+
+/* ---------- Camera angles (Ami 2025) ----------
+   Photos: assets/img/ami/<car colour>-<angle>.webp, all 2000×1125 and lined up with the side photo's car. The side view keeps the
+   coordinates above. For the ¾ views each sticker zone is the side zone seen in perspective: its 4 corners (TL, TR, BR, BL) are
+   traced on the photo (dq door, wq rear window, bq badge), and side-view artwork is mapped onto them (see warp()).
+   The front view shows no sticker zone. The Ami Pop has only its side photo for now. */
+export type Angle = 'front' | 'front34' | 'side' | 'back';
+const QS_ANGLES: Angle[] = ['front', 'front34', 'side', 'back'];
+export const anglesOf = (m: unknown): Angle[] => (MOD(m) === MODEL_DEFS.qs ? QS_ANGLES.slice() : ['side']);
+type Pt = number[];
+const QS_ZONES: Record<string, { dq?: Pt[]; wq?: Pt[]; bq?: Pt[]; views: Record<string, number[]> }> = {
+  front: { views: { full: [412.3, 258.6, 1173.4, 701.9], thumb: [438.7, 287, 1120.6, 645] } },
+  front34: {
+    dq: [[1012.4, 645.8], [1242.8, 632.6], [1241, 731.7], [1010.9, 751.5]], wq: [[1223.8, 327.8], [1331.9, 314], [1359.1, 483], [1242.8, 477.7]],
+    bq: [[1134.8, 657.5], [1228, 651.7], [1227.1, 705.2], [1133.9, 712.5]], views: { full: [462, 244.7, 1121, 670.5], thumb: [487.2, 271.9, 1070.6, 616.2] },
+  },
+  back: {
+    dq: [[731.3, 634.9], [829.4, 645.7], [832.6, 747.7], [733.8, 727.1]], wq: [[875.8, 335.3], [971.3, 330.1], [928.7, 497.7], [839.1, 492.2]],
+    bq: [[780, 657.9], [822.8, 663.4], [824.5, 717.9], [781.5, 710.1]], views: { full: [532.9, 242.9, 1117.1, 668.2], thumb: [558.1, 270, 1066.9, 614.1] },
+  },
+};
+// One photo was taken from a different camera position, so its zones are traced separately (window refitted by eye to the glass).
+const ZONE_OVR: Record<string, { dq: Pt[]; wq: Pt[]; bq: Pt[]; win?: string }> = {
+  'browncolor-front34': {
+    dq: [[1081.1, 649.4], [1281.8, 629.2], [1283.2, 732.3], [1084.1, 753]], wq: [[1248, 331], [1366, 327], [1370, 478], [1252, 478]],
+    bq: [[1185.5, 658], [1268.8, 649.5], [1269.6, 705.1], [1186.7, 713.6]],
+    // From this lower camera the rear window looks narrower and steeper than the side shape in perspective: traced outline.
+    win: 'M1264 342 L1325 345 L1357 470 L1299 470 Z',
+  },
+};
+// Side-view rectangles the corner quads correspond to (door rect, rear-window box, badge rect).
+const SIDE_R = { door: [876, 658, 1147, 762], win: [1150, 335, 1310, 500], badge: [1016, 677, 1129, 733] };
+const rectPts = ([x0, y0, x1, y1]: number[]): Pt[] => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+
+/* Perspective (projective) map taking 4 points onto 4 points: returns h0..h7 (h8 = 1). */
+function homography(src: Pt[], dst: Pt[]) {
+  const A: number[][] = [];
+  src.forEach(([x, y], i) => {
+    const [u, v] = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y, u], [0, 0, 0, x, y, 1, -v * x, -v * y, v]);
+  });
+  for (let c = 0; c < 8; c++) { // Gaussian elimination with partial pivoting
+    let p = c; for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+    [A[c], A[p]] = [A[p], A[c]];
+    for (let r = 0; r < 8; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let k = c; k < 9; k++) A[r][k] -= f * A[c][k]; }
+  }
+  return A.map((r, i) => r[8] / r[i]);
+}
+const hp = (H: number[], x: number, y: number): Pt => { const w = H[6] * x + H[7] * y + 1; return [(H[0] * x + H[1] * y + H[2]) / w, (H[3] * x + H[4] * y + H[5]) / w]; };
+/* Best flat (affine) approximation of the perspective map over one rectangle, as SVG matrix(a b c d e f) numbers. */
+function fitAffine(H: number[], x0: number, y0: number, x1: number, y1: number) {
+  const P = rectPts([x0, y0, x1, y1]), Q = P.map(([x, y]) => hp(H, x, y));
+  const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, w2 = ((x1 - x0) / 2) ** 2 * 4, h2 = ((y1 - y0) / 2) ** 2 * 4;
+  const qx = Q.reduce((s, q) => s + q[0], 0) / 4, qy = Q.reduce((s, q) => s + q[1], 0) / 4;
+  let a = 0, b = 0, c = 0, d = 0;
+  P.forEach(([x, y], i) => { const dx = x - mx, dy = y - my; a += (Q[i][0] - qx) * dx; c += (Q[i][0] - qx) * dy; b += (Q[i][1] - qy) * dx; d += (Q[i][1] - qy) * dy; });
+  a /= w2; c /= h2; b /= w2; d /= h2;
+  return [a, b, c, d, qx - a * mx - c * my, qy - b * mx - d * my];
+}
+const mat = (m: number[]) => `matrix(${m.map((n) => +n.toFixed(5)).join(' ')})`;
+// Side-view outlines as point lists (rounded rects sampled along their corners), so they can be mapped into another angle.
+function rrPts(x: number, y: number, w: number, h: number, r: number): Pt[] {
+  const out: Pt[] = [], C = [[x + w - r, y + r, -90], [x + w - r, y + h - r, 0], [x + r, y + h - r, 90], [x + r, y + r, 180]];
+  C.forEach(([cx, cy, a0]) => { for (let i = 0; i <= 6; i++) { const t = (a0 + i * 15) * Math.PI / 180; out.push([cx + Math.cos(t) * r, cy + Math.sin(t) * r]); } });
+  return out;
+}
+const SIDE_SHAPES = { door: rrPts(876, 658, 271, 104, 42), win: [[1161, 345], [1226, 355], [1300, 489], [1199, 489]], badge: rrPts(1016, 677, 113, 56, 20) };
+const mapPath = (H: number[], pts: Pt[]) => pts.map(([x, y], i) => { const [u, v] = hp(H, x, y); return (i ? 'L' : 'M') + u.toFixed(1) + ' ' + v.toFixed(1); }).join(' ') + ' Z';
+/* Zones of one photo (colour + angle), worked out once. */
+const ZCACHE: Record<string, any> = {};
+function zoneOf(trim: string, ang: Angle) {
+  const key = trim + '-' + ang;
+  if (ZCACHE[key]) return ZCACHE[key];
+  const base = QS_ZONES[ang], o = ZONE_OVR[key] || base, z: any = { views: base.views };
+  if (o.dq && o.wq && o.bq) {
+    z.Hd = homography(rectPts(SIDE_R.door), o.dq); z.Hw = homography(rectPts(SIDE_R.win), o.wq); z.Hb = homography(rectPts(SIDE_R.badge), o.bq);
+    z.door = mapPath(z.Hd, SIDE_SHAPES.door); z.win = (o as any).win || mapPath(z.Hw, SIDE_SHAPES.win); z.badge = mapPath(z.Hb, SIDE_SHAPES.badge);
+    z.dA = fitAffine(z.Hd, 860, 645, 1160, 775); z.wA = fitAffine(z.Hw, 1150, 335, 1310, 500); z.bA = fitAffine(z.Hb, 1016, 677, 1129, 733);
+    z.ds = Math.sqrt(Math.abs(z.dA[0] * z.dA[3] - z.dA[1] * z.dA[2])); z.ws = Math.sqrt(Math.abs(z.wA[0] * z.wA[3] - z.wA[1] * z.wA[2]));
+  }
+  return (ZCACHE[key] = z);
+}
+/* Draw side-view artwork in perspective. SVG has no perspective transform, so the artwork rectangle is split into a 2×2 grid of
+   cells, each cut into 2 triangles; every triangle is drawn (a <use> of one shared copy) with the flat transform that maps its 3
+   corners exactly, so neighbouring pieces meet without steps. Triangles are grown by half a pixel so no seam shows. */
+const triAffine = (s: Pt[], d: Pt[]) => {
+  const [[x0, y0], [x1, y1], [x2, y2]] = s, det = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0);
+  const solve = (k: number) => { // coefficients p, q, r of k' = p·x + q·y + r
+    const v0 = d[0][k], v1 = d[1][k], v2 = d[2][k];
+    const p = ((v1 - v0) * (y2 - y0) - (v2 - v0) * (y1 - y0)) / det, q = ((v2 - v0) * (x1 - x0) - (v1 - v0) * (x2 - x0)) / det;
+    return [p, q, v0 - p * x0 - q * y0];
+  };
+  const X = solve(0), Y = solve(1);
+  return [X[0], Y[0], X[1], Y[1], X[2], Y[2]];
+};
+function warp(id: string, H: number[], [x, y, w, h]: number[], content: string, n = 2) {
+  let defs = `<g id="${id}">${content}</g>`, body = '', k = 0;
+  const P = (i: number, j: number): Pt => [x + w * i / n, y + h * j / n];
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    for (const tri of [[P(i, j), P(i + 1, j), P(i + 1, j + 1)], [P(i, j), P(i + 1, j + 1), P(i, j + 1)]]) {
+      const cx = (tri[0][0] + tri[1][0] + tri[2][0]) / 3, cy = (tri[0][1] + tri[1][1] + tri[2][1]) / 3, c = `${id}${k++}`;
+      const grown = tri.map(([px, py]) => { const l = Math.hypot(px - cx, py - cy) || 1; return `${(px + (px - cx) / l * .7).toFixed(2)},${(py + (py - cy) / l * .7).toFixed(2)}`; });
+      defs += `<clipPath id="${c}"><polygon points="${grown.join(' ')}"/></clipPath>`;
+      body += `<g transform="${mat(triAffine(tri, tri.map(([px, py]) => hp(H, px, py))))}" clip-path="url(#${c})"><use href="#${id}"/></g>`;
+    }
+  }
+  return { defs, body };
+}
+/* Car colour of a version (an unknown one falls back to that version's first) and the photo for it and an angle. */
+const trimOf = (m: unknown, t: unknown) => { const L = TRIMS[MOD(m) === MODEL_DEFS.pop ? 'pop' : 'qs']; return typeof t === 'string' && L.includes(t) ? t : L[0]; };
+const angleOf = (m: unknown, a: unknown): Angle => (anglesOf(m).includes(a as Angle) ? (a as Angle) : 'side');
+const photoURL = (trim: string, ang: Angle) => `${IMG_DIR}ami/${trim}-${ang}.webp`;
+const imgOf = (m: unknown, t: unknown, ang: Angle) => (MOD(m) === MODEL_DEFS.qs ? `href="${photoURL(trimOf(m, t), ang)}" width="2000" height="1125"` : MOD(m).img);
+const viewsAt = (m: unknown, ang: Angle): Record<string, number[]> => (ang === 'side' ? viewsOf(m) : QS_ZONES[ang].views);
 
 /* Each design draws into the door panel and the rear window; everything is clipped to those two shapes. */
 export const ART: Record<string, { door: (a: string, b: string, u: string) => string; win: (a: string, b: string, u: string) => string }> = {
@@ -233,10 +347,11 @@ export function initArt() {
   Object.keys(ART_SRC).reduce((p, k) => p.then(() => prepareArt(k)).catch(() => {}), Promise.resolve());
 }
 
+const growPlate = (P: number[]) => [P[0] - 3, P[1] - 3, P[2] + 6, P[3] + 6, P[4] + 3];
 const plateText = (o: Partial<Cfg>) => (o.numberOn && o.number ? esc(o.number) : '');
 
 /* Accessible name of a car picture: design, colours (live stage only), Ami version and badge text. */
-function carLabel(kit: Kit, o: Cfg, full: boolean) {
+function carLabel(kit: Kit, o: Cfg, full: boolean, ang: Angle = 'side') {
   const d = kit.D(o.design)!, T = kit.T;
   let s = T('carDesign', { name: d.name });
   if (full) {
@@ -244,16 +359,21 @@ function carLabel(kit: Kit, o: Cfg, full: boolean) {
     s += d.fixed || !c1 || !c2 ? T('carInOrig', { finish }) : T('carIn', { c1: c1.name, c2: c2.name, finish });
   }
   s += T('carOn', { model: MOD(o.model).name });
+  if (full && ang !== 'side') s += T('carAngle_' + ang);
   if (full && o.numberOn && o.number) s += T('carBadge', { text: o.number });
   return s;
 }
 
-interface CarOpts extends Cfg { uid: string; view: string; live?: boolean; decorative?: boolean }
+interface CarOpts extends Cfg { uid: string; view: string; live?: boolean; decorative?: boolean; angle?: Angle }
 export function carSVG(kit: Kit, o: CarOpts): string {
+  const ang = angleOf(o.model, o.angle);
+  if (ang !== 'side') return carSVGAt(kit, o, ang);
   const u = o.uid, a = hex(o.c1), b = hex(o.c2), A = ART[o.design] || NO_ART, M = MOD(o.model), V = viewsOf(o.model), v = V[o.view] || V.full, live = !!o.live;
-  const rims = live ? M.wheels.map(([x, y]: number[]) => `<g transform="translate(${x} ${y})"><g class="rimspin"><g clip-path="url(#${u}-rim)"><image ${M.img} transform="translate(${-x} ${-y})"/></g></g></g>`).join('') : '';
+  const img = imgOf(o.model, o.trim, 'side');
+  const rims = live ? M.wheels.map(([x, y]: number[]) => `<g transform="translate(${x} ${y})"><g class="rimspin"><g clip-path="url(#${u}-rim)"><image ${img} transform="translate(${-x} ${-y})"/></g></g></g>`).join('') : '';
   const lights = M.lights ? ((L: any) => `<mask id="${u}-lt" maskUnits="userSpaceOnUse" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}"><image href="${L.mask}" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" preserveAspectRatio="none"/></mask><rect class="lights" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" fill="${a}" mask="url(#${u}-lt)" style="transition:fill .6s"/>`)(M.lights) : '';
-  const P = M.plate;
+  // The brown-with-colour car has a bright green pill in the badge recess: a slightly larger plate keeps it hidden.
+  const P = M === MODEL_DEFS.qs && trimOf(o.model, o.trim) === 'browncolor' ? growPlate(M.plate) : M.plate;
   const a11y = o.decorative ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="${esc(carLabel(kit, o, live))}"`;
   return `<svg class="car-svg" viewBox="${v.join(' ')}" xmlns="${NS}" ${a11y}>
   <defs>
@@ -269,7 +389,7 @@ export function carSVG(kit: Kit, o: CarOpts): string {
     <linearGradient id="${u}-sq" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".8"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
   </defs>
   <g class="drive">
-    <image ${M.img}/>
+    <image ${img}/>
     ${lights}
     ${rims}
     <g clip-path="url(#${u}-door)">
@@ -287,7 +407,7 @@ export function carSVG(kit: Kit, o: CarOpts): string {
     <rect ${M.door} fill="none" stroke="#0E0F10" stroke-width="2.5"/>
     <path d="${M.win}" fill="none" ${M.winStroke} stroke-linejoin="round"/>
     <path d="M876 741.5 H1147" stroke="#060606" stroke-width="3"/><path d="M880 744.2 H1143" stroke="#fff" stroke-opacity=".07" stroke-width="1"/><path d="M1011.5 743 V762" stroke="#060606" stroke-width="2.5"/>
-    <image ${M.img} clip-path="url(#${u}-badge)"/>
+    <image ${img} clip-path="url(#${u}-badge)"/>
     <rect x="${P[0]}" y="${P[1]}" width="${P[2]}" height="${P[3]}" rx="${P[4]}" fill="url(#${u}-pl)"/><g${M.dx ? ` transform="translate(${M.dx} 0)"` : ''}>
     <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="1050" y="684" width="50" height="44"><image href="${LOGO}" x="1056" y="687" width="37" height="37"/></mask>
     <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1};transition:opacity .4s"/>
@@ -296,87 +416,172 @@ export function carSVG(kit: Kit, o: CarOpts): string {
   </g></svg>`;
 }
 
+/* The car from another angle (Ami 2025). Same layers as the side view: the door and rear-window artwork (drawn in side-view
+   coordinates) mapped onto the door and window seen in perspective, their shading, the badge recess and the OFS/T plate.
+   The front view shows no sticker zone, so it is only the photo. */
+function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
+  const u = o.uid, a = hex(o.c1), b = hex(o.c2), A = ART[o.design] || NO_ART, live = !!o.live, img = imgOf(o.model, o.trim, ang);
+  const z = zoneOf(trimOf(o.model, o.trim), ang), v = z.views[o.view] || z.views.full;
+  const a11y = o.decorative ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="${esc(carLabel(kit, o, live, ang))}"`;
+  const head = `<svg class="car-svg" viewBox="${v.join(' ')}" xmlns="${NS}" ${a11y}>`;
+  if (!z.Hd) return head + `<g class="drive"><image ${img}/></g></svg>`;
+  // The plate is drawn a little larger than in the side view so the factory badge (and the green pill) never peeks out at its edge.
+  const shine = `style="opacity:${o.finish === 'gloss' ? 1 : .25}"`, P = growPlate(MODEL_DEFS.qs.plate);
+  const D = warp(u + '-dw', z.Hd, [860, 645, 300, 130], `<g class="slot-door"><g>${A.door(a, b, u + 'x')}</g></g>`);
+  const W = warp(u + '-ww', z.Hw, [1150, 335, 160, 165], `<g class="slot-win"><g>${A.win(a, b, u + 'x')}</g></g>`);
+  // Door panel lines of the side view (lower crease and the short upright), mapped as straight lines.
+  const line = (x0: number, y0: number, x1: number, y1: number, st: string) => { const p = hp(z.Hd, x0, y0), q2 = hp(z.Hd, x1, y1); return `<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)} L${q2[0].toFixed(1)} ${q2[1].toFixed(1)}" ${st}/>`; };
+  const sw = (n: number) => (n * z.ds).toFixed(2); // stroke widths scale with the door; the outlines keep a minimum so no factory graphic edge shows
+  return `${head}
+  <defs>
+    <clipPath id="${u}-door"><path d="${z.door}"/></clipPath>
+    <clipPath id="${u}-win"><path d="${z.win}"/></clipPath>
+    <clipPath id="${u}-badge"><path d="${z.badge}"/></clipPath>
+    <linearGradient id="${u}-ds" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></linearGradient>
+    <linearGradient id="${u}-ws" x1="0" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>
+    <linearGradient id="${u}-sh" x1="0" y1="0" x2="1" y2=".4"><stop offset=".25" stop-color="#fff" stop-opacity="0"/><stop offset=".4" stop-color="#fff" stop-opacity=".22"/><stop offset=".47" stop-color="#fff" stop-opacity=".04"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/><stop offset=".78" stop-color="#fff" stop-opacity=".12"/><stop offset=".84" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="${u}-pl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#141414"/></linearGradient>
+    ${D.defs}${W.defs}
+  </defs>
+  <g class="drive">
+    <image ${img}/>
+    <g clip-path="url(#${u}-door)">
+      <path d="${z.door}" fill="#18191A"/>
+      ${D.body}
+      <g transform="${mat(z.dA)}"><rect x="860" y="645" width="300" height="130" fill="url(#${u}-ds)"/><rect class="shine" x="860" y="645" width="300" height="130" fill="url(#${u}-sh)" ${shine}/></g>
+    </g>
+    <g clip-path="url(#${u}-win)">
+      <path d="${z.win}" fill="#1C2022"/>
+      ${W.body}
+      <g transform="${mat(z.wA)}"><rect x="1150" y="335" width="160" height="165" fill="url(#${u}-ws)"/><rect class="shine" x="1150" y="335" width="145" height="165" fill="url(#${u}-sh)" ${shine}/></g>
+    </g>
+    <path d="${z.door}" fill="none" stroke="#0E0F10" stroke-width="${Math.max(3.2 * z.ds, 2.8).toFixed(2)}" stroke-linejoin="round"/>
+    <path d="${z.win}" fill="none" stroke="#0A0B0C" stroke-width="${Math.max(4.5 * z.ws, 3).toFixed(2)}" stroke-linejoin="round"/>
+    ${line(876, 741.5, 1147, 741.5, `stroke="#060606" stroke-width="${sw(3)}"`)}${line(880, 744.2, 1143, 744.2, `stroke="#fff" stroke-opacity=".07" stroke-width="${sw(1)}"`)}${line(1011.5, 743, 1011.5, 762, `stroke="#060606" stroke-width="${sw(2.5)}"`)}
+    <image ${img} clip-path="url(#${u}-badge)"/>
+    <g transform="${mat(z.bA)}">
+      <rect x="${P[0]}" y="${P[1]}" width="${P[2]}" height="${P[3]}" rx="${P[4]}" fill="url(#${u}-pl)"/>
+      <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="1050" y="684" width="50" height="44"><image href="${LOGO}" x="1056" y="687" width="37" height="37"/></mask>
+      <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1};transition:opacity .4s"/>
+      <text class="plate" x="1074.5" y="711" text-anchor="middle" fill="${a}" style="font:800 15px Archivo,sans-serif;font-stretch:125%;letter-spacing:.06em">${plateText(o)}</text>
+    </g>
+  </g></svg>`;
+}
+
 /* ---------- Live stage (hero + configurator) ---------- */
 const easeIO = (k: number) => (k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const easeOut = (k: number) => 1 - Math.pow(1 - k, 3);
 export class Stage {
-  host: HTMLElement; kit: Kit; cfg: Cfg; vname = 'full';
+  host: HTMLElement; kit: Kit; cfg: Cfg; vname = 'full'; ang: Angle = 'side'; pre = false;
   u = ''; lc = 0; vb: number[] = []; vRaf = 0; dRaf = 0;
   svg: any; slots: any[] = []; sq: any; drive: any; plate: any; logo: any; shines: any[] = []; rims: any[] = []; lights: any[] = []; defs: any;
   constructor(host: HTMLElement, kit: Kit, cfg: Cfg) { this.host = host; this.kit = kit; this.cfg = { ...cfg }; this.build(); }
-  /* (Re)build the SVG for the current config (a different Ami version needs a different photo and zones), keeping the camera view. */
-  build() {
-    const cfg = this.cfg, V = viewsOf(cfg.model);
+  /* (Re)build the SVG for the current config and angle (a different Ami version or car colour needs a different photo), keeping
+     the camera view. fade: the old picture stays on top and fades out (angle and car-colour changes). */
+  build(fade = false) {
+    const cfg = this.cfg;
     cancelAnimationFrame(this.vRaf); cancelAnimationFrame(this.dRaf);
+    this.ang = angleOf(cfg.model, this.ang);
+    const V = viewsAt(cfg.model, this.ang);
     if (!V[this.vname]) this.vname = 'full';
     this.u = 'st' + (++UID); this.lc = 0; this.vb = V[this.vname].slice();
-    this.host.innerHTML = carSVG(this.kit, { ...cfg, uid: this.u, view: this.vname, live: true });
+    const html = carSVG(this.kit, { ...cfg, uid: this.u, view: this.vname, live: true, angle: this.ang });
+    qa(':scope > .car-fade', this.host).forEach((el) => el.remove()); // a fade still running from a quick double press
+    const old = fade && !reduced() ? this.svg : null;
+    if (old && old.parentNode === this.host) {
+      if (getComputedStyle(this.host).position === 'static') this.host.style.position = 'relative';
+      old.classList.add('car-fade'); old.setAttribute('aria-hidden', 'true');
+      Object.assign(old.style, { position: 'absolute', left: '0', top: '0', width: '100%', pointerEvents: 'none' });
+      this.host.insertAdjacentHTML('afterbegin', html);
+      old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, easing: 'ease-in-out' }).onfinish = () => old.remove();
+    } else this.host.innerHTML = html;
     this.svg = this.host.firstElementChild;
-    this.slots = [q('.slot-door', this.svg), q('.slot-win', this.svg)];
+    this.slots = [q('.slot-door', this.svg), q('.slot-win', this.svg)].filter(Boolean);
     this.sq = q('.squeegee', this.svg); this.drive = q('.drive', this.svg); this.plate = q('.plate', this.svg); this.logo = q('.plate-logo', this.svg);
     this.shines = qa('.shine', this.svg); this.rims = qa('.rimspin', this.svg); this.lights = qa('.lights', this.svg); this.defs = q('defs', this.svg);
   }
   /* The language changed: new accessible name, same picture. */
-  setKit(kit: Kit) { this.kit = kit; if (this.svg) this.svg.setAttribute('aria-label', carLabel(kit, this.cfg, true)); }
+  setKit(kit: Kit) { this.kit = kit; if (this.svg) this.svg.setAttribute('aria-label', carLabel(kit, this.cfg, true, this.ang)); }
   set(cfg: Cfg) {
     const p = this.cfg; this.cfg = { ...cfg };
     if (!this.kit.D(cfg.design)) return;
-    if ((p.model || 'qs') !== (cfg.model || 'qs')) { this.build(); this.driveIn(); return; }
-    this.svg.setAttribute('aria-label', carLabel(this.kit, cfg, true));
+    if ((p.model || 'qs') !== (cfg.model || 'qs')) { this.build(); this.driveIn(); this.preload(); return; }
+    if (trimOf(p.model, p.trim) !== trimOf(cfg.model, cfg.trim)) { this.build(true); this.preload(); return; }
+    this.svg.setAttribute('aria-label', carLabel(this.kit, cfg, true, this.ang));
     if (p.finish !== cfg.finish) this.shines.forEach((s) => (s.style.opacity = cfg.finish === 'gloss' ? 1 : .25));
     if (p.design !== cfg.design || p.c1 !== cfg.c1 || p.c2 !== cfg.c2) this.wipe();
     const t = plateText(cfg);
     if (t !== plateText(p) || p.c1 !== cfg.c1) {
+      this.lights.forEach((l) => l.setAttribute('fill', hex(cfg.c1)));
+      if (!this.plate) return; // front view: no badge
       this.plate.textContent = cfg.numberOn ? cfg.number : '';
       this.plate.setAttribute('fill', hex(cfg.c1));
       this.logo.setAttribute('fill', hex(cfg.c1));
-      this.lights.forEach((l) => l.setAttribute('fill', hex(cfg.c1)));
       this.logo.style.opacity = t ? 0 : 1;
       if (!reduced() && t && !plateText(p)) this.plate.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500 });
     }
   }
+  /* Turn the car to another camera angle (crossfade), same design and colours, camera back to that angle's full view. */
+  angle(name: Angle) {
+    const a = angleOf(this.cfg.model, name);
+    if (a === this.ang) return;
+    this.ang = a; this.vname = 'full'; this.build(true);
+  }
+  currentAngle() { return this.ang; }
+  /* Fetch the other angles' photos of this car colour in the background, so turning the car is instant (configurator only). */
+  preload(on?: boolean) {
+    if (on) this.pre = true;
+    if (!this.pre || MOD(this.cfg.model) !== MODEL_DEFS.qs) return;
+    const t = trimOf(this.cfg.model, this.cfg.trim);
+    anglesOf(this.cfg.model).forEach((a) => { const im = new Image(); im.decoding = 'async'; im.src = photoURL(t, a); });
+  }
   wipe() {
-    const C = this.cfg, lid = this.u + 'L' + (++this.lc), A = ART[C.design] || NO_ART;
+    const C = this.cfg, lid = this.u + 'L' + (++this.lc), A = ART[C.design] || NO_ART, slots = this.slots, sq = this.sq;
+    if (slots.length < 2) return; // front view: no sticker zone
     const layers = [A.door, A.win].map((fn, i) => { const g = document.createElementNS(NS, 'g'); g.innerHTML = fn(hex(C.c1), hex(C.c2), lid + i); return g; });
-    if (reduced()) { layers.forEach((g, i) => this.slots[i].replaceChildren(g)); return; }
+    if (reduced()) { layers.forEach((g, i) => slots[i].replaceChildren(g)); return; }
     const cp = document.createElementNS(NS, 'clipPath'); cp.id = lid + 'w';
     const r = document.createElementNS(NS, 'rect');
     [['x', 860], ['y', 320], ['height', 460], ['width', 0]].forEach(([k, v]) => r.setAttribute(k as string, String(v)));
     cp.append(r); this.defs.append(cp);
-    layers.forEach((g, i) => { g.setAttribute('clip-path', `url(#${cp.id})`); this.slots[i].append(g); });
-    const t0 = performance.now(), dur = 900, span = 440; this.sq.style.opacity = 1;
+    layers.forEach((g, i) => { g.setAttribute('clip-path', `url(#${cp.id})`); slots[i].append(g); });
+    // The squeegee light only exists in the side view; on the other angles the new design just sweeps in.
+    const t0 = performance.now(), dur = 900, span = 440; if (sq) sq.style.opacity = 1;
     const step = (now: number): void => {
       const k = Math.min(1, (now - t0) / dur), w = easeIO(k) * span;
-      r.setAttribute('width', w.toFixed(1)); this.sq.setAttribute('transform', `translate(${(860 + w).toFixed(1)} 0)`);
+      r.setAttribute('width', w.toFixed(1)); if (sq) sq.setAttribute('transform', `translate(${(860 + w).toFixed(1)} 0)`);
       if (k < 1) { requestAnimationFrame(step); return; }
       layers.forEach((g) => { g.removeAttribute('clip-path'); while (g.previousSibling) g.previousSibling.remove(); });
       cp.remove();
-      if (this.slots[0].lastChild === layers[0]) this.sq.style.opacity = 0;
+      if (sq && slots[0].lastChild === layers[0]) sq.style.opacity = 0;
     };
     requestAnimationFrame(step);
   }
+  /* The car drives in from the right (side view); from the other angles it simply fades in. */
   driveIn() {
     if (reduced()) return;
-    const t0 = performance.now(), dur = 1500, dist = 560, R = 97;
+    const t0 = performance.now(), side = this.ang === 'side', dur = side ? 1500 : 600, dist = 560, R = 97;
     cancelAnimationFrame(this.dRaf);
     const step = (now: number) => {
-      const k = Math.min(1, (now - t0) / dur), off = dist * (1 - easeOut(k));
+      const k = Math.min(1, (now - t0) / dur), off = side ? dist * (1 - easeOut(k)) : 0;
       this.drive.setAttribute('transform', `translate(${off.toFixed(1)} 0)`);
-      this.drive.style.opacity = Math.min(1, k * 3);
+      this.drive.style.opacity = side ? Math.min(1, k * 3) : easeOut(k);
       const deg = off / R * 180 / Math.PI;
       this.rims.forEach((g) => g.setAttribute('transform', `rotate(${deg.toFixed(2)})`));
       if (k < 1) this.dRaf = requestAnimationFrame(step);
     };
     this.dRaf = requestAnimationFrame(step);
   }
+  /* Camera presets. The door and window close-ups exist only in the side view, so the car turns to the side first. */
   view(name: string) {
-    const V = viewsOf(this.cfg.model);
+    if ((name === 'door' || name === 'window') && this.ang !== 'side' && anglesOf(this.cfg.model).length > 1) { this.ang = 'side'; this.vname = 'full'; this.build(true); }
+    const V = viewsAt(this.cfg.model, this.ang);
     this.vname = V[name] ? name : 'full';
     this.animateTo(V[this.vname], 800);
   }
   /* Zoom in (f < 1) or out (f > 1) around the middle of what is on screen, never wider than the full car or closer than 30%. */
   zoom(f: number) {
-    const full = viewsOf(this.cfg.model).full, [x, y, w, h] = this.vb;
+    const full = viewsAt(this.cfg.model, this.ang).full, [x, y, w, h] = this.vb;
     const nw = Math.min(full[2], Math.max(full[2] * 0.3, w * f)), nh = nw * (full[3] / full[2]);
     this.animateTo(this.clampBox([x + w / 2 - nw / 2, y + h / 2 - nh / 2, nw, nh]), 450);
   }
@@ -389,10 +594,10 @@ export class Stage {
     this.svg.setAttribute('viewBox', this.vb.map((n) => n.toFixed(2)).join(' '));
   }
   /* True when closer than the full-car view (the picture can then be dragged). */
-  zoomed() { return this.vb[2] < viewsOf(this.cfg.model).full[2] - 1; }
+  zoomed() { return this.vb[2] < viewsAt(this.cfg.model, this.ang).full[2] - 1; }
   /* Keep a camera box inside the full-car frame. */
   clampBox(b: number[]) {
-    const f = viewsOf(this.cfg.model).full;
+    const f = viewsAt(this.cfg.model, this.ang).full;
     return [Math.min(Math.max(b[0], f[0]), f[0] + f[2] - b[2]), Math.min(Math.max(b[1], f[1]), f[1] + f[3] - b[3]), b[2], b[3]];
   }
   animateTo(to: number[], ms: number) {

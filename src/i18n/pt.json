@@ -213,6 +213,9 @@
     "carInOrig": " nas cores originais, {finish}",
     "carOn": " num Citroën {model}",
     "carBadge": ", texto do emblema “{text}”",
+    "carAngle_front": ", vista de frente",
+    "carAngle_front34": ", vista de frente a três quartos",
+    "carAngle_back": ", vista de trás a três quartos",
 
     "lightTone": "Tom claro",
     "darkTone": "Tom escuro",

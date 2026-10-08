@@ -6,7 +6,7 @@ import EN from '../i18n/en.json';
 
 export type Lang = 'pt' | 'en';
 export interface Design { id: string; name: string; tag: string; cat: string; catName: string; price: number; c1: string; c2: string; art?: string; fixed?: boolean }
-export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; finish: 'matte' | 'gloss'; kit: 'one' | 'both'; numberOn: boolean; number: string }
+export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; finish: 'matte' | 'gloss'; kit: 'one' | 'both'; numberOn: boolean; number: string; trim: string }
 export interface CartItem { key: string; cfg: Cfg; qty: number }
 
 export const I18N: Record<Lang, any> = { pt: PT, en: EN };
@@ -14,6 +14,8 @@ export const CATS: string[] = DATA.cats;
 export const HERO_CYCLE: string[] = DATA.heroCycle;
 export const FEATURED: string[] = DATA.featured;
 export const MODELS = { qs: 'Ami  2025', pop: 'Ami Pop' } as const;
+/* Factory colour schemes of the car in each version (preview only: not part of the kit key, not saved with orders). First = default. */
+export const TRIMS: Record<'qs' | 'pop', string[]> = { qs: ['yellow', 'purple', 'brown', 'browncolor'], pop: ['base'] };
 
 const has = (o: object, k: unknown): boolean => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
 const fmt = (s: string, v?: Record<string, unknown>) => (v ? String(s).replace(/\{(\w+)\}/g, (m, k) => (has(v, k) ? String(v[k]) : m)) : s);
@@ -57,7 +59,7 @@ function build(lang: Lang) {
   const EXTRA = DATA.extras as { secondSide: number; badge: number };
   const D = (id: unknown): Design | undefined => DESIGNS.find((d) => d.id === id);
   const modelName = (m: unknown) => (has(MODELS, m) ? MODELS[m as keyof typeof MODELS] : MODELS.qs);
-  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'AMI' }); // every kit covers both sides
+  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'AMI', trim: TRIMS.qs[0] }); // every kit covers both sides
   const cleanNumber = (v: unknown) => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9 .#&!-]/g, '').slice(0, 8);
 
   /* Validate a config from an untrusted source (query string, localStorage, order rows). Returns a full config or null. */
@@ -66,6 +68,8 @@ function build(lang: Lang) {
     const d = D(c.design); if (!d) return null;
     const out = defaultCfg(d);
     if (has(MODELS, c.model)) out.model = c.model;
+    // Car colour must belong to the chosen version; otherwise (e.g. after switching version) use that version's first.
+    out.trim = TRIMS[out.model].includes(c.trim) ? c.trim : TRIMS[out.model][0];
     if (has(COLORS, c.c1)) out.c1 = c.c1;
     if (has(COLORS, c.c2)) out.c2 = c.c2;
     if (c.finish === 'matte' || c.finish === 'gloss') out.finish = c.finish;
@@ -91,15 +95,17 @@ function build(lang: Lang) {
     const p = new URLSearchParams({ design: c.design, c1: c.c1, c2: c.c2, finish: c.finish, kit: c.kit });
     if (c.numberOn && c.number) p.set('number', c.number);
     if (c.model && c.model !== 'qs') p.set('model', c.model);
+    if (c.trim && c.trim !== TRIMS[c.model || 'qs'][0]) p.set('trim', c.trim);
     return p.toString();
   };
-  /* Config from a query string (?design=&c1=&c2=&finish=&kit=&number=&model=), validated against the data. */
+  /* Config from a query string (?design=&c1=&c2=&finish=&kit=&number=&model=&trim=), validated against the data. */
   function cfgFromQuery(search: string): Cfg | null {
     let q: URLSearchParams; try { q = new URLSearchParams(search); } catch { return null; }
-    // A link with only ?model= (from the home page version cards) starts on the first design in that version.
-    const d = D(q.get('design')) || (q.get('model') ? DESIGNS[0] : null); if (!d) return null;
+    // A link with only ?model= (from the home page version cards) starts on the first design in that version;
+    // same for a link with only ?trim= (car colour).
+    const d = D(q.get('design')) || (q.get('model') || q.get('trim') ? DESIGNS[0] : null); if (!d) return null;
     const num = q.has('number') ? cleanNumber(q.get('number')) : '';
-    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, finish: q.get('finish'), kit: q.get('kit'), number: num || 'AMI', numberOn: !!num });
+    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, finish: q.get('finish'), kit: q.get('kit'), number: num || 'AMI', numberOn: !!num, trim: q.get('trim') });
   }
   return { lang, L, T, COLORS, DESIGNS, EXTRA, D, has, modelName, defaultCfg, cleanNumber, sanitizeCfg, isPersonalised, priceOf, keyOf, colourLabel, descOf, cfgQuery, cfgFromQuery, money: T.price };
 }

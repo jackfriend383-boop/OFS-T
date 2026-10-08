@@ -18,18 +18,16 @@ const isDark = () => { const t = document.documentElement.dataset.ofst; return t
 
 export function ThemeButton() {
   const { T } = useApp();
-  const [dark, setDark] = useState(true); // matches the server render; synced below
+  const [dark, setDark] = useState(false); // light is the default and matches the server render; synced below
   const pending = useRef<(() => void) | null>(null);
   const sync = useCallback(() => setDark(isDark()), []);
   useEffect(() => {
     sync();
     const root = document.documentElement;
-    const mq = matchMedia('(prefers-color-scheme: light)');
-    mq.addEventListener('change', sync);
     const mo = new MutationObserver(sync); mo.observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-ofst'] });
     const onStorage = (e: StorageEvent) => { if (e.key === 'ofst-theme' && (e.newValue === 'light' || e.newValue === 'dark')) { root.dataset.ofst = e.newValue; sync(); } };
     addEventListener('storage', onStorage);
-    return () => { mq.removeEventListener('change', sync); mo.disconnect(); removeEventListener('storage', onStorage); };
+    return () => { mo.disconnect(); removeEventListener('storage', onStorage); };
   }, [sync]);
 
   const toggle = (e: React.MouseEvent<HTMLButtonElement>) => {

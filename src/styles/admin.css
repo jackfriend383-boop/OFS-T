@@ -26,10 +26,9 @@
 .kpi-accent b{color:var(--accent-text)}
 .kpi-foot{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;min-height:16px}
 .kpi-d{font:600 11.5px var(--mono);color:var(--muted)}
-.kpi-d.up{color:#3FB97A}
+.kpi-d.up{color:#1A7F4B}
 .kpi-d.down{color:var(--err)}
-:root[data-theme="light"] .kpi-d.up{color:#1A7F4B}
-@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .kpi-d.up{color:#1A7F4B}}
+:root[data-ofst="dark"] .kpi-d.up{color:#3FB97A}
 .kpi-hint{font-size:11.5px;color:var(--dim)}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px}
 .dpanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;align-content:start;min-width:0}

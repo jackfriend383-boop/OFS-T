@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../state';
-import { Stage, THUMB_PLACEHOLDER, initArt, thumbSVG } from '../lib/car';
+import { Stage, THUMB_PLACEHOLDER, initArt, thumbSVG, type Angle } from '../lib/car';
 import type { Cfg } from '../lib/kit';
 
 /* A car picture with the sticker design on it. Drawn when it comes near the viewport (or near the visible part of the horizontal
@@ -18,13 +18,13 @@ export const Thumb = memo(function Thumb({ cfg, decorative = true, eager = false
     io.observe(el);
     return () => io.disconnect();
   }, [shown]);
-  const key = kit.keyOf(cfg) + kit.lang + decorative;
+  const key = kit.keyOf(cfg) + kit.lang + decorative + cfg.trim; // the car colour is not part of the kit key, but changes the picture
   const html = useMemo(() => (shown ? thumbSVG(kit, cfg, decorative) : THUMB_PLACEHOLDER), [shown, key]); // eslint-disable-line react-hooks/exhaustive-deps
   return <span ref={ref} className={className || undefined} style={{ display: 'block' }} dangerouslySetInnerHTML={{ __html: html }} />;
 });
 
 /* The live car (hero + configurator). The Stage animates its own SVG; React only owns the host element. */
-export interface StageApi { replay: () => void; view: (name: string) => void; zoom: (f: number) => void; pan: (dx: number, dy: number) => void; zoomed: () => boolean }
+export interface StageApi { replay: () => void; view: (name: string) => void; zoom: (f: number) => void; pan: (dx: number, dy: number) => void; zoomed: () => boolean; angle: (name: Angle) => void; currentAngle: () => Angle }
 export function CarStage({ cfg, id, apiRef, onClick, style }: { cfg: Cfg; id?: string; apiRef?: React.MutableRefObject<StageApi | null>; onClick?: () => void; style?: React.CSSProperties }) {
   const { kit } = useApp();
   const host = useRef<HTMLDivElement>(null);
@@ -33,9 +33,11 @@ export function CarStage({ cfg, id, apiRef, onClick, style }: { cfg: Cfg; id?: s
   useEffect(() => {
     initArt();
     const s = (stage.current = new Stage(host.current!, kit, first.current));
-    if (apiRef) apiRef.current = { replay: () => s.driveIn(), view: (n) => s.view(n), zoom: (f) => s.zoom(f), pan: (x, y) => s.pan(x, y), zoomed: () => s.zoomed() };
+    if (apiRef) apiRef.current = { replay: () => s.driveIn(), view: (n) => s.view(n), zoom: (f) => s.zoom(f), pan: (x, y) => s.pan(x, y), zoomed: () => s.zoomed(), angle: (a) => s.angle(a), currentAngle: () => s.currentAngle() };
     s.driveIn();
-    return () => { s.destroy(); stage.current = null; };
+    // Only the configurator (which controls the camera) turns the car: fetch the other angles once the page has settled.
+    const t = apiRef ? setTimeout(() => s.preload(true), 1200) : 0;
+    return () => { clearTimeout(t); s.destroy(); stage.current = null; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { stage.current?.setKit(kit); }, [kit]);
   useEffect(() => { stage.current?.set(cfg); }, [cfg]);

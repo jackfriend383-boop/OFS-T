@@ -1,12 +1,12 @@
-/* Configurator: live stage, design picker strip, Ami version/colour/finish/kit/badge options, summary and the mobile bar.
-   Reads an optional starting config from the query string (?design=&c1=&c2=&finish=&kit=&number=&model=), validated against the data. */
+/* Configurator: live stage (the arrows turn the car between camera angles), design picker strip, Ami version/car colour/vinyl colour/finish/badge options,
+   summary and the mobile bar. Reads an optional starting config from the query string (?design=&c1=&c2=&finish=&kit=&number=&model=&trim=), validated against the data. */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useApp } from '../state';
 import { COPY } from '../content';
-import { CATS, type Cfg } from '../lib/kit';
+import { CATS, TRIMS, type Cfg } from '../lib/kit';
 import { CarStage, Thumb, type StageApi } from '../components/Car';
-import { viewIcon } from '../lib/car';
+import { viewIcon, anglesOf, type Angle } from '../lib/car';
 import { FilterTabs } from '../components/DesignCard';
 import { useFilterFeedback } from '../lib/filter';
 
@@ -62,6 +62,32 @@ function Swatches({ slot, labelId, cfg, onPick, groups }: { slot: 'c1' | 'c2'; l
   );
 }
 
+/* Car colour (factory trim of the chosen Ami version): one radio per trim, a round two-tone swatch plus its name.
+   Arrow keys move and select, like the vinyl colour swatches. */
+const TRIM_SW: Record<string, [string, string]> = { yellow: ['#111214', '#E4F21B'], purple: ['#111214', '#B79BEA'], brown: ['#8C8379', '#8C8379'], browncolor: ['#8C8379', '#5BE07A'], base: ['#8C8379', '#8C8379'] };
+function Trims({ labelId, value, items, names, onPick }: { labelId: string; value: string; items: string[]; names: Record<string, string>; onPick: (k: string) => void }) {
+  const row = useRef<HTMLDivElement>(null);
+  const onKey = (e: React.KeyboardEvent) => {
+    const step = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 } as Record<string, number>)[e.key];
+    if (step === undefined) return;
+    const bs = [...row.current!.querySelectorAll<HTMLElement>('.trim')], i = bs.indexOf(document.activeElement as HTMLElement);
+    if (i < 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const j = (i + step + bs.length) % bs.length;
+    onPick(bs[j].dataset.k!); bs[j].focus();
+  };
+  return (
+    <div className="trims" id="trimRow" ref={row} role="radiogroup" aria-labelledby={labelId} onKeyDown={onKey}>
+      {items.map((k) => {
+        const sel = value === k, [a, b] = TRIM_SW[k] || TRIM_SW.base;
+        return <button key={k} type="button" className="trim" data-k={k} role="radio" aria-checked={sel} tabIndex={sel ? 0 : -1} onClick={() => onPick(k)}>
+          <span className="trim-sw" style={{ '--c': a, '--c2': b } as any} aria-hidden="true" /><span className="trim-n">{names[k] || k}</span>
+        </button>;
+      })}
+    </div>
+  );
+}
+
 function Seg({ id, label, labelledBy, value, items, onPick }: { id: string; label?: string; labelledBy?: string; value: string; items: [string, string][]; onPick: (v: string) => void }) {
   const i = Math.max(0, items.findIndex(([v]) => v === value));
   return (
@@ -84,6 +110,10 @@ export default function Configurator() {
   const [added, setAdded] = useState(false);
   const [sumLive, setSumLive] = useState('');
   const [view, setView] = useState('full');
+  // Camera angle of the preview photo (front, front ¾, side, rear); the arrows, ← → and swipes turn the car.
+  const [angle, setAngle] = useState<Angle>('side');
+  const angles = anglesOf(cfg.model);
+  const trims = TRIMS[cfg.model];
   // Preview background: grey studio or the beach. Remembered for this browser tab only.
   const [scene, setScene] = useState<'studio' | 'beach'>('studio');
   useEffect(() => { try { if (sessionStorage.getItem('ofst-scene') === 'beach') setScene('beach'); } catch { /* private mode */ } }, []);
@@ -138,13 +168,18 @@ export default function Configurator() {
     return () => { onPickDesign.current = null; onEditConfig.current = null; cfgProvider.current = null; };
   }, [kit, pickDesign, update, onPickDesign, onEditConfig, cfgProvider]);
 
-  const cycle = useCallback((dir: number) => {
-    const list = visible.length ? visible : DESIGNS;
-    let i = list.findIndex((x) => x.id === cfgRef.current.design);
-    i = (i + dir + list.length) % list.length;
-    pickDesign(list[i].id, true);
-  }, [visible, DESIGNS, pickDesign]);
-  /* ← / → switch designs when nothing interactive has focus (or focus is on the stage), never with modifier keys (Alt+← is "back"). */
+  /* Turn the car to the previous/next camera angle (wraps around); the camera goes back to the full view of that angle. */
+  const rotate = useCallback((dir: number) => {
+    const list = anglesOf(cfgRef.current.model); if (list.length < 2) return;
+    const cur = api.current?.currentAngle() ?? 'side';
+    const next = list[((list.indexOf(cur) < 0 ? 0 : list.indexOf(cur)) + dir + list.length) % list.length];
+    api.current?.angle(next); setAngle(next); setView('full');
+  }, []);
+  // A version with fewer photos (Ami Pop) falls back to its first angle.
+  useEffect(() => {
+    if (!angles.includes(angle)) { api.current?.angle(angles[0]); setAngle(angles[0]); }
+  }, [cfg.model]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* ← / → turn the car when nothing interactive has focus (or focus is on the stage), never with modifier keys (Alt+← is "back"). */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -152,13 +187,13 @@ export default function Configurator() {
       const a = document.activeElement, st = document.getElementById('stage');
       if (!(a === document.body || a === document.documentElement || a === document.getElementById('main') || (st && st.contains(a) && !(a as HTMLElement).closest('#views')))) return;
       if (document.getElementById('drawer')?.classList.contains('on') || document.getElementById('search')?.classList.contains('on')) return;
-      cycle(e.key === 'ArrowLeft' ? -1 : 1);
+      rotate(e.key === 'ArrowLeft' ? -1 : 1);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [cycle]);
+  }, [rotate]);
 
-  // Swipe the car left/right on touch screens to change design.
+  // Swipe the car left/right on touch screens to turn it.
   const swipe = useRef<{ x: number; y: number } | null>(null);
 
   const tones = d.art === 'flame';
@@ -200,6 +235,7 @@ export default function Configurator() {
   const rows: [string, string, string, string][] = [
     [c.design, d.name, money(d.price), 'optDesignCard'],
     [c.version, kit.modelName(cfg.model), '', 'optModelCard'],
+    ...(trims.length > 1 ? [[c.carColour, c.trims[cfg.trim] || cfg.trim, '', 'optModelCard'] as [string, string, string, string]] : []),
     [c.colours, colourText, '', 'optColourCard'],
     [c.finish, cfg.finish === 'gloss' ? c.gloss : c.matte, '', 'optFinishCard'],
     [c.badge, cfg.numberOn && cfg.number ? cfg.number : '–', cfg.numberOn && cfg.number ? '+' + money(kit.EXTRA.badge) : '', 'optBadgeCard'],
@@ -208,7 +244,7 @@ export default function Configurator() {
     const el = document.getElementById('stageWrap') as any; if (!el) return;
     if (document.fullscreenElement) document.exitFullscreen?.(); else (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
   };
-  // Dragging the zoomed picture (mouse or touch); a quick swipe on the full view still changes the design on touch screens.
+  // Dragging the zoomed picture (mouse or touch); a quick swipe on the full view turns the car on touch screens.
   const drag = useRef<{ x: number; y: number; id: number } | null>(null);
   const icon = (d: string) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d={d} /></svg>;
 
@@ -238,14 +274,17 @@ export default function Configurator() {
             onPointerCancel={(e) => { swipe.current = null; drag.current = null; (e.currentTarget as HTMLElement).classList.remove('grabbing'); }}
             onPointerUp={(e) => {
               if (drag.current) { drag.current = null; (e.currentTarget as HTMLElement).classList.remove('grabbing'); return; }
-              const s = swipe.current; if (!s) return; swipe.current = null; const dx = e.clientX - s.x, dy = e.clientY - s.y; if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) cycle(dx < 0 ? 1 : -1);
+              const s = swipe.current; if (!s) return; swipe.current = null; const dx = e.clientX - s.x, dy = e.clientY - s.y; if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) rotate(dx < 0 ? 1 : -1);
             }}>
             <div className="stage-tag" id="stageTag" ref={tagRef}><span className="eyebrow" id="stCat">{d.catName || d.cat}</span><strong id="stName">{d.name}</strong><span id="stTag">{d.tag}</span></div>
             {ready
               ? <CarStage id="cfgCar" cfg={cfg} apiRef={api} />
               : <div id="cfgCar"><svg className="car-svg" viewBox="530 250 1080 646" aria-hidden="true" focusable="false" /></div>}
-            <button type="button" className="stage-arrow prev" id="prevD" aria-label={c.prev} onClick={() => cycle(-1)}>{icon('m15 6-6 6 6 6')}</button>
-            <button type="button" className="stage-arrow next" id="nextD" aria-label={c.next} onClick={() => cycle(1)}>{icon('m9 6 6 6-6 6')}</button>
+            {angles.length > 1 && <>
+              <button type="button" className="stage-arrow prev" id="prevD" aria-label={c.prev} aria-controls="cfgCar" onClick={() => rotate(-1)}>{icon('m15 6-6 6 6 6')}</button>
+              <button type="button" className="stage-arrow next" id="nextD" aria-label={c.next} aria-controls="cfgCar" onClick={() => rotate(1)}>{icon('m9 6 6 6-6 6')}</button>
+              <div className="stage-angle" id="stageAngle" role="status" aria-live="polite">{c.angles[angle]}</div>
+            </>}
             <div className="stage-ctrl" role="group" aria-label={c.camera}>
               <button type="button" id="btnReplay" title={c.replay} aria-label={c.replay} onClick={() => api.current?.replay()}>{icon('M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4')}<span>{c.replay}</span></button>
               <span className="ctrl-sep" aria-hidden="true" />
@@ -254,11 +293,11 @@ export default function Configurator() {
               <span className="ctrl-sep" aria-hidden="true" />
               <button type="button" id="btnFull" title={c.fullscreen} aria-label={c.fullscreen} onClick={toggleFull}>{icon('M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5')}</button>
             </div>
-            <div className="stage-hint" aria-hidden="true">{c.hint}</div>
+            {angles.length > 1 && <div className="stage-hint" aria-hidden="true">{c.hint}</div>}
           </section>
           </div>
           <div className="views" id="views" role="group" aria-label={c.camera}>
-            {c.views.map(([v, t]) => <button key={v} type="button" data-v={v} aria-pressed={view === v} onClick={() => { setView(v); api.current?.view(v); }}><span className={'vi vi-' + v} dangerouslySetInnerHTML={{ __html: viewIcon(cfg.model, v as 'full' | 'door' | 'window') }} />{t}</button>)}
+            {c.views.map(([v, t]) => <button key={v} type="button" data-v={v} aria-pressed={view === v} onClick={() => { setView(v); api.current?.view(v); setAngle(api.current?.currentAngle() ?? angle); }}><span className={'vi vi-' + v} dangerouslySetInnerHTML={{ __html: viewIcon(cfg.model, v as 'full' | 'door' | 'window') }} />{t}</button>)}
             <span className="views-sep" aria-hidden="true" />
             <button type="button" className="scene-btn" id="btnScene" aria-pressed={scene === 'beach'} title={c.scenery} onClick={toggleScene}>
               <span className="vi vi-scene" aria-hidden="true"><svg viewBox="0 0 64 40" focusable="false"><rect x="3" y="3" width="58" height="34" rx="3" fill="none" stroke="currentColor" strokeWidth="3" /><path d="M8 32 22 18l8 8 6-5 20 11z" fill="currentColor" /><circle cx="45" cy="13" r="4" fill="currentColor" /></svg></span>
@@ -291,6 +330,10 @@ export default function Configurator() {
           <section className="ocard" id="optModelCard" aria-labelledby="optModelLbl">
             <div className="ocard-head"><h2 id="optModelLbl">{c.version}</h2><span className="ocard-val">{kit.modelName(cfg.model)}</span></div>
             <Seg id="segModel" labelledBy="optModelLbl" value={cfg.model} items={[['qs', 'Ami 2025'], ['pop', 'Pop']]} onPick={(v) => update({ model: v as Cfg['model'] })} />
+            {trims.length > 1 && <>
+              <div className="sub-label"><span id="trimLabel">{c.carColour}</span><span id="trimName">{c.trims[cfg.trim] || cfg.trim}</span></div>
+              <Trims labelId="trimLabel" value={cfg.trim} items={trims} names={c.trims} onPick={(k) => update({ trim: k })} />
+            </>}
           </section>
 
           <section className="ocard" id="optColourCard" aria-labelledby="optColourLbl">
