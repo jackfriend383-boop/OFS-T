@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && vite build --ssr src/entry-server.tsx --outDir dist-ssr && node scripts/prerender.mjs",
+    "build": "vite build",
     "dev:admin": "vite --config vite.admin.config.ts --port 5174",
     "build:admin": "tsc --noEmit && vite build --config vite.admin.config.ts",
     "preview": "vite preview",
