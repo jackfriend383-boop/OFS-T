@@ -13,7 +13,7 @@ export const I18N: Record<Lang, any> = { pt: PT, en: EN };
 export const CATS: string[] = DATA.cats;
 export const HERO_CYCLE: string[] = DATA.heroCycle;
 export const FEATURED: string[] = DATA.featured;
-export const MODELS = { qs: 'Ami  2025', pop: 'Ami Pop' } as const;
+export const MODELS = { qs: 'Ami 2025', pop: 'Ami Pop' } as const;
 /* Factory colour schemes of the car in each version (preview only: not part of the kit key, not saved with orders). First = default. */
 export const TRIMS: Record<'qs' | 'pop', string[]> = { qs: ['yellow', 'purple', 'brown', 'browncolor'], pop: ['base'] };
 
@@ -90,7 +90,7 @@ function build(lang: Lang) {
   const EXTRA = DATA.extras as { secondSide: number; badge: number };
   const D = (id: unknown): Design | undefined => DESIGNS.find((d) => d.id === id);
   const modelName = (m: unknown) => (has(MODELS, m) ? MODELS[m as keyof typeof MODELS] : MODELS.qs);
-  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'AMI', trim: TRIMS.qs[0], pieces: ['full'] }); // every kit covers both sides
+  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'OFST', trim: TRIMS.qs[0], pieces: ['full'] }); // every kit covers both sides
   const cleanNumber = (v: unknown) => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9 .#&!-]/g, '').slice(0, 8);
 
   /* Validate a config from an untrusted source (query string, localStorage, order rows). Returns a full config or null. */
@@ -110,14 +110,14 @@ function build(lang: Lang) {
     out.numberOn = !!c.numberOn && !!out.number && out.model !== 'pop';
     // Missing pieces (older carts, saved orders) = the full kit.
     out.pieces = normPieces(c.pieces, out.model, d.price);
-    if (!out.numberOn && !out.number) out.number = 'AMI';
+    if (!out.numberOn && !out.number) out.number = 'OFST';
     return out;
   }
-  /* Personalised = made to the buyer's choices (no change-of-mind returns): badge text, or colours that differ from the defaults. */
+  /* Personalised = made to the buyer's own specification (no change-of-mind returns): only custom badge text. Choosing other
+     colours from our own palette is a standard option, so the 14-day withdrawal right still applies (DL 24/2014 art. 17). */
   function isPersonalised(c: Cfg | null | undefined) {
     const d = c && D(c.design); if (!d) return false;
-    if (c!.numberOn && c!.number) return true;
-    return !d.fixed && (c!.c1 !== d.c1 || c!.c2 !== d.c2);
+    return !!(c!.numberOn && c!.number);
   }
   const piecesOf = (c: Cfg) => normPieces(c.pieces, c.model, D(c.design)?.price ?? 0);
   const priceOf = (c: Cfg) => piecesPrice(piecesOf(c), D(c.design)!.price) + (c.kit === 'both' ? EXTRA.secondSide : 0) + (c.numberOn && c.number ? EXTRA.badge : 0);
@@ -143,7 +143,7 @@ function build(lang: Lang) {
     // same for a link with only ?trim= (car colour).
     const d = D(q.get('design')) || (q.get('model') || q.get('trim') ? DESIGNS[0] : null); if (!d) return null;
     const num = q.has('number') ? cleanNumber(q.get('number')) : '';
-    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, finish: q.get('finish'), kit: q.get('kit'), number: num || 'AMI', numberOn: !!num, trim: q.get('trim'), pieces: q.get('pieces') });
+    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, finish: q.get('finish'), kit: q.get('kit'), number: num || 'OFST', numberOn: !!num, trim: q.get('trim'), pieces: q.get('pieces') });
   }
   return { lang, L, T, COLORS, DESIGNS, EXTRA, D, has, modelName, defaultCfg, cleanNumber, sanitizeCfg, isPersonalised, priceOf, keyOf, piecesOf, piecesLabel, colourLabel, descOf, cfgQuery, cfgFromQuery, money: T.price };
 }

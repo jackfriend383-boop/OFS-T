@@ -75,6 +75,7 @@ export function CartDrawer() {
       <div className="row"><span className="muted">{T('subtotal')}</span><span className="price">{money(sub)}</span></div>
       <div className="row"><span className="muted">{T('shipping')}</span><span className="price">{T('shippingCalc')}</span></div>
       <div className="row big"><span>{T('total')}</span><span className="price">{money(sub)}</span></div>
+      <p className="muted cart-vat">{T('vatNote')}</p>
       <button type="button" className="btn btn-primary" id="checkout" onClick={() => { setDrawerMode('checkout'); }}>{T('checkout')}</button>
     </>
   ) : null;
@@ -183,6 +184,7 @@ function Checkout({ onBack }: { onBack: () => void }) {
     <div className="co-f" key={f.id}>
       <label htmlFor={f.id}>{T(f.label)}</label>
       <input className="field" id={f.id} name={f.ac} type={'type' in f ? f.type : 'text'} autoComplete={f.ac} required defaultValue={saved[f.id]} {...f.props}
+        readOnly={f.id === 'coEmail' && !!u?.email /* receipts go to the signed-in account's email */}
         aria-invalid={errs[f.id] ? true : undefined} aria-describedby={errs[f.id] ? f.id + 'Err' : undefined} />
       <p className="err" id={f.id + 'Err'} hidden={!errs[f.id]}>{errs[f.id]}</p>
     </div>

@@ -1,6 +1,6 @@
 /* Sales analytics for the admin dashboard. Pure functions over the orders the dashboard already loaded (the Worker returns
    the newest 500 paid / mismatch orders), so nothing here needs a new API endpoint. All money is in cents. */
-import type { Cfg, Kit } from '../../lib/kit';
+import { includedPieces, type Cfg, type Kit } from '../../lib/kit';
 
 export interface AOrder {
   id: string; ref: string; status: string; pay: string; created: Date;
@@ -30,7 +30,11 @@ export function rangeBounds(r: RangeKey, orders: AOrder[], now = new Date()) {
 export const inRange = <O extends AOrder>(orders: O[], from: Date, to: Date): O[] => orders.filter((o) => valid(o) && o.created >= from && o.created < to);
 
 /* A kit with both doors is two door stickers. */
-export const sheetsOf = (it: { cfg: Cfg; qty: number }) => it.qty * (it.cfg.kit === 'both' ? 2 : 1);
+/* How many stickers of each piece to print for one order line: pairs (left + right) except rims, which come as a set of 4. */
+export const printCounts = (it: { cfg: Cfg; qty: number }) =>
+  includedPieces(it.cfg).map((p) => [p, it.qty * (p === 'rims' ? 4 : 2)] as const);
+/* Door stickers to print (the main product), used by the KPIs and the CSV export. */
+export const sheetsOf = (it: { cfg: Cfg; qty: number }) => printCounts(it).reduce((s, [p, n]) => s + (p === 'door' ? n : 0), 0);
 /* Revenue counts what Stripe confirmed (paid). A 'mismatch' order is flagged separately and left out until it is checked. */
 const revenueOf = (o: AOrder) => (o.pay === 'paid' ? o.total : 0);
 

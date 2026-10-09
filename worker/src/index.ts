@@ -1,6 +1,6 @@
 import { priceItem, isPersonalised, type PricedItem } from './pricing';
 import { createCheckoutSession, expireCheckoutSession, verifyWebhook } from './stripe';
-import { sendMail, signInEmail, paidEmail, invoiceEmail, type MailAttachment } from './mail';
+import { sendMail, signInEmail, paidEmail, invoiceEmail, shippedEmail, newOrderEmail, adminAlertEmail, type MailAttachment } from './mail';
 
 /* OFS/T order API (Cloudflare Worker + D1). The only code that touches the database.
    Public:  POST   /api/checkout               (signed-in customers only) validate + price an order on the server, keep it as a
@@ -36,12 +36,16 @@ export interface Env {
   ADMIN_PASSWORD: string;   // secret: wrangler secret put ADMIN_PASSWORD  (12+ characters)
 }
 
-const MAX_ORDERS_PER_10_MIN = 30;     // global flood cap on checkouts started (same as the old schema); raise if you ever get more real orders
-const MAX_FAILED_LOGINS_PER_15_MIN = 10;
+const MAX_ORDERS_PER_10_MIN = 100;     // global flood cap on checkouts started (same as the old schema); raise if you ever get more real orders
+const MAX_FAILED_LOGINS_PER_15_MIN = 60; // shop-wide ceiling; one visitor is stopped much earlier (per IP)
 const SESSION_SECONDS = 8 * 3600;
 const CUSTOMER_SESSION_SECONDS = 30 * 86400;
 const MAX_LINKS_PER_EMAIL_15_MIN = 3;
-const MAX_LINKS_GLOBAL_15_MIN = 100;
+const MAX_LINKS_GLOBAL_15_MIN = 300;     // last-resort cap; the per-visitor limit below stops a single script first
+const MAX_LINKS_PER_IP_15_MIN = 6;
+const MAX_CHECKOUTS_PER_IP_10_MIN = 10;
+const MAX_UNPAID_PER_ACCOUNT_30_MIN = 3;
+const MAX_FAILED_LOGINS_PER_IP_15_MIN = 8;
 const PROFILE_LIMITS: Record<string, number> = { name: 200, phone: 40, street: 300, postcode: 20, city: 120, country: 60 };
 const MAX_BODY = 40000;
 const MAX_INVOICE_BYTES = 750000;
@@ -125,7 +129,7 @@ function validateOrder(b: any) {
   const c = b.customer;
   if (!isObj(c)) throw new HttpError(400, 'invalid');
   const customer: Record<string, string> = {};
-  for (const k of Object.keys(c)) if (!(k in CUSTOMER_LIMITS) && !OPTIONAL_CUSTOMER.includes(k)) throw new HttpError(400, 'invalid'); // no extra personal data
+  for (const k of Object.keys(c)) if (!Object.prototype.hasOwnProperty.call(CUSTOMER_LIMITS, k) && !OPTIONAL_CUSTOMER.includes(k)) throw new HttpError(400, 'invalid'); // no extra personal data
   for (const [k, [min, max]] of Object.entries(CUSTOMER_LIMITS)) {
     const v = c[k];
     if (typeof v !== 'string' || v.length < min || v.length > max || /[\u0000-\u001f\u007f]/.test(v)) throw new HttpError(400, 'invalid');
@@ -141,7 +145,8 @@ function validateOrder(b: any) {
 
   // Every line is re-validated and priced here from the shared price list; any total the browser sends is ignored.
   if (!Array.isArray(b.items) || b.items.length < 1 || b.items.length > 50) throw new HttpError(400, 'invalid');
-  const priced = b.items.map(priceItem);
+  const orderLang: 'pt' | 'en' = b.lang === 'en' ? 'en' : 'pt';
+  const priced = b.items.map((it: any) => priceItem(it, orderLang));
   if (priced.some((i: PricedItem | null) => !i)) throw new HttpError(400, 'invalid');
   const lines = priced as PricedItem[];
   const itemsJson = JSON.stringify(lines);
@@ -158,12 +163,25 @@ function validateOrder(b: any) {
   return { id, customer: JSON.stringify(customer), email: customer.email, items: itemsJson, lines, total, lang, personalised: b.consent_personalised === true ? 1 : null };
 }
 
+
+/* The visitor's IP address as Cloudflare sees it (used only as a short-lived rate-limit key, never stored with orders). */
+const clientIp = (req: Request) => (req.headers.get('CF-Connecting-IP') || req.headers.get('X-Forwarded-For') || 'unknown').split(',')[0].trim().slice(0, 64);
+/* Counts one hit for `key` and says whether it is still within `max` per `minutes`. Old rows are cleaned up as we go. */
+async function allowHit(env: Env, key: string, minutes: number, max: number, record = true): Promise<boolean> {
+  await env.DB.prepare(`DELETE FROM rate_hits WHERE at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')`).run();
+  const { n } = (await env.DB.prepare(`SELECT count(*) AS n FROM rate_hits WHERE key = ?1 AND at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?2)`)
+    .bind(key, `-${minutes} minutes`).first<{ n: number }>())!;
+  if (n >= max) return false;
+  if (record) await env.DB.prepare('INSERT INTO rate_hits (key) VALUES (?1)').bind(key).run();
+  return true;
+}
+
 /* ---------- handlers ---------- */
 /* Checkout drafts the customer never paid for are removed after this long. A Stripe session expires after 31 minutes and Stripe
    normally tells us at once (checkout.session.expired), so this is only a safety net. It is kept generous because Stripe retries a
    failed webhook for up to 3 days: if the paid notice is late (e.g. the Worker was down), the draft must still be there.
    Drafts waiting for a slow payment method (Multibanco) are kept for 30 days. */
-const STALE_DRAFT = '-24 hours';
+const STALE_DRAFT = '-4 days'; // longer than Stripe's 3-day webhook retries
 const STALE_AWAITING = '-30 days';
 
 /* Step 1 of paying: keep the order as a draft in pending_checkouts, open a Stripe Checkout Session for exactly that amount and
@@ -173,6 +191,17 @@ async function startCheckout(req: Request, env: Env) {
   const uid = await customerId(req, env);
   if (!uid) throw new HttpError(401, 'sign_in_required'); // only signed-in customers can buy
   const o = validateOrder(await readJson(req));
+  // Receipts and invoices go to the account's verified email, never to an address typed at checkout (a typo would leak the order).
+  const acct = await env.DB.prepare('SELECT email FROM users WHERE id = ?1').bind(uid).first<{ email: string }>();
+  if (!acct) throw new HttpError(401, 'session_expired');
+  o.email = acct.email;
+  o.customer = JSON.stringify({ ...JSON.parse(o.customer), email: acct.email });
+  // Per-visitor and per-account limits stop one person from filling the shop-wide cap and blocking everyone else.
+  const { n: mine } = (await env.DB.prepare(
+    "SELECT count(*) AS n FROM pending_checkouts WHERE user_id = ?1 AND awaiting_payment = 0 AND created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-30 minutes')",
+  ).bind(uid).first<{ n: number }>())!;
+  if (mine >= MAX_UNPAID_PER_ACCOUNT_30_MIN) throw new HttpError(429, 'rate_limited');
+  if (!(await allowHit(env, 'checkout:' + clientIp(req), 10, MAX_CHECKOUTS_PER_IP_10_MIN))) throw new HttpError(429, 'rate_limited');
   // Opportunistic clean-up of abandoned drafts, then the global flood cap.
   await env.DB.prepare(
     `DELETE FROM pending_checkouts WHERE (awaiting_payment = 0 AND created_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?1))
@@ -205,10 +234,12 @@ async function startCheckout(req: Request, env: Env) {
 /* The customer pressed "back" on Stripe's page (Stripe sends them to /order/?o=..&cancelled=1). Close the Stripe session so it
    can't be paid later, then drop the draft. The draft is only dropped once Stripe confirms the session is expired, so an order
    can never be lost if the customer actually paid in another tab. Answers ok either way (nothing to reveal). */
-async function cancelCheckout(env: Env, id: string) {
+async function cancelCheckout(req: Request, env: Env, id: string) {
   if (!UUID.test(id)) throw new HttpError(400, 'invalid');
-  const row = await env.DB.prepare('SELECT stripe_session_id FROM pending_checkouts WHERE id = ?1 AND awaiting_payment = 0')
-    .bind(id.toLowerCase()).first<{ stripe_session_id: string | null }>();
+  const uid = await customerId(req, env); // only the customer who started the checkout can cancel it
+  if (!uid) return { ok: true };
+  const row = await env.DB.prepare('SELECT stripe_session_id FROM pending_checkouts WHERE id = ?1 AND awaiting_payment = 0 AND user_id = ?2')
+    .bind(id.toLowerCase(), uid).first<{ stripe_session_id: string | null }>();
   if (!row) return { ok: true };
   const status = row.stripe_session_id && env.STRIPE_SECRET_KEY ? await expireCheckoutSession(env.STRIPE_SECRET_KEY, row.stripe_session_id) : null;
   if (status === 'expired' || !row.stripe_session_id) {
@@ -232,11 +263,19 @@ async function orderStatus(env: Env, id: string) {
 /* Payment confirmation email. Best effort: a mail problem must never make the webhook fail (the order is already paid). */
 async function notifyPaid(env: Env, orderId: string): Promise<string | null> {
   try {
-    const o = await env.DB.prepare('SELECT customer, items, total_cents, lang FROM orders WHERE id = ?1').bind(orderId).first<any>();
+    const o = await env.DB.prepare('SELECT customer, items, COALESCE(paid_cents, total_cents) AS total_cents, lang, consent_personalised FROM orders WHERE id = ?1').bind(orderId).first<any>();
     if (!o) return 'not_found';
-    const email = JSON.parse(o.customer).email as string;
-    const m = paidEmail(o.lang === 'en' ? 'en' : 'pt', orderId.slice(-6).toUpperCase(), o.total_cents, JSON.parse(o.items));
-    await sendMail(env, email, m.subject, m.html, m.text);
+    const customer = JSON.parse(o.customer);
+    const lines = JSON.parse(o.items);
+    const order = { ref: orderId.slice(-6).toUpperCase(), totalCents: o.total_cents, lines, personalised: o.consent_personalised === 1, customer };
+    const m = paidEmail(o.lang === 'en' ? 'en' : 'pt', order);
+    await sendMail(env, customer.email as string, m.subject, m.html, m.text);
+    await env.DB.prepare(`UPDATE orders SET paid_email_sent_at = ${NOW} WHERE id = ?1`).bind(orderId).run();
+    // Also tell the shop (best effort: a failure here never affects the customer's email or the order).
+    if (env.ADMIN_EMAIL) {
+      try { const n = newOrderEmail({ ...order, adminUrl: 'https://admin.ofstdesigns.com/' }); await sendMail(env, env.ADMIN_EMAIL.trim(), n.subject, n.html, n.text); }
+      catch (e: any) { console.error('shop notification not sent', e && e.message); }
+    }
     return null; // sent
   } catch (e: any) { console.error('paid email not sent', e && e.message); return String((e && e.message) || 'mail_failed'); }
 }
@@ -246,7 +285,8 @@ async function notifyPaid(env: Env, orderId: string): Promise<string | null> {
    Spaced out to stay under Resend's rate limit. Returns counts and the first error reason (e.g. mail_not_configured). */
 const RESEND_BATCH = 40;
 async function resendPaidEmails(env: Env) {
-  const { results } = await env.DB.prepare("SELECT id FROM orders WHERE payment_status = 'paid' ORDER BY created_at DESC").all<{ id: string }>();
+  // Only orders whose confirmation was never sent, oldest first, so each click moves on instead of re-sending the same ones.
+  const { results } = await env.DB.prepare("SELECT id FROM orders WHERE payment_status = 'paid' AND paid_email_sent_at IS NULL ORDER BY created_at ASC").all<{ id: string }>();
   const batch = results.slice(0, RESEND_BATCH);
   let sent = 0, failed = 0, reason: string | null = null;
   for (const [i, r] of batch.entries()) {
@@ -267,6 +307,8 @@ async function stripeWebhook(req: Request, env: Env) {
   try { ev = JSON.parse(body); } catch { throw new HttpError(400, 'invalid'); }
   const s = ev && ev.data && ev.data.object;
   if (!s || typeof s.id !== 'string') return { received: true };
+  // Refunds and disputes are reported per payment (not per checkout), so they are matched on the stored payment id.
+  if (typeof ev.type === 'string' && (ev.type === 'charge.refunded' || ev.type.startsWith('charge.dispute.'))) return paymentChange(env, ev.type, s);
   const orderId = String(s.client_reference_id || (s.metadata && s.metadata.order_id) || '').toLowerCase();
   if (!UUID.test(orderId)) return { received: true };
 
@@ -278,14 +320,15 @@ async function stripeWebhook(req: Request, env: Env) {
       case 'checkout.session.completed':
       case 'checkout.session.async_payment_succeeded':
         if (s.payment_status === 'paid') {
-          const ok = s.amount_total === draft.total_cents && String(s.currency).toLowerCase() === 'eur';
+          const ok = amountOk(s, draft.total_cents);
           // Copy the draft into orders and delete it in one transaction. INSERT OR IGNORE: a retried event changes nothing.
           const [ins] = await env.DB.batch([
             env.DB.prepare(
-              `INSERT OR IGNORE INTO orders (id, customer, items, total_cents, lang, consent_terms, consent_personalised, payment_status, stripe_session_id, paid_at, user_id)
-               SELECT id, customer, items, total_cents, lang, 1, consent_personalised, ?2, stripe_session_id, ${ok ? NOW : 'NULL'}, user_id
+              `INSERT OR IGNORE INTO orders (id, customer, items, total_cents, lang, consent_terms, consent_personalised, payment_status, stripe_session_id, paid_at, user_id, payment_intent, paid_cents)
+               SELECT id, customer, items, total_cents, lang, 1, consent_personalised, ?2, stripe_session_id, ${ok ? NOW : 'NULL'}, user_id, ?3, ?4
                FROM pending_checkouts WHERE id = ?1`,
-            ).bind(orderId, ok ? 'paid' : 'mismatch'),
+            ).bind(orderId, ok ? 'paid' : 'mismatch', typeof s.payment_intent === 'string' ? s.payment_intent : null,
+              Number.isInteger(s.amount_total) ? s.amount_total : null),
             // Only drop the draft once the order really is in `orders` (never lose a paid order if the insert was skipped).
             env.DB.prepare('DELETE FROM pending_checkouts WHERE id = ?1 AND EXISTS (SELECT 1 FROM orders WHERE id = ?1)').bind(orderId),
           ]);
@@ -306,7 +349,11 @@ async function stripeWebhook(req: Request, env: Env) {
   // Older orders (created before drafts existed) or a retried event for an order that is already in `orders`.
   const order = await env.DB.prepare('SELECT total_cents, payment_status FROM orders WHERE id = ?1 AND stripe_session_id = ?2')
     .bind(orderId, s.id).first<{ total_cents: number; payment_status: string }>();
-  if (!order) return { received: true };
+  if (!order) {
+    // A paid notice with no draft and no order means money arrived for something we no longer have: make it visible in the logs.
+    if (s.payment_status === 'paid') console.error('paid checkout without draft or order', orderId, s.id);
+    return { received: true };
+  }
 
   const set = (status: string, paid = false) => env.DB.prepare(
     `UPDATE orders SET payment_status = ?1${paid ? ", paid_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')" : ''} WHERE id = ?2 AND payment_status != 'paid'`,
@@ -316,13 +363,52 @@ async function stripeWebhook(req: Request, env: Env) {
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded':
       if (s.payment_status === 'paid') {
-        const ok = s.amount_total === order.total_cents && String(s.currency).toLowerCase() === 'eur';
+        const ok = amountOk(s, order.total_cents);
         const r = await set(ok ? 'paid' : 'mismatch', ok);
         if (ok && r.meta.changes === 1) await notifyPaid(env, orderId); // first time only: Stripe retries do not re-send
       }
       break;
     case 'checkout.session.async_payment_failed': await set('failed'); break;
     case 'checkout.session.expired': await set('expired'); break;
+  }
+  return { received: true };
+}
+
+/* The paid amount is correct when it equals our total, or when a Stripe promotion code lowered it: then Stripe's subtotal must
+   still equal our total and the difference must be exactly the discount Stripe reports. Always in euros. */
+function amountOk(s: any, totalCents: number) {
+  if (String(s.currency).toLowerCase() !== 'eur' || !Number.isInteger(s.amount_total)) return false;
+  if (s.amount_total === totalCents) return true;
+  const discount = s.total_details && s.total_details.amount_discount;
+  return s.amount_subtotal === totalCents && Number.isInteger(discount) && discount > 0 && s.amount_total === totalCents - discount && s.amount_total >= 0;
+}
+
+/* charge.refunded / charge.dispute.*: update the order and email the shop. A refund is made by you in the Stripe dashboard;
+   this only records it so the admin page shows it. A dispute (chargeback) has a deadline, so the shop is told at once. */
+async function paymentChange(env: Env, type: string, s: any) {
+  const pi = typeof s.payment_intent === 'string' ? s.payment_intent : '';
+  if (!pi) return { received: true };
+  const order = await env.DB.prepare('SELECT id, refund_status FROM orders WHERE payment_intent = ?1').bind(pi).first<{ id: string; refund_status: string | null }>();
+  if (!order) { console.error('refund/dispute for unknown payment', type, pi); return { received: true }; }
+  let status: string | null = null, note = '';
+  if (type === 'charge.refunded') {
+    status = s.refunded ? 'refunded' : 'partial';
+    note = `Reembolso registado: ${(Number(s.amount_refunded) / 100 || 0).toFixed(2)} €`;
+    await env.DB.prepare('UPDATE orders SET refund_status = ?1, refunded_cents = ?2 WHERE id = ?3')
+      .bind(status, Number.isInteger(s.amount_refunded) ? s.amount_refunded : null, order.id).run();
+  } else {
+    if (type === 'charge.dispute.created') status = 'disputed';
+    else if (type === 'charge.dispute.closed') status = s.status === 'won' ? 'dispute_won' : s.status === 'lost' ? 'dispute_lost' : null;
+    if (!status) return { received: true };
+    note = status === 'disputed' ? 'O cliente abriu uma disputa (chargeback). Responda no painel da Stripe antes do prazo.'
+      : status === 'dispute_won' ? 'Disputa ganha.' : 'Disputa perdida.';
+    await env.DB.prepare('UPDATE orders SET refund_status = ?1 WHERE id = ?2').bind(status, order.id).run();
+  }
+  if (env.ADMIN_EMAIL && status !== order.refund_status) {
+    try {
+      const m = adminAlertEmail(order.id.slice(-6).toUpperCase(), note);
+      await sendMail(env, env.ADMIN_EMAIL.trim(), m.subject, m.html, m.text);
+    } catch (e: any) { console.error('shop alert not sent', e && e.message); }
   }
   return { received: true };
 }
@@ -338,11 +424,14 @@ async function login(req: Request, env: Env) {
     "SELECT count(*) AS n FROM login_attempts WHERE at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-15 minutes')",
   ).first<{ n: number }>())!;
   if (n >= MAX_FAILED_LOGINS_PER_15_MIN) throw new HttpError(429, 'rate_limited');
+  // Failed attempts also count per visitor (IP), so a stranger guessing passwords is stopped long before the partners are locked out.
+  const ipKey = 'adminfail:' + clientIp(req);
+  if (!(await allowHit(env, ipKey, 15, MAX_FAILED_LOGINS_PER_IP_15_MIN, false))) throw new HttpError(429, 'rate_limited');
 
   // Evaluate both comparisons before branching so the timing does not reveal which one failed.
   const [okEmail, okPass] = await Promise.all([safeEqual(email, env.ADMIN_EMAIL.trim().toLowerCase()), safeEqual(password, env.ADMIN_PASSWORD)]);
   if (!okEmail || !okPass) {
-    await env.DB.prepare('INSERT INTO login_attempts DEFAULT VALUES').run();
+    await env.DB.batch([env.DB.prepare('INSERT INTO login_attempts DEFAULT VALUES'), env.DB.prepare('INSERT INTO rate_hits (key) VALUES (?1)').bind(ipKey)]);
     throw new HttpError(401, 'invalid_credentials');
   }
   const token = newToken();
@@ -365,7 +454,7 @@ async function requireAdmin(req: Request, env: Env) {
 
 async function listOrders(env: Env) {
   const { results } = await env.DB.prepare(
-    "SELECT id, created_at, status, customer, items, total_cents, consent_terms, consent_personalised, payment_status, paid_at FROM orders WHERE payment_status IN ('paid', 'mismatch') ORDER BY created_at DESC LIMIT 500",
+    "SELECT id, created_at, status, customer, items, total_cents, consent_terms, consent_personalised, payment_status, paid_at, paid_cents, refund_status, refunded_cents FROM orders WHERE payment_status IN ('paid', 'mismatch') ORDER BY created_at DESC LIMIT 500",
   ).all<any>();
   return results.map((r) => ({
     ...r,
@@ -378,7 +467,7 @@ async function listOrders(env: Env) {
 
 async function listInvoices(env: Env) {
   const { results } = await env.DB.prepare(
-    `SELECT o.id, o.created_at, o.status, o.customer, o.items, o.total_cents, o.payment_status
+    `SELECT o.id, o.created_at, o.status, o.customer, o.items, o.total_cents, o.payment_status, o.paid_cents
     FROM orders o
     WHERE o.payment_status IN ('paid', 'mismatch') AND o.invoice_sent_at IS NULL
     ORDER BY o.created_at ASC LIMIT 500`,
@@ -399,18 +488,20 @@ async function addInvoice(req: Request, env: Env, id: string) {
   if (!INVOICE_TYPES.includes(contentType) || !/^[A-Za-z0-9+/]*={0,2}$/.test(b.data) || b.data.length < 1 || b.data.length > 1100000) throw new HttpError(400, 'invalid');
   const bytes = Math.floor(b.data.length * 3 / 4) - (b.data.endsWith('==') ? 2 : b.data.endsWith('=') ? 1 : 0);
   if (bytes < 1 || bytes > MAX_INVOICE_BYTES) throw new HttpError(413, 'too_large');
-  const order = await env.DB.prepare(`SELECT id, customer, items, total_cents, lang FROM orders WHERE id = ?1 AND payment_status IN ('paid', 'mismatch')`).bind(id.toLowerCase()).first<any>();
+  const order = await env.DB.prepare(`SELECT id, customer, items, COALESCE(paid_cents, total_cents) AS total_cents, lang FROM orders WHERE id = ?1 AND payment_status IN ('paid', 'mismatch')`).bind(id.toLowerCase()).first<any>();
   if (!order) throw new HttpError(404, 'not_found');
   const filename = safeFilename(b.filename);
   const customer = JSON.parse(order.customer);
   const lines = JSON.parse(order.items).map((i: any) => ({ name: String(i.name || 'OFS/T kit').slice(0, 200), desc: String(i.desc || '').slice(0, 300), qty: Math.max(1, Math.min(99, Math.floor(+i.qty) || 1)) }));
   const m = invoiceEmail(order.lang === 'en' ? 'en' : 'pt', order.id.slice(-6).toUpperCase(), order.total_cents, lines);
   const attachment: MailAttachment = { filename, content: b.data, content_type: contentType };
+  // Claim the order first, so a double click or two partners at once can't email the customer twice.
+  const claimed = await env.DB.prepare(`UPDATE orders SET invoice_sent_at = ${NOW} WHERE id = ?1 AND invoice_sent_at IS NULL RETURNING id`).bind(order.id).first();
+  if (!claimed) throw new HttpError(409, 'invoice_already_sent');
   try {
     await sendMail(env, customer.email, m.subject, m.html, m.text, [attachment]);
-    const marked = await env.DB.prepare(`UPDATE orders SET invoice_sent_at = ${NOW} WHERE id = ?1 AND invoice_sent_at IS NULL RETURNING id`).bind(order.id).first();
-    if (!marked) throw new Error('invoice_already_sent');
   } catch {
+    await env.DB.prepare('UPDATE orders SET invoice_sent_at = NULL WHERE id = ?1').bind(order.id).run(); // not sent: allow a retry
     throw new HttpError(502, 'mail_unavailable');
   }
   return { order_id: order.id, filename, email_sent: true };
@@ -419,8 +510,15 @@ async function addInvoice(req: Request, env: Env, id: string) {
 async function setStatus(req: Request, env: Env, id: string) {
   const b = await readJson(req);
   if (!UUID.test(id) || !isObj(b) || !STATUSES.includes(b.status)) throw new HttpError(400, 'invalid');
+  const before = await env.DB.prepare('SELECT status, customer, lang FROM orders WHERE id = ?1').bind(id.toLowerCase()).first<any>();
+  if (!before) throw new HttpError(404, 'not_found');
   const row = await env.DB.prepare('UPDATE orders SET status = ?1 WHERE id = ?2 RETURNING id, status').bind(b.status, id.toLowerCase()).first();
   if (!row) throw new HttpError(404, 'not_found');
+  // First time an order becomes "shipped": email the customer (best effort; the status change stands either way).
+  if (b.status === 'shipped' && before.status !== 'shipped') {
+    try { const m = shippedEmail(before.lang === 'en' ? 'en' : 'pt', id.slice(-6).toUpperCase()); await sendMail(env, JSON.parse(before.customer).email, m.subject, m.html, m.text); }
+    catch (e: any) { console.error('shipped email not sent', e && e.message); }
+  }
   return row;
 }
 
@@ -462,13 +560,16 @@ async function requestLink(req: Request, env: Env) {
   const b = await readJson(req);
   const email = isObj(b) && typeof b.email === 'string' ? b.email.trim().toLowerCase().slice(0, 254) : '';
   if (!EMAIL.test(email) || /[\u0000-\u001f\u007f<>"]/.test(email)) throw new HttpError(400, 'invalid');
-  const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?1').bind(email).first<{ id: string }>();
+  // The answer is always the same {ok:true}, whether or not the address has an account (nobody can probe who is a customer).
+  // New customers give their date of birth AFTER opening the link (see verifyLink); a date sent here by an older page is still used.
   const rawBirthDate = isObj(b) && typeof b.birth_date === 'string' ? b.birth_date : '';
-  if (!existing && !rawBirthDate) return { ok: true, needs_birth_date: true };
-  const birthDate = existing ? (rawBirthDate ? validBirthDate(rawBirthDate) : null) : validBirthDate(rawBirthDate);
+  let birthDate: string | null = null;
+  if (rawBirthDate) { try { birthDate = validBirthDate(rawBirthDate); } catch { birthDate = null; } }
   if (!env.RESEND_API_KEY || !env.MAIL_FROM || !env.SITE_URL) throw new HttpError(503, 'not_configured');
   const lang: 'pt' | 'en' = isObj(b) && b.lang === 'en' ? 'en' : 'pt';
 
+  // Per visitor (IP) limit first, so one script can't use up the shared limit and lock everyone else out.
+  if (!(await allowHit(env, 'link:' + clientIp(req), 15, MAX_LINKS_PER_IP_15_MIN))) return { ok: true };
   await env.DB.prepare(`DELETE FROM link_requests WHERE at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')`).run();
   const [per, all] = await Promise.all([
     env.DB.prepare(`SELECT count(*) AS n FROM link_requests WHERE email = ?1 AND at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-15 minutes')`).bind(email).first<{ n: number }>(),
@@ -496,16 +597,33 @@ async function verifyLink(req: Request, env: Env) {
   const b = await readJson(req);
   const token = isObj(b) && typeof b.token === 'string' ? b.token : '';
   if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) throw new HttpError(401, 'invalid_link');
+  const hash = hex(await sha256(token));
+  const pending = await env.DB.prepare(
+    `SELECT email, birth_date FROM login_links WHERE token_hash = ?1 AND used_at IS NULL AND expires_at > ${NOW}`,
+  ).bind(hash).first<{ email: string; birth_date: string | null }>();
+  if (!pending) throw new HttpError(401, 'invalid_link');
+  // A new customer confirms their age here, after proving they own the address, so the sign-in form reveals nothing.
+  const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?1').bind(pending.email).first<{ id: string }>();
+  let birthDate = pending.birth_date;
+  if (!existing && !birthDate) {
+    const raw = isObj(b) && typeof b.birth_date === 'string' ? b.birth_date : '';
+    if (!raw) return { needs_birth_date: true }; // the link stays valid until it is used or expires
+    try { birthDate = validBirthDate(raw); }
+    catch (e) {
+      if (e instanceof HttpError && e.code === 'age_restricted') await env.DB.prepare(`UPDATE login_links SET used_at = ${NOW} WHERE token_hash = ?1`).bind(hash).run();
+      throw e;
+    }
+  }
   const link = await env.DB.prepare(
-    `UPDATE login_links SET used_at = ${NOW} WHERE token_hash = ?1 AND used_at IS NULL AND expires_at > ${NOW} RETURNING email, birth_date`,
-  ).bind(hex(await sha256(token))).first<{ email: string; birth_date: string }>();
+    `UPDATE login_links SET used_at = ${NOW} WHERE token_hash = ?1 AND used_at IS NULL AND expires_at > ${NOW} RETURNING email`,
+  ).bind(hash).first<{ email: string }>();
   if (!link) throw new HttpError(401, 'invalid_link');
 
   const lang = isObj(b) && b.lang === 'en' ? 'en' : 'pt';
   const user = await env.DB.prepare(
      `INSERT INTO users (id, email, birth_date, last_login_at, lang) VALUES (?1, ?2, ?3, ${NOW}, ?4)
       ON CONFLICT(email) DO UPDATE SET last_login_at = excluded.last_login_at, birth_date = COALESCE(users.birth_date, excluded.birth_date) RETURNING *`,
-    ).bind(crypto.randomUUID(), link.email, link.birth_date, lang).first<any>();
+    ).bind(crypto.randomUUID(), link.email, birthDate, lang).first<any>();
 
   const session = newToken();
   await env.DB.batch([
@@ -534,7 +652,7 @@ async function updateMe(req: Request, env: Env, uid: string) {
   if (!isObj(b)) throw new HttpError(400, 'invalid');
   const sets: string[] = [], vals: (string | null)[] = [];
   for (const [k, v] of Object.entries(b)) {
-    if (!(k in PROFILE_LIMITS)) throw new HttpError(400, 'invalid');
+    if (!Object.prototype.hasOwnProperty.call(PROFILE_LIMITS, k)) throw new HttpError(400, 'invalid'); // own keys only (no 'constructor' etc.)
     if (v !== null && (typeof v !== 'string' || v.length > PROFILE_LIMITS[k] || /[\u0000-\u001f\u007f]/.test(v))) throw new HttpError(400, 'invalid');
     sets.push(`${k} = ?${sets.length + 1}`);
     vals.push(typeof v === 'string' && v.trim() ? v.trim() : null);
@@ -550,7 +668,7 @@ async function myOrders(env: Env, uid: string) {
   const u = await env.DB.prepare('SELECT email FROM users WHERE id = ?1').bind(uid).first<{ email: string }>();
   if (!u) throw new HttpError(401, 'session_expired');
   const { results } = await env.DB.prepare(
-    `SELECT id, created_at, status, items, total_cents, payment_status, paid_at FROM orders
+    `SELECT id, created_at, status, items, COALESCE(paid_cents, total_cents) AS total_cents, payment_status, paid_at, refund_status FROM orders
      WHERE payment_status = 'paid' AND (user_id = ?1 OR lower(json_extract(customer, '$.email')) = ?2)
      ORDER BY created_at DESC LIMIT 100`,
   ).bind(uid, u.email).all<any>();
@@ -604,7 +722,7 @@ export default {
       }
       if (path === '/api/checkout' && req.method === 'POST') return respond(await startCheckout(req, env), 201, req, env);
       const cancel = /^\/api\/checkout\/([^/]+)\/cancel$/.exec(path);
-      if (cancel && req.method === 'POST') return respond(await cancelCheckout(env, cancel[1]), 200, req, env);
+      if (cancel && req.method === 'POST') return respond(await cancelCheckout(req, env, cancel[1]), 200, req, env);
       const st = /^\/api\/orders\/([^/]+)\/status$/.exec(path);
       if (st && req.method === 'GET') return respond(await orderStatus(env, st[1]), 200, req, env);
       if (path === '/api/admin/login' && req.method === 'POST') return respond(await login(req, env), 200, req, env);

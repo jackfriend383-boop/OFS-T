@@ -44,8 +44,8 @@
 
   "pages": {
     "home": {"title": "{brand} — Kits de autocolantes para o Citroën Ami", "description": "Kits de autocolantes em vinil pré-cortados para a porta e o vidro lateral traseiro do Citroën Ami. Escolha entre {count} designs, defina duas cores e veja o kit no seu carro antes de encomendar."},
-    "shop": {"title": "Loja: todos os designs — {brand}", "crumb": "Loja", "description": "Os {count} designs de kits de autocolantes OFS/T para o Citroën Ami: camuflado de chamas exclusivo, urbano, corrida, retro e minimalista. A partir de {min} por lado."},
-    "configurator": {"title": "Configurador: crie o kit do seu Ami — {brand}", "crumb": "Configurador", "description": "Crie o seu kit de autocolantes para o Citroën Ami em direto, num Ami  2025 ou Ami Pop: escolha o design, duas cores de vinil, acabamento mate ou brilhante, um ou os dois lados e texto personalizado no emblema, e adicione-o ao carrinho."},
+    "shop": {"title": "Loja: todos os designs — {brand}", "crumb": "Loja", "description": "Os {count} designs de kits de autocolantes OFS/T para o Citroën Ami: camuflado de chamas exclusivo, urbano, corrida, retro e minimalista. Kit completo a partir de {min}, os dois lados."},
+    "configurator": {"title": "Configurador: crie o kit do seu Ami — {brand}", "crumb": "Configurador", "description": "Crie o seu kit de autocolantes para o Citroën Ami em direto, num Ami 2025 ou Ami Pop: escolha o design, duas cores de vinil, acabamento mate ou brilhante, kit completo ou peças individuais e texto personalizado no emblema, e adicione-o ao carrinho."},
     "about": {"title": "Sobre nós e perguntas frequentes — {brand}", "crumb": "Sobre nós e perguntas frequentes", "description": "Quem faz os kits de autocolantes OFS/T para o Citroën Ami, como são cortados e respostas sobre aplicação, lavagens, remoção e compatibilidade."},
     "privacy": {"title": "Política de privacidade — {brand}", "crumb": "Política de privacidade", "description": "Como a OFS/T trata os dados pessoais na sua loja online de kits de autocolantes para o Citroën Ami."},
     "terms": {"title": "Condições de venda — {brand}", "crumb": "Condições de venda", "description": "Condições de venda dos kits de autocolantes OFS/T para o Citroën Ami."},
@@ -79,11 +79,11 @@
 
   "llms": {
     "heading": "Português",
-    "intro": "A {brand} vende kits de autocolantes em vinil pré-cortados para o Citroën Ami. Cada kit cobre o painel inferior da porta e o vidro lateral traseiro dos dois lados. {count} designs, a partir de {min} por lado, preços em EUR.",
+    "intro": "A {brand} vende kits de autocolantes em vinil pré-cortados para o Citroën Ami. Cada kit cobre o painel inferior da porta e o vidro lateral traseiro dos dois lados. {count} designs, kit completo a partir de {min}, preços em EUR.",
     "pages": [
       ["home", "Início", "apresentação, designs populares, como encomendar e aplicar, carros compatíveis"],
-      ["shop", "Loja", "os {count} designs, com categoria e preço por lado"],
-      ["configurator", "Configurador", "pré-visualização em direto no Ami 2025 ou Ami Pop; design, cores, acabamento, tamanho do kit e texto do emblema. Ligação direta a um design com ?design=<id> (acrescente &model=pop para o Ami Pop)"],
+      ["shop", "Loja", "os {count} designs, com categoria e preço do kit completo"],
+      ["configurator", "Configurador", "pré-visualização em direto no Ami 2025 ou Ami Pop; design, cores, acabamento, peças e texto do emblema. Ligação direta a um design com ?design=<id> (acrescente &model=pop para o Ami Pop)"],
       ["about", "Sobre nós e perguntas frequentes", "quem faz os kits; tempo de aplicação, lavagens, remoção, compatibilidade, designs personalizados"]
     ],
     "legal": [
@@ -92,7 +92,7 @@
       ["refunds", "Reembolsos e devoluções", "devoluções e direito de livre resolução"],
       ["cookies", "Política de cookies", "cookies e armazenamento local"]
     ],
-    "design_line": "{cat}, {price} por lado. {tag}"
+    "design_line": "{cat}, {price} kit completo (os dois lados). {tag}"
   },
 
   "placeholders": {
@@ -143,6 +143,7 @@
     "subtotal": "Subtotal",
     "shipping": "Envio",
     "shippingCalc": "Calculado ao finalizar a compra",
+    "vatNote": "IVA não aplicável – regime de isenção (art. 53.º do CIVA).",
     "total": "Total",
     "checkout": "Finalizar compra",
     "openCart_one": "Abrir carrinho, {n} artigo",
@@ -178,7 +179,7 @@
     "countries": ["Portugal", "Espanha", "França", "Itália", "Alemanha", "Países Baixos", "Bélgica"],
     "msgTerms": "Confirme que aceita as condições de venda e a política de reembolsos e devoluções, e que leu a política de privacidade.",
     "msgPers": "Confirme que compreende que os kits personalizados não podem ser devolvidos por mudança de opinião.",
-    "termsCheck": "Li e aceito as {terms} e a {refunds}, e li a {privacy}.",
+    "termsCheck": "Li e aceito as {terms} e a {refunds}, li a {privacy} e declaro ter 18 ou mais anos (ou autorização dos meus pais ou tutores).",
     "termsLink": "condições de venda",
     "refundsLink": "política de reembolsos e devoluções",
     "privacyLink": "política de privacidade",
@@ -253,6 +254,13 @@
     "sRevenue": "Receita",
     "noOrders": "Ainda não há encomendas. Aparecem aqui assim que um cliente finalizar a compra.",
     "moldPreview": "Pré-visualização do molde de impressão: {name}",
+    "refund_partial": "Reembolsado em parte na Stripe.",
+    "refund_refunded": "Reembolsado na Stripe: não enviar.",
+    "refund_disputed": "Pagamento contestado (chargeback): responda no painel da Stripe antes do prazo.",
+    "refund_dispute_won": "Disputa ganha.",
+    "refund_dispute_lost": "Disputa perdida: o pagamento foi devolvido ao cliente.",
+    "discountNote": "Código promocional usado: menos {amount}.",
+    "printLine": "Para imprimir: {list}",
     "doorStickers_one": "{n} autocolante de porta",
     "doorStickers_other": "{n} autocolantes de porta",
     "qtyLine": "Qtd. {q} · {price}",

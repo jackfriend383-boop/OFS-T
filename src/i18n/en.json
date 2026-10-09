@@ -44,8 +44,8 @@
 
   "pages": {
     "home": {"title": "{brand} — Sticker kits for the Citroën Ami", "description": "Pre-cut vinyl sticker kits for the Citroën Ami door panel and rear quarter window. Pick from {count} designs, set two colours and preview the kit on your car before you order."},
-    "shop": {"title": "Shop all designs — {brand}", "crumb": "Shop", "description": "All {count} OFS/T sticker kit designs for the Citroën Ami: signature flame camo, street, racing, retro and minimal. From {min} per side."},
-    "configurator": {"title": "Configurator: design your Ami kit — {brand}", "crumb": "Configurator", "description": "Design your Citroën Ami sticker kit live on an Ami 2025 or Ami Pop: choose a design, two vinyl colours, matte or gloss, one or both sides and custom badge text, then add it to your cart."},
+    "shop": {"title": "Shop all designs — {brand}", "crumb": "Shop", "description": "All {count} OFS/T sticker kit designs for the Citroën Ami: signature flame camo, street, racing, retro and minimal. Full kit from {min}, both sides."},
+    "configurator": {"title": "Configurator: design your Ami kit — {brand}", "crumb": "Configurator", "description": "Design your Citroën Ami sticker kit live on an Ami 2025 or Ami Pop: choose a design, two vinyl colours, matte or gloss, full kit or single pieces and custom badge text, then add it to your cart."},
     "about": {"title": "About & FAQ — {brand}", "crumb": "About & FAQ", "description": "Who makes OFS/T sticker kits for the Citroën Ami, how they are cut, and answers on fitting, car washes, removal and compatibility."},
     "privacy": {"title": "Privacy policy — {brand}", "crumb": "Privacy policy", "description": "How OFS/T handles personal data in its online shop for Citroën Ami sticker kits."},
     "terms": {"title": "Terms of sale — {brand}", "crumb": "Terms of sale", "description": "Terms of sale for OFS/T sticker kits for the Citroën Ami."},
@@ -79,11 +79,11 @@
 
   "llms": {
     "heading": "English",
-    "intro": "{brand} sells pre-cut vinyl sticker kits for the Citroën Ami. Each kit covers the lower door panel and the rear quarter window on both sides. {count} designs, from {min} per side, prices in EUR.",
+    "intro": "{brand} sells pre-cut vinyl sticker kits for the Citroën Ami. Each kit covers the lower door panel and the rear quarter window on both sides. {count} designs, full kit from {min}, prices in EUR.",
     "pages": [
       ["home", "Home", "overview, popular designs, how ordering and fitting work, compatible cars"],
-      ["shop", "Shop", "all {count} designs with category and price per side"],
-      ["configurator", "Configurator", "live preview on the Ami 2025 or Ami Pop; pick design, colours, finish, kit size and badge text. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)"],
+      ["shop", "Shop", "all {count} designs with category and full-kit price"],
+      ["configurator", "Configurator", "live preview on the Ami 2025 or Ami Pop; pick design, colours, finish, pieces and badge text. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)"],
       ["about", "About & FAQ", "who makes the kits; fitting time, car washes, removal, compatibility, custom designs"]
     ],
     "legal": [
@@ -92,7 +92,7 @@
       ["refunds", "Refunds & returns", "returns and withdrawal"],
       ["cookies", "Cookie policy", "cookies and local storage"]
     ],
-    "design_line": "{cat}, {price} per side. {tag}"
+    "design_line": "{cat}, {price} full kit (both sides). {tag}"
   },
 
   "placeholders": {},
@@ -116,6 +116,7 @@
     "subtotal": "Subtotal",
     "shipping": "Shipping",
     "shippingCalc": "Calculated at checkout",
+    "vatNote": "VAT not applicable (art. 53 CIVA exemption).",
     "total": "Total",
     "checkout": "Checkout",
     "openCart_one": "Open cart, {n} item",
@@ -151,7 +152,7 @@
     "countries": ["Portugal", "Spain", "France", "Italy", "Germany", "Netherlands", "Belgium"],
     "msgTerms": "Please confirm that you accept the terms of sale and the refunds & returns policy, and have read the privacy policy.",
     "msgPers": "Please confirm that you understand personalised kits cannot be returned for a change of mind.",
-    "termsCheck": "I have read and accept the {terms} and the {refunds}, and I have read the {privacy}.",
+    "termsCheck": "I have read and accept the {terms} and the {refunds}, I have read the {privacy}, and I am 18 or over (or have my parents' or guardian's permission).",
     "termsLink": "terms of sale",
     "refundsLink": "refunds &amp; returns policy",
     "privacyLink": "privacy policy",
@@ -226,6 +227,13 @@
     "sRevenue": "Revenue",
     "noOrders": "No orders yet. They appear here as soon as a customer checks out.",
     "moldPreview": "Print mold preview: {name}",
+    "refund_partial": "Partly refunded in Stripe.",
+    "refund_refunded": "Refunded in Stripe: do not ship.",
+    "refund_disputed": "Payment disputed (chargeback): reply in the Stripe dashboard before the deadline.",
+    "refund_dispute_won": "Dispute won.",
+    "refund_dispute_lost": "Dispute lost: the payment was returned to the customer.",
+    "discountNote": "Promotion code used: {amount} off.",
+    "printLine": "To print: {list}",
     "doorStickers_one": "{n} door sticker",
     "doorStickers_other": "{n} door stickers",
     "qtyLine": "Qty {q} · {price}",

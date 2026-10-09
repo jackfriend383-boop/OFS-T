@@ -25,6 +25,12 @@ export async function createCheckoutSession(p: CheckoutParams): Promise<{ id: st
   f.set('locale', p.locale);
   f.set('metadata[order_id]', p.orderId);
   f.set('payment_intent_data[metadata][order_id]', p.orderId);
+  // Shown under the Pay button: no VAT is charged (small-business exemption, art. 53.º CIVA).
+  f.set('custom_text[submit][message]', p.locale === 'pt'
+    ? 'Preços finais. IVA não aplicável – regime de isenção (art. 53.º do CIVA).'
+    : 'Final prices. VAT not applicable – exemption under art. 53 of the Portuguese VAT Code (CIVA).');
+  // Lets customers type a promotion code you create in the Stripe dashboard (Products > Coupons). No code = no field effect.
+  f.set('allow_promotion_codes', 'true');
   f.set('expires_at', String(Math.floor(Date.now() / 1000) + 31 * 60)); // Stripe minimum is 30 minutes
   p.items.forEach((i, n) => {
     f.set(`line_items[${n}][quantity]`, String(i.qty));

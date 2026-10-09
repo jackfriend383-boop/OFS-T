@@ -175,7 +175,8 @@ export function makeBackend(kit: Kit) {
      Best effort (nothing to show if it fails: an unpaid draft is never turned into an order and is cleaned up later). */
   async function cancelCheckout(id: string) {
     if (!UUID.test(String(id))) return;
-    try { await request('/api/checkout/' + encodeURIComponent(id) + '/cancel', { method: 'POST' }); } catch { /* ignore */ }
+    const sess = ls.get(); // only the customer who started the checkout may cancel it
+    try { await request('/api/checkout/' + encodeURIComponent(id) + '/cancel', { method: 'POST', token: sess?.access_token }); } catch { /* ignore */ }
   }
   /* ---------- Customer account ---------- */
   const hasCustomerSession = () => backendConfigured && !!ls.get();
@@ -186,15 +187,17 @@ export function makeBackend(kit: Kit) {
     catch (e: any) { if (e.code === 'session_expired') ls.clear(); throw e; }
   }
   /* Emails a one-time sign-in link (the answer is the same whether or not the address already has an account). */
-  async function requestLink(email: string, birthDate: string): Promise<{ needsBirthDate: boolean }> {
+  async function requestLink(email: string, birthDate = ''): Promise<{ needsBirthDate: boolean }> {
     email = String(email || '').trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BackendError(T('badEmail'), 'invalid');
     const r = await request('/api/auth/request', { method: 'POST', body: { email, birth_date: birthDate, lang: kit.lang } });
     return { needsBirthDate: r && r.needs_birth_date === true };
   }
-  /* Uses the token from the emailed link; on success the customer is signed in. */
-  async function verifyLink(token: string): Promise<Customer> {
-    const r = await request('/api/auth/verify', { method: 'POST', body: { token, lang: kit.lang } });
+  /* Uses the token from the emailed link; on success the customer is signed in. A new customer is first asked for their date of
+     birth (needsBirthDate): the same link is then sent again together with it. */
+  async function verifyLink(token: string, birthDate = ''): Promise<Customer | { needsBirthDate: true }> {
+    const r = await request('/api/auth/verify', { method: 'POST', body: birthDate ? { token, birth_date: birthDate, lang: kit.lang } : { token, lang: kit.lang } });
+    if (r && r.needs_birth_date === true) return { needsBirthDate: true };
     if (!r || typeof r.access_token !== 'string' || !r.user) throw new BackendError(MSG.generic, 'bad_response');
     ls.set({ access_token: r.access_token, expires_at: Date.now() + Math.max(60, +r.expires_in || 3600) * 1000 });
     return r.user as Customer;

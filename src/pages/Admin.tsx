@@ -11,7 +11,7 @@ import { isUUID } from '../lib/backend';
 import { fileBase, moldPNG, moldSVG, saveFile, svgBlob } from '../lib/mold';
 import type { Cfg } from '../lib/kit';
 import { DASH } from './admin/copy';
-import { RANGES, customers as groupCustomers, dayKey, delta, inRange, kpis, rangeBounds, reports, series, sheetsOf, toCSV, type CustomerRow, type Point, type RangeKey } from './admin/stats';
+import { RANGES, customers as groupCustomers, dayKey, delta, inRange, kpis, rangeBounds, printCounts, reports, series, sheetsOf, toCSV, type CustomerRow, type Point, type RangeKey } from './admin/stats';
 import { BarList, Columns, TrendChart } from './admin/Charts';
 
 type Panel = 'boot' | 'setup' | 'login' | 'locked' | 'main';
@@ -21,7 +21,7 @@ const TAB_KEY = 'ofst-admin-tab', RANGE_KEY = 'ofst-admin-range';
 const remember = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* private mode */ } };
 const recall = (k: string) => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } };
 const pct = (v: number, locale: string) => new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 }).format(v);
-interface Order { id: string; ref: string; status: string; created: Date; name: string; email: string; street: string; postcode: string; city: string; country: string; nif: string; items: { cfg: Cfg; qty: number; list: number }[]; dropped: number; total: number; listTotal: number; pers: boolean; pay: string }
+interface Order { id: string; ref: string; status: string; created: Date; name: string; email: string; street: string; postcode: string; city: string; country: string; nif: string; items: { cfg: Cfg; qty: number; list: number }[]; dropped: number; total: number; listTotal: number; pers: boolean; pay: string; refund: string; discount: number }
 const NEXT: Record<string, string> = { new: 'printed', printed: 'shipped', shipped: 'new' };
 const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
 const Rich = ({ html, as: Tag = 'span', ...p }: { html: string; as?: any } & Record<string, any>) => <Tag {...p} dangerouslySetInnerHTML={{ __html: html }} />; // our own copy, never user input
@@ -95,13 +95,17 @@ export default function Admin() {
       const cfg = i && typeof i === 'object' && kit.sanitizeCfg(i.cfg); if (!cfg) return null;
       return { cfg, qty: Math.min(99, Math.max(1, Math.floor(+i.qty) || 1)), list: Math.round(kit.priceOf(cfg) * 100) };
     }).filter(Boolean) as Order['items'];
-    const total = Number.isFinite(+o.total_cents) ? Math.round(+o.total_cents) : 0;
+    const list = Number.isFinite(+o.total_cents) ? Math.round(+o.total_cents) : 0;
+    // What the customer paid: lower than the order total when a Stripe promotion code was used (older orders: the total).
+    const total = o.paid_cents != null && Number.isFinite(+o.paid_cents) ? Math.round(+o.paid_cents) : list;
     return {
       id: String(o.id), ref: String(o.id).slice(-6).toUpperCase(), status: STATUS[o.status] ? o.status : 'new', created: new Date(o.created_at),
       name: str(cu.name, 200), email: str(cu.email, 254), street: str(cu.street, 300), postcode: str(cu.postcode, 20), city: str(cu.city, 120), country: str(cu.country, 60),
       nif: /^\d{9}$/.test(String(cu.nif || '')) ? String(cu.nif) : '', // optional Portuguese tax number
       items, dropped: raw.length - items.length, total, listTotal: items.reduce((s, i) => s + i.list * i.qty, 0), pers: o.consent_personalised === true,
       pay: o.payment_status === 'paid' ? 'paid' : o.payment_status === 'mismatch' ? 'mismatch' : 'unpaid', // set only by Stripe's signed webhook
+      refund: ['partial', 'refunded', 'disputed', 'dispute_won', 'dispute_lost'].includes(o.refund_status) ? o.refund_status : '', // from Stripe
+      discount: Math.max(0, list - total),
     };
   }
 
@@ -273,9 +277,10 @@ export default function Admin() {
 
   const ordersList = (list: Order[], compact: boolean) => list.map((o) => {
     const warn: string[] = [];
-    if (o.total !== o.listTotal) warn.push(T('warnTotal', { sent: euro(o.total), list: euro(o.listTotal) }));
+    // The total shown is what Stripe confirmed; the price list may have changed since, so no warning for that any more.
     if (o.dropped) warn.push(T.n('warnDropped', o.dropped));
     if (o.pay === 'mismatch') warn.push(T('warnMismatch'));
+    if (o.refund) warn.push(T('refund_' + o.refund));
     const when = isNaN(o.created.getTime()) ? '' : o.created.toLocaleString(locale);
     const kits = o.items.reduce((s, i) => s + i.qty, 0);
     return (
@@ -285,8 +290,9 @@ export default function Admin() {
             <h3 id={'ord-' + o.ref}>{o.name || T('customer')} <span className="muted mono adm-ref">#{o.ref}</span></h3>
             {compact
               ? <p>{when} · {d.kits(kits)} · <span className="price">{euro(o.total)}</span>{o.city ? ' · ' + o.city : ''}</p>
-              : <p>{o.email}<br />{o.street}, {o.postcode} {o.city}, {o.country}{o.nif ? <> · NIF <span className="mono">{o.nif}</span></> : null}<br />{when} · <span className="price">{euro(o.listTotal)}</span>{o.pay === 'paid' ? ' · ' + T('payPaid') : ''}{o.pers ? ' · ' + T('persAck') : ''}</p>}
+              : <p>{o.email}<br />{o.street}, {o.postcode} {o.city}, {o.country}{o.nif ? <> · NIF <span className="mono">{o.nif}</span></> : null}<br />{when} · <span className="price">{euro(o.total)}</span>{o.pay === 'paid' ? ' · ' + T('payPaid') : ''}{o.pers ? ' · ' + T('persAck') : ''}</p>}
             {warn.map((w) => <p className="err" key={w}>{w}</p>)}
+            {o.discount > 0 && <p className="muted">{T('discountNote', { amount: euro(o.discount) })}</p>}
           </div>
           <div className="adm-st">
             <span className="status" data-s={o.status}>{STATUS[o.status]}</span>
@@ -297,12 +303,13 @@ export default function Admin() {
           <details className="oitems" open={o.status === 'new'}>
             <summary>{d.details} · {d.kits(kits)}</summary>
             {o.items.map((it, ii) => {
-              const cf = it.cfg, n = sheetsOf(it), dz = kit.D(cf.design)!, forOrder = T('forOrder', { name: dz.name, ref: o.ref }), key = `dl${o.id}.${ii}`;
+              const cf = it.cfg, dz = kit.D(cf.design)!, forOrder = T('forOrder', { name: dz.name, ref: o.ref }), key = `dl${o.id}.${ii}`;
               return (
                 <div className="oitem" key={ii}>
                   <Mold cfg={cf} label={T('moldPreview', { name: dz.name })} />
                   <div>
-                    <h4>{dz.name} · {T.n('doorStickers', n)}</h4>
+                    <h4>{dz.name}</h4>
+                    <p className="adm-print"><b>{T('printLine', { list: printCounts(it).map(([p, c]) => `${c} × ${T('pc_' + p)}`).join(' · ') })}</b></p>
                     <p>{kit.descOf(cf)}<br />{T('qtyLine', { q: it.qty, price: euro(it.list * it.qty) })}
                       {cf.numberOn && cf.number && <><br />{T('badgeIn', { text: '\u0000', colour: kit.COLORS[cf.c1].name }).split('\u0000').map((p, k) => (k ? [<b key="b">{cf.number}</b>, p] : p))}</>}</p>
                     <div className="btns">

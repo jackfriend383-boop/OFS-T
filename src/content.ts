@@ -32,7 +32,7 @@ const en = {
   },
   shop: {
     eyebrow: 'Shop', h1: 'All designs', designs: 'Designs', filter: 'Filter by category',
-    lead: 'Each kit covers the lower door panel and the rear quarter window. Every kit covers both sides of the car.',
+    lead: 'The full kit covers both lower door panels and both rear quarter windows (plus the front accents on the Ami Pop). Single pieces are sold in pairs, one for each side.',
   },
   cfg: {
     options: 'Options', back: 'Back to models', h1: ['Customize', 'your Ami'],
@@ -53,10 +53,10 @@ const en = {
     zoomIn: 'Zoom in', zoomOut: 'Zoom out', fullscreen: 'Full screen', dragHint: 'Drag to look around',
     scenery: 'Scenery', studio: 'Studio', beach: 'Beach', classics: 'Classics', metallics: 'Metallic specials',
     brochure: {
-      eyebrow: 'The kit', title: 'Made for the Ami, down to the millimetre.',
+      eyebrow: 'The kit', title: 'Cut to the Ami’s sticker areas.',
       lead: 'Every OFS/T kit is cut to the shapes of the Ami door panel and rear window, printed on outdoor vinyl and packed with everything you need to fit it at home.',
       cards: [
-        ['Outdoor vinyl', 'Weather- and UV-resistant cast vinyl in a matte or gloss finish.'],
+        ['Outdoor vinyl', 'Vinyl for exterior automotive use, in a matte or gloss finish.'],
         ['Cut to fit', 'Panels follow the factory sticker areas of the Ami, so the lines sit where they should.'],
         ['Fit it yourself', 'A step-by-step guide and squeegee method, no tools beyond a spray bottle.'],
         ['Made to order', 'Printed for your car in your colours once you order.'],
@@ -122,7 +122,7 @@ const pt: typeof en = {
   },
   shop: {
     eyebrow: 'Loja', h1: 'Todos os designs', designs: 'Designs', filter: 'Filtrar por categoria',
-    lead: 'Cada kit cobre o painel inferior da porta e o vidro lateral traseiro. Cada kit cobre os dois lados do carro.',
+    lead: 'O kit completo cobre os dois painéis inferiores das portas e os dois vidros laterais traseiros (e os acentos frontais no Ami Pop). As peças individuais são vendidas aos pares, uma para cada lado.',
   },
   cfg: {
     options: 'Opções', back: 'Voltar aos modelos', h1: ['Personalize', 'o seu Ami'],
@@ -143,10 +143,10 @@ const pt: typeof en = {
     zoomIn: 'Aproximar', zoomOut: 'Afastar', fullscreen: 'Ecrã inteiro', dragHint: 'Arraste para explorar',
     scenery: 'Cenário', studio: 'Estúdio', beach: 'Praia', classics: 'Clássicas', metallics: 'Especiais metalizadas',
     brochure: {
-      eyebrow: 'O kit', title: 'Feito para o Ami, ao milímetro.',
+      eyebrow: 'O kit', title: 'Cortado à medida das zonas de autocolante do Ami.',
       lead: 'Cada kit OFS/T é cortado à medida do painel da porta e do vidro traseiro do Ami, impresso em vinil de exterior e enviado com tudo o que precisa para o aplicar em casa.',
       cards: [
-        ['Vinil de exterior', 'Vinil fundido resistente ao tempo e aos raios UV, em acabamento mate ou brilhante.'],
+        ['Vinil de exterior', 'Vinil para uso automóvel exterior, em acabamento mate ou brilhante.'],
         ['Cortado à medida', 'Os painéis seguem as zonas de autocolante de origem do Ami, para as linhas ficarem no sítio certo.'],
         ['Aplique você mesmo', 'Um guia passo a passo e o método da espátula, só precisa de um pulverizador.'],
         ['Feito por encomenda', 'Impresso para o seu carro, nas suas cores, depois de encomendar.'],

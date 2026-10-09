@@ -33,11 +33,17 @@ CREATE TABLE IF NOT EXISTS orders (
   stripe_session_id    TEXT,
   paid_at              TEXT,
   user_id              TEXT,  -- customer account (users.id) when the buyer was signed in
-  invoice_sent_at      TEXT
+  invoice_sent_at      TEXT,
+  paid_email_sent_at   TEXT,  -- when the payment confirmation email was sent
+  payment_intent       TEXT,  -- Stripe payment id (refunds and disputes are matched on it)
+  paid_cents           INTEGER CHECK (paid_cents IS NULL OR paid_cents BETWEEN 0 AND 1000000), -- amount paid after any promotion code
+  refund_status        TEXT CHECK (refund_status IS NULL OR refund_status IN ('partial', 'refunded', 'disputed', 'dispute_won', 'dispute_lost')),
+  refunded_cents       INTEGER
 );
 CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders (created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_stripe_session_idx ON orders (stripe_session_id);
 CREATE INDEX IF NOT EXISTS orders_user_idx ON orders (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS orders_payment_intent_idx ON orders (payment_intent);
 -- (An older database without the payment columns: run migrations/0002_payments.sql first, then this file.)
 
 -- Checkouts in progress (same checks as orders). Moved into orders by the Stripe webhook once paid. See migrations/0005.
@@ -99,6 +105,13 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   token_hash TEXT PRIMARY KEY,
   expires_at TEXT NOT NULL
 );
+
+-- Short-lived per-visitor counters for rate limits (keys like "link:<ip>"); rows older than a day are deleted automatically.
+CREATE TABLE IF NOT EXISTS rate_hits (
+  key TEXT NOT NULL CHECK (length(key) <= 100),
+  at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS rate_hits_key_at_idx ON rate_hits (key, at);
 
 CREATE TABLE IF NOT EXISTS login_attempts (
   at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))

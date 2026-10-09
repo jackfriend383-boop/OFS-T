@@ -98,13 +98,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const cartRef = useRef(cart); cartRef.current = cart;
 
   /* ---------- Customer account ---------- */
-  const [account, setAccount] = useState<{ user: Customer | null; ready: boolean }>({ user: null, ready: false });
+  const [account, setAccount] = useState<{ user: Customer | null; ready: boolean; offline?: boolean }>({ user: null, ready: false });
   const backendRef = useRef(backend); backendRef.current = backend;
   useEffect(() => {
     let live = true;
     const b = backendRef.current;
     if (!b.hasCustomerSession()) { setAccount({ user: null, ready: true }); return; }
-    b.me().then((u) => live && setAccount({ user: u, ready: true })).catch(() => live && setAccount({ user: null, ready: true }));
+    b.me().then((u) => live && setAccount({ user: u, ready: true }))
+      // Only an expired session signs the customer out; if the shop's server can't be reached, the saved session is kept.
+      .catch((e: any) => live && setAccount({ user: null, ready: true, offline: e?.code !== 'session_expired' && b.hasCustomerSession() }));
     return () => { live = false; };
   }, []);
   const setCustomer = useCallback((u: Customer | null) => setAccount({ user: u, ready: true }), []);
@@ -142,7 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   /* Signed in, or a saved session that is still being checked. Without a backend nobody can sign in, so nothing is blocked. */
   const signedIn = () => {
     const b = backendRef.current, a = accountRef.current;
-    return !b.configured || !!a.user || (!a.ready && b.hasCustomerSession());
+    return !b.configured || !!a.user || ((!a.ready || !!a.offline) && b.hasCustomerSession());
   };
   /* Remember what the guest wanted, then go to the sign-in page. In the configurator the kit goes in the address too,
      so they come back to the same design. */

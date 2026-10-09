@@ -139,13 +139,13 @@ export default function Configurator() {
   const visible = DESIGNS.filter((x) => cat === 'All' || x.cat === cat);
   useFilterFeedback(cat, '#strip .pcard', visible.length);
 
-  /* Badge text may be empty while the visitor is typing; sanitizeCfg would switch the badge off and reset it to "AMI". */
+  /* Badge text may be empty while the visitor is typing; sanitizeCfg would switch the badge off and reset it to "OFST". */
   const update = useCallback((patch: Partial<Cfg>) => {
     const merged = { ...cfgRef.current, ...patch }, next = kit.sanitizeCfg(merged);
     if (!next) return;
     next.numberOn = !!merged.numberOn && next.model !== 'pop'; // the custom badge is only offered on the Ami 2025
     if (typeof merged.number === 'string') next.number = kit.cleanNumber(merged.number);
-    if (!next.numberOn && !next.number) next.number = 'AMI';
+    if (!next.numberOn && !next.number) next.number = 'OFST';
     cfgRef.current = next; setCfg(next);
   }, [kit]);
 
@@ -443,7 +443,7 @@ export default function Configurator() {
             </ul>
           </div>
         </div>
-        <aside className="summary">
+        <section className="summary" aria-labelledby="sumTitle">
           <h2 id="sumTitle">{c.summaryTitle}</h2>
           <div><h3 id="sumName">{d.name}</h3><span className="muted" id="sumSub">{`${kit.modelName(cfg.model)} · ${kit.colourLabel(cfg)} · ${T(cfg.finish === 'gloss' ? 'gloss' : 'matte')}`}</span></div>
           <div className="total"><span className="muted">{c.total}</span><Price id="sumTotal" value={total} /></div>
@@ -455,7 +455,7 @@ export default function Configurator() {
           <div className="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7" /><circle cx="6" cy="17.5" r="1.7" /><circle cx="17" cy="17.5" r="1.7" /></svg><span>{c.ship[0]}<br />{c.ship[1]}</span></div>
           <p className="sr" id="sumLive" role="status" aria-live="polite" ref={sumLive} />
           <dl className="specs">{c.specs.map(([k, v]) => <div key={k} style={{ display: 'contents' }}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-        </aside>
+        </section>
       </section>
 
       <section className="brochure" aria-labelledby="broTitle">
