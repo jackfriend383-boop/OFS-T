@@ -9,7 +9,8 @@ const dist = join(root, 'dist');
 const ssrDir = join(root, 'dist-ssr');
 const site = JSON.parse(await readFile(join(root, 'src/data/site.json'), 'utf8'));
 
-const { render, routes, SITE_URL, pageUrl } = await import(pathToFileURL(join(ssrDir, 'entry-server.js')).href);
+const { render, routes, SITE_URL, pageUrl, loadAllProse } = await import(pathToFileURL(join(ssrDir, 'entry-server.js')).href);
+await loadAllProse(); // the long text pages are separate files: load them before rendering
 const template = await readFile(join(dist, 'index.html'), 'utf8');
 
 const page = (url) => {

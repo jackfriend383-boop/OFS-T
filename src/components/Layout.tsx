@@ -134,11 +134,13 @@ function Header() {
   );
 }
 
-/* The logo in both versions: black on the light theme, white on the dark theme (CSS shows the right one). */
+/* The logo in both versions: black on the light theme, white on the dark theme (CSS shows the right one).
+   loading="lazy": the browser then only downloads the version that is shown (a hidden lazy image is never fetched), and the
+   page no longer preloads both. */
 function Logo() {
   return (<>
-    <img className="logo-l" src={BASE + 'assets/img/OFST-icon-black.svg'} alt="" width="34" height="34" />
-    <img className="logo-d" src={BASE + 'assets/img/OFST-icon-white.svg'} alt="" width="34" height="34" />
+    <img className="logo-l" src={BASE + 'assets/img/OFST-icon-black.svg'} alt="" width="34" height="34" loading="lazy" />
+    <img className="logo-d" src={BASE + 'assets/img/OFST-icon-white.svg'} alt="" width="34" height="34" loading="lazy" />
   </>);
 }
 

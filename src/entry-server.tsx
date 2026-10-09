@@ -19,3 +19,4 @@ export function render(url: string) {
 
 export const routes = (['pt', 'en'] as Lang[]).flatMap((l) => PAGE_KEYS.map((k) => ({ lang: l, key: k, path: pagePath(l, k) })));
 export { SITE_URL, pageUrl, PAGE_KEYS, pagePath };
+export { loadAllProse } from './pages/Prose';

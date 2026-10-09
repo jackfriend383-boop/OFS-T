@@ -8,7 +8,7 @@ import { applyHead, type SeoKey } from './seo';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import Configurator from './pages/Configurator';
-import Prose from './pages/Prose';
+import Prose, { loadProse } from './pages/Prose';
 import Order from './pages/Order';
 import Account from './pages/Account';
 
@@ -51,6 +51,8 @@ function HeadSync({ seo }: { seo: SeoKey }) {
   useEffect(() => {
     // The first load of a prerendered page already has its head; the dev server (no prerender) needs it added.
     if (first.current) { first.current = false; if (document.head.querySelector('[data-h]')) return; }
+    // The about page's head lists its FAQ, which lives in the page text: fetch that first (it is a separate file).
+    if (seo === 'about') { let live = true; loadProse(lang, seo).catch(() => '').then(() => { if (live) applyHead(seo, lang); }); return () => { live = false; }; }
     applyHead(seo, lang);
   }, [seo, lang]);
   return null;

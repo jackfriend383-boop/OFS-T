@@ -121,8 +121,6 @@ html.theme-vt .top{view-transition-name:none}
 
 /* ---------- Car svg ---------- */
 .car-svg{display:block;width:100%;height:auto;overflow:visible}
-.car-svg .shine{transition:opacity .6s var(--ease)}
-.car-svg .squeegee{opacity:0;transition:opacity .3s}
 
 /* ---------- Home ---------- */
 .hero{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr);align-items:center;gap:clamp(16px,3vw,48px);padding:clamp(28px,5vw,64px) var(--gutter) 24px;position:relative;overflow:hidden}
@@ -231,7 +229,6 @@ html:lang(pt) .hero h1{font-size:clamp(1.45rem,4.4vw,4.7rem)}
 .stage{grid-area:stage;position:relative;overflow:hidden;min-height:480px;background:
   radial-gradient(60% 65% at 50% 45%,var(--stage-hi) 0%,var(--stage-mid) 60%,var(--stage-lo) 100%);display:grid;place-items:center;touch-action:pan-y}
 .stage::after{content:"";position:absolute;inset:auto 0 0 0;height:30%;background:linear-gradient(transparent,var(--stage-shade));pointer-events:none}
-.stage-car{width:min(100%,1000px);padding:40px clamp(8px,4vw,60px) 10px;transition:transform .7s var(--ease);transform-origin:42% 62%;cursor:default}
 .stage-tag{position:absolute;left:24px;top:22px;display:grid;gap:2px;z-index:2}
 .stage-tag strong{font-family:var(--display);font-stretch:125%;font-weight:800;font-size:22px;text-transform:uppercase}
 .stage-tag span:last-child{color:var(--muted);font-size:13.5px}
@@ -259,7 +256,6 @@ html:lang(pt) .hero h1{font-size:clamp(1.45rem,4.4vw,4.7rem)}
 .lines{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:13.5px}
 .lines li{display:flex;justify-content:space-between;gap:10px;color:var(--muted)}
 .lines li span:last-child{font-family:var(--mono);color:var(--fg)}
-.lines li.in{animation:swap .4s var(--ease)}
 .total{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding-top:12px}
 .total strong{font-family:var(--display);font-stretch:125%;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
 .ship{display:flex;gap:12px;align-items:center;font-size:12.5px;color:var(--muted);line-height:1.4}
@@ -394,7 +390,6 @@ html:lang(pt) .hero h1{font-size:clamp(1.45rem,4.4vw,4.7rem)}
   /* Configurator on phones: the car stays pinned under the header while the options scroll beneath it. */
   .cfg{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "picker" "side" "summary";min-height:0}
   .stage{min-height:0;position:sticky;top:calc(var(--top-h) + env(safe-area-inset-top,0px));z-index:20;align-self:start;border-bottom:1px solid var(--line);box-shadow:0 10px 24px -18px rgba(0,0,0,.5)}
-  .stage-car{padding:46px 4px 50px}
   .stage-ctrl{display:none}
   .stage-arrow{top:50%;margin-top:-18px;width:36px;height:36px}
   .stage-arrow.prev{left:8px}.stage-arrow.next{right:8px}
@@ -998,16 +993,15 @@ body{margin:0;font-size:15.5px;letter-spacing:.005em}
 /* ---------- Night scene on the configurator stage (dark theme) ----------
    A night city street behind the car (its road sits under the wheels, like the beach); the car's lights are drawn by the renderer.
    Text and controls on the picture stay light so they read on the dark sky. */
-.stage.scene-night{background:#070A14;isolation:isolate}
-.stage.scene-night::before{content:"";position:absolute;inset:0;z-index:-1;background:url(/assets/img/city-night.svg) center 78%/cover no-repeat;pointer-events:none;animation:ofst-night-in .6s ease both}
-.stage.scene-night .stage-tag{color:#F2F2F4}
-.stage.scene-night .stage-tag .eyebrow,.stage.scene-night .stage-tag span:last-child{color:#B9BCC8}
-.stage.scene-night .stage-angle,.stage.scene-night .stage-hint{color:#B9BCC8}
-.stage.scene-night .stage-arrow{background:rgba(20,22,30,.72);color:#F2F2F4;box-shadow:0 2px 12px rgba(0,0,0,.4)}
-.stage.scene-night .stage-arrow:hover{background:rgba(36,38,48,.9)}
-.stage-wrap:fullscreen .stage.scene-night{background:#070A14}
-@keyframes ofst-night-in{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.stage.scene-night::before{animation:none}}
+/* The dark theme always shows the night scene: matching the theme too (not only the class React sets) shows it from the first paint. */
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage){background:#070A14;isolation:isolate}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage)::before{content:"";position:absolute;inset:0;z-index:-1;background:url(/assets/img/city-night.svg) center 78%/cover no-repeat;pointer-events:none}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-tag{color:#F2F2F4}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-tag .eyebrow,:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-tag span:last-child{color:#B9BCC8}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-angle,:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-hint{color:#B9BCC8}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-arrow{background:rgba(20,22,30,.72);color:#F2F2F4;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-arrow:hover{background:rgba(36,38,48,.9)}
+.stage-wrap:fullscreen :is(.stage.scene-night,:root[data-ofst="dark"] .stage){background:#070A14}
 
 /* ===== Home: "What's in the kit" flashcards (Home.tsx KitCard) =====
    Each card turns over (3D flip) on hover with a mouse, or on tap/click/Enter. Both faces share one grid cell so the
@@ -1062,3 +1056,18 @@ body{margin:0;font-size:15.5px;letter-spacing:.005em}
   .kc:hover .kc-front{opacity:0}
   .kc:hover .kc-back{opacity:1}
 }
+
+/* Speed on phones and slower devices: no live blur behind the bars that stay on screen (the blur is recomputed on every
+   scroll frame at high pixel density). A solid background looks almost the same. html.lite is set by theme-init.js on
+   devices with few processor cores or little memory. */
+@media (max-width:900px){
+  .cbar{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .mbar{background:var(--panel);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .stage-ctrl{backdrop-filter:none;-webkit-backdrop-filter:none}
+}
+html.lite .cbar{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+html.lite .mbar{background:var(--panel);backdrop-filter:none;-webkit-backdrop-filter:none}
+html.lite .stage-ctrl,html.lite .ctrl-group{backdrop-filter:none;-webkit-backdrop-filter:none}
+/* Home hero on phones: a long design name pushes the dots onto a second line; keep room for that line at all times so the
+   page below doesn't jump each time the hero changes design (layout shift). */
+@media (max-width:520px){.hero-caption{min-height:70px;align-content:flex-start}}

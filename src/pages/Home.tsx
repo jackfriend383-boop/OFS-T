@@ -96,10 +96,11 @@ export default function Home() {
       <div className="hero hero-scene">
         <div className="hero-bg" aria-hidden="true" />
         <div className="hero-copy">
-          {/* OFS/T lettering (black on light, white on dark); decorative, the page title is the headline. */}
+          {/* OFS/T lettering (black on light, white on dark); decorative, the page title is the headline.
+              loading="lazy": only the version shown for the current theme is downloaded. */}
           <span className="hero-wordmark" aria-hidden="true">
-            <img className="logo-l" src={BASE + 'assets/img/OFST-name-black.svg'} alt="" width="190" height="50" />
-            <img className="logo-d" src={BASE + 'assets/img/OFST-name-white.svg'} alt="" width="190" height="50" />
+            <img className="logo-l" src={BASE + 'assets/img/OFST-name-black.svg'} alt="" width="190" height="50" loading="lazy" />
+            <img className="logo-d" src={BASE + 'assets/img/OFST-name-white.svg'} alt="" width="190" height="50" loading="lazy" />
           </span>
           <span className="eyebrow">{c.eyebrow}</span>
           <h1 className="display">

@@ -13,21 +13,10 @@ import { useFilterFeedback } from '../lib/filter';
 
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* Visual price tween; the final value is announced once through #sumLive, not every frame. */
+/* A price, shown straight away (no count-up); the final value is announced once through #sumLive. */
 function Price({ value, id }: { value: number; id: string }) {
   const { kit } = useApp();
-  const ref = useRef<HTMLElement>(null);
-  const from = useRef(value);
-  useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const a = from.current; from.current = value;
-    if (reduced() || a === value) { el.textContent = kit.money(value); return; }
-    const t0 = performance.now(); let raf = 0;
-    const f = (n: number) => { const k = Math.min(1, (n - t0) / 450); el.textContent = kit.money(Math.round(a + (value - a) * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(f); };
-    raf = requestAnimationFrame(f);
-    return () => cancelAnimationFrame(raf);
-  }, [value, kit]);
-  return <strong id={id} ref={ref}>{kit.money(value)}</strong>;
+  return <strong id={id}>{kit.money(value)}</strong>;
 }
 
 /* Colour swatches: one radio group per slot, shown as two rows (classic colours, then metallic specials).
@@ -123,7 +112,6 @@ export default function Configurator() {
   const [cat, setCat] = useState('All');
   const [numErr, setNumErr] = useState('');
   const [added, setAdded] = useState(false);
-  const [sumLive, setSumLive] = useState('');
   const [view, setView] = useState('full');
   // Camera angle of the preview photo (front, front ¾, side, rear); the arrows, ← → and swipes turn the car.
   const [angle, setAngle] = useState<Angle>('side');
@@ -247,26 +235,17 @@ export default function Configurator() {
     update({ pieces: next });
   };
   const pieceItems = PIECES.filter((p) => p !== 'accent' || pop);
-  const prevLines = useRef<string[]>([]);
-  const fresh = lines.map(([a, b]) => !prevLines.current.includes(a + b));
-  useEffect(() => { prevLines.current = lines.map(([a, b]) => a + b); });
   const pers = kit.isPersonalised(cfg), total = kit.priceOf(cfg);
 
-  // Final value announced once, after the changes settle.
+  // Final value announced to screen readers once the clicking stops (600 ms), not on every click. Written straight into the
+  // hidden #sumLive line, so this late update never redraws the rest of the page (what you see changes at once).
+  const sumLive = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
     if (!started.current) return;
     const msg = T('cfgSay', { name: d.name, model: kit.modelName(cfg.model), colours: kit.colourLabel(cfg), finish: T(cfg.finish === 'gloss' ? 'glossLc' : 'matteLc'), sides: kit.piecesLabel(cfg), total: money(total) }) + (pers ? T('cfgSayPers') : '');
-    const t = setTimeout(() => setSumLive(msg), 600);
+    const t = setTimeout(() => { if (sumLive.current) sumLive.current.textContent = msg; }, 600);
     return () => clearTimeout(t);
   }, [cfg, kit]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // "Swap" flash on the stage tag when the design changes.
-  const tagRef = useRef<HTMLDivElement>(null);
-  const prevDesign = useRef(cfg.design);
-  useEffect(() => {
-    if (prevDesign.current !== cfg.design && !reduced()) { const t = tagRef.current; if (t) { t.classList.remove('swap'); void t.offsetWidth; t.classList.add('swap'); } }
-    prevDesign.current = cfg.design;
-  }, [cfg.design]);
 
   const addCurrent = () => {
     if (cfg.numberOn && !cfg.number) { setNumErr(T('numErr')); numInput.current?.focus(); return; }
@@ -325,18 +304,15 @@ export default function Configurator() {
               if (drag.current) { drag.current = null; (e.currentTarget as HTMLElement).classList.remove('grabbing'); return; }
               const s = swipe.current; if (!s) return; swipe.current = null; const dx = e.clientX - s.x, dy = e.clientY - s.y; if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) rotate(dx < 0 ? 1 : -1);
             }}>
-            <div className="stage-tag" id="stageTag" ref={tagRef}><span className="eyebrow" id="stCat">{d.catName || d.cat}</span><strong id="stName">{d.name}</strong><span id="stTag">{d.tag}</span></div>
-            {ready
-              ? <CarStage id="cfgCar" cfg={cfg} apiRef={api} />
-              : <div id="cfgCar"><svg className="car-svg" viewBox="530 250 1080 646" aria-hidden="true" focusable="false" /></div>}
+            <div className="stage-tag" id="stageTag"><span className="eyebrow" id="stCat">{d.catName || d.cat}</span><strong id="stName">{d.name}</strong><span id="stTag">{d.tag}</span></div>
+            {/* The server render already holds the car photo; a starting config from the address is applied once the page runs. */}
+            <CarStage id="cfgCar" cfg={cfg} apiRef={api} />
             {angles.length > 1 && <>
               <button type="button" className="stage-arrow prev" id="prevD" aria-label={c.prev} aria-controls="cfgCar" onClick={() => rotate(-1)}>{icon('m15 6-6 6 6 6')}</button>
               <button type="button" className="stage-arrow next" id="nextD" aria-label={c.next} aria-controls="cfgCar" onClick={() => rotate(1)}>{icon('m9 6 6 6-6 6')}</button>
               <div className="stage-angle" id="stageAngle" role="status" aria-live="polite">{c.angles[angle]}</div>
             </>}
             <div className="stage-ctrl" role="group" aria-label={c.camera}>
-              <button type="button" id="btnReplay" title={c.replay} aria-label={c.replay} onClick={() => api.current?.replay()}>{icon('M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4')}<span>{c.replay}</span></button>
-              <span className="ctrl-sep" aria-hidden="true" />
               <button type="button" id="btnZoomOut" title={c.zoomOut} aria-label={c.zoomOut} onClick={() => api.current?.zoom(1.35)}>{icon('M5 12h14')}</button>
               <button type="button" id="btnZoomIn" title={c.zoomIn} aria-label={c.zoomIn} onClick={() => api.current?.zoom(1 / 1.35)}>{icon('M12 5v14M5 12h14')}</button>
               <span className="ctrl-sep" aria-hidden="true" />
@@ -471,13 +447,13 @@ export default function Configurator() {
           <h2 id="sumTitle">{c.summaryTitle}</h2>
           <div><h3 id="sumName">{d.name}</h3><span className="muted" id="sumSub">{`${kit.modelName(cfg.model)} · ${kit.colourLabel(cfg)} · ${T(cfg.finish === 'gloss' ? 'gloss' : 'matte')}`}</span></div>
           <div className="total"><span className="muted">{c.total}</span><Price id="sumTotal" value={total} /></div>
-          <ul className="lines" id="sumLines">{lines.map(([a, b], n) => <li key={a + b} className={fresh[n] && started.current ? 'in' : ''}><span>{a}</span><span>{b}</span></li>)}</ul>
+          <ul className="lines" id="sumLines">{lines.map(([a, b]) => <li key={a + b}><span>{a}</span><span>{b}</span></li>)}</ul>
           <div className="incl"><h4 id="inclTitle">{c.included}</h4><ul aria-labelledby="inclTitle">{included.map((x) => <li key={x}>{x}</li>)}</ul></div>
           <button type="button" className={'btn btn-primary' + (added ? ' done' : '')} id="addCart" onClick={addCurrent}>{addLabel}</button>
           <button type="button" className="btn btn-2" onClick={() => jump('optDesignCard')}>{c.change}</button>
           <p className="pers-note" id="persNote" hidden={!pers}>{c.persBefore}<Link to={to('refunds') + '#personalised'}>{c.persLink}</Link>{c.persAfter}</p>
           <div className="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7" /><circle cx="6" cy="17.5" r="1.7" /><circle cx="17" cy="17.5" r="1.7" /></svg><span>{c.ship[0]}<br />{c.ship[1]}</span></div>
-          <p className="sr" id="sumLive" role="status" aria-live="polite">{sumLive}</p>
+          <p className="sr" id="sumLive" role="status" aria-live="polite" ref={sumLive} />
           <dl className="specs">{c.specs.map(([k, v]) => <div key={k} style={{ display: 'contents' }}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         </aside>
       </section>

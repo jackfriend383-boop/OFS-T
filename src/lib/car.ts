@@ -1,7 +1,7 @@
-/* OFS/T car renderer: design artwork (ART), signature art preparation (prepareArt), carSVG, the live Stage and thumbnails.
+/* OFS/T car renderer: design artwork (ART), carSVG, the live Stage and thumbnails.
    Ported from assets/js/car.js. The SVG is built as a string (fast to render in bulk and shared by the cart, search and admin
-   thumbnails); the Stage animates the live copy imperatively and is wrapped by the <CarStage> React component. Browser-only
-   work (artwork preparation, the Stage) never runs on the server. */
+   thumbnails, and by the server render of the live car); the Stage updates the live copy imperatively and is wrapped by the
+   <CarStage> React component. Every change on the live car is instant (no animation). The Stage never runs on the server. */
 import DATA from '../data/designs.json';
 import { TRIMS, includedPieces, normPieces, type Cfg, type Kit } from './kit';
 
@@ -11,7 +11,6 @@ const hex = (k: string) => (COLORS[k] || COLORS[Object.keys(COLORS)[0]]).hex;
 const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c as string] as string));
 const q = (s: string, r: ParentNode) => r.querySelector(s) as any;
 const qa = (s: string, r: ParentNode) => [...r.querySelectorAll(s)] as any[];
-const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const IMG_DIR = import.meta.env.BASE_URL + 'assets/img/';
 let UID = 0;
@@ -25,12 +24,14 @@ function blob(cx: number, cy: number, r: number, R: () => number, n: number) {
 }
 const wave = (x0: number, x1: number, yb: number, amp: number, f: number, ph: number) => { let d = ''; for (let x = x0; x <= x1; x += 4) d += (x === x0 ? 'M' : 'L') + x + ' ' + (yb + Math.sin(x / f + ph) * amp).toFixed(1); return d; };
 
-/* Signature artwork from supplied door files.
-   pill = door outline inside the image; ring = badge cut-out (outer and inner rounded rects) and the registration mark, all in image px.
-   'mask' art is split into black, white, light tone and dark tone so the two tones can be recoloured; 'rgb' art keeps its own colours. */
+/* Signature artwork from supplied door files (flame-red.webp, flame-stealth.webp, 2000 px wide).
+   pill = door outline inside the image, in source px. 'mask' art is split into black, white, light tone and dark tone so the
+   two tones can be recoloured (a colour-matrix filter, see toneMatrix); 'rgb' art keeps its own colours.
+   The ready-made versions (badge cut-out filled in, tones separated) are static files made once with scripts/make-art.mjs, at
+   two widths: 1000 px for phones and low-memory devices, 1600 px otherwise. The browser no longer processes pixels. */
 const ART_SRC: Record<string, any> = {
-  flame: { img: IMG_DIR + 'flame-red.webp', mode: 'mask', size: [2000, 846], pill: [22, 60, 1976, 788], outer: [1068, 193, 1885, 657, 120], inner: [1165, 265, 1718, 594, 140], mark: [1588, 532, 46] },
-  stealth: { img: IMG_DIR + 'flame-stealth.webp', mode: 'rgb', size: [2000, 859], pill: [39, 73, 1964, 792], outer: [1071, 204, 1872, 662, 120], inner: [1163, 274, 1711, 602, 140], mark: [1603, 562, 46] },
+  flame: { mode: 'mask', size: [2000, 846], pill: [22, 60, 1976, 788], files: { 1000: 'art-flame-1000.png', 1600: 'art-flame-1600.png' } },
+  stealth: { mode: 'rgb', size: [2000, 859], pill: [39, 73, 1964, 792], files: { 1000: 'art-stealth-1000.webp', 1600: 'art-stealth-1600.webp' } },
 };
 const NO_ART = { door: (..._a: any[]) => '', win: (..._a: any[]) => '' };
 const SIGNATURE = (DATA.designs as any[]).filter((d) => d.art && ART_SRC[d.art]);
@@ -159,7 +160,10 @@ const triAffine = (s: Pt[], d: Pt[]) => {
   const X = solve(0), Y = solve(1);
   return [X[0], Y[0], X[1], Y[1], X[2], Y[2]];
 };
-function warp(id: string, H: number[], [x, y, w, h]: number[], content: string, n = 2) {
+/* Slower devices (html.lite, set by theme-init.js): 1x1 grid = 2 triangles per sticker zone instead of 8, so each sticker is
+   repainted 2 times instead of 8 in the angled views. The perspective is a little less exact. Never used by the server render. */
+const WARP_N = typeof document !== 'undefined' && document.documentElement.classList.contains('lite') ? 1 : 2;
+function warp(id: string, H: number[], [x, y, w, h]: number[], content: string, n = WARP_N) {
   let defs = `<g id="${id}">${content}</g>`, body = '', k = 0;
   const P = (i: number, j: number): Pt => [x + w * i / n, y + h * j / n];
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
@@ -193,8 +197,8 @@ const RIMS34: Record<string, number[][]> = {
   front34: [[838.4, 749.5, 72, 75], [1378.7, 706.2, 52, 65]],
   'browncolor-front34': [[926, 756, 80, 86], [1399, 710, 53, 76]],
 };
-/* Rim sticker: a ring along the outer lip in the first colour with a thin line inside it in the second; two short gaps let the
-   drive-in spin show. Drawn around (0, 0); gloss/matte uses the same shine as the other stickers. */
+/* Rim sticker: a ring along the outer lip in the first colour with a thin line inside it in the second, with two short gaps.
+   Drawn around (0, 0); gloss/matte uses the same shine as the other stickers. */
 const rimRing = (u: string, rx: number, ry: number, a: string, b: string, shine: string) => {
   const ring = (k: number) => `cx="0" cy="0" rx="${(rx * k).toFixed(1)}" ry="${(ry * k).toFixed(1)}"`, w = (Math.min(rx, ry) * .11).toFixed(1);
   return `<g class="rim-sticker"><ellipse class="rs-a" ${ring(.89)} fill="none" stroke="${a}" stroke-width="${w}" pathLength="100" stroke-dasharray="47 3" stroke-dashoffset="1.5"/>`
@@ -215,13 +219,12 @@ const NIGHT: Record<string, { head?: number[][]; tail?: number[][]; pools?: numb
   'pop-side': { head: [[626, 531, 14, 12]], tail: [[1393, 530, 5, 13]], pools: [[470, 852, 190, 16, 0], [1450, 852, 80, 10, 1]], beams: [[456, 540, 175, 36, -3]], floor: 826 },
 };
 const nightKey = (o: Partial<Cfg>, ang: Angle) => (MOD(o.model) === MODEL_DEFS.pop ? 'pop-side' : trimOf(o.model, o.trim) === 'browncolor' && ang === 'front34' ? 'browncolor-front34' : 'qs-' + ang);
-// Style of the night layers: shown or hidden (hidden ones are not painted at all), with a soft fade unless motion is reduced.
-const nightStyle = (on: boolean) => `opacity:${on ? 1 : 0};visibility:${on ? 'visible' : 'hidden'};transition:${reduced() ? 'none' : 'opacity .5s ease,visibility .5s'}`;
 /* Night layers of one photo: 'under' (light on the road, drawn below the car) and 'over' (the car slightly darker and bluer,
-   then the glowing lamps). Empty unless asked for (live stage, or night: true). */
+   then the glowing lamps). Only built when the night scene is on (the live stage rebuilds its picture when it switches), so the
+   day picture carries no hidden extra copy of the photo. */
 function nightLayers(u: string, o: CarOpts, ang: Angle, img: string) {
-  if (!o.live && !o.night) return { defs: '', under: '', over: '' };
-  const N = NIGHT[nightKey(o, ang)] || {}, st = nightStyle(!!o.night), e = (c: number[], f: string) => `<ellipse cx="${c[0]}" cy="${c[1]}" rx="${c[2]}" ry="${c[3]}" fill="${f}"/>`;
+  if (!o.night) return { defs: '', under: '', over: '' };
+  const N = NIGHT[nightKey(o, ang)] || {}, e = (c: number[], f: string) => `<ellipse cx="${c[0]}" cy="${c[1]}" rx="${c[2]}" ry="${c[3]}" fill="${f}"/>`;
   const defs = `<filter id="${u}-nd" color-interpolation-filters="sRGB"><feFlood flood-color="#0A1328" flood-opacity=".42"/><feComposite in2="SourceAlpha" operator="in"/></filter>
     <radialGradient id="${u}-nh"><stop offset="0" stop-color="#FFF4DC" stop-opacity=".75"/><stop offset=".3" stop-color="#FFE2A8" stop-opacity=".28"/><stop offset="1" stop-color="#FFD58A" stop-opacity="0"/></radialGradient>
     <radialGradient id="${u}-nr"><stop offset="0" stop-color="#FF4A36" stop-opacity=".8"/><stop offset=".35" stop-color="#E0180E" stop-opacity=".3"/><stop offset="1" stop-color="#B00A04" stop-opacity="0"/></radialGradient>
@@ -235,10 +238,10 @@ function nightLayers(u: string, o: CarOpts, ang: Angle, img: string) {
     <radialGradient id="${u}-nb" fx=".96" fy=".5"><stop offset="0" stop-color="#FFEBC2" stop-opacity=".34"/><stop offset=".5" stop-color="#FFEBC2" stop-opacity=".1"/><stop offset="1" stop-color="#FFEBC2" stop-opacity="0"/></radialGradient>`;
   // With a floor shadow in the photo, the light on the road goes over it (it would hide it otherwise).
   const pools = (N.pools || []).map((p) => e(p, `url(#${u}-${p[4] ? 'nq' : 'np'})`)).join('');
-  const under = N.floor ? '' : `<g class="night" style="${st}">${pools}</g>`;
+  const under = N.floor ? '' : `<g class="night">${pools}</g>`;
   const beams = (N.beams || []).map((B) => `<ellipse cx="${B[0]}" cy="${B[1]}" rx="${B[2]}" ry="${B[3]}" transform="rotate(${B[4]} ${B[0]} ${B[1]})" fill="url(#${u}-nb)"/>`).join('');
   const halo = (L: number[], id: string, k: number) => { const r = Math.max(L[2], L[3]) * k; return e([L[0], L[1], r, r], `url(#${u}-${id})`); };
-  const over = `<g class="night" style="${st}"><image ${img} filter="url(#${u}-nd)"/>${N.floor ? `<image ${img} filter="url(#${u}-nf)" mask="url(#${u}-nc)"/>${pools}` : ''}${beams}`
+  const over = `<g class="night"><image ${img} filter="url(#${u}-nd)"/>${N.floor ? `<image ${img} filter="url(#${u}-nf)" mask="url(#${u}-nc)"/>${pools}` : ''}${beams}`
     + (N.head || []).map((L) => halo(L, 'nh', 3.4) + e(L, `url(#${u}-nl)`)).join('')
     + (N.tail || []).map((L) => halo(L, 'nr', 2.6) + e(L, `url(#${u}-nt)`)).join('') + '</g>';
   return { defs, under, over };
@@ -290,127 +293,32 @@ export const ART: Record<string, { door: (a: string, b: string, u: string) => st
 };
 
 /* Signature artwork: the whole door shape maps onto the door panel; a section of the same art (left of the badge) fills the rear window.
-   The artwork is prepared once in the browser (badge cut-out filled in, tones separated) and shared by every car on the page.
-   Performance: the working resolution follows the device (ART_K of the 2000px source: 1000px on small screens / low memory,
-   1600px otherwise), the main thread is yielded to between phases, the PNG/WebP is encoded off-thread (toBlob) and referenced
-   through a short blob: URL, and the result is cached in sessionStorage (if it fits) so other pages skip the work. */
-const ART_K = (() => {
-  if (typeof window === 'undefined') return .8;
+   The picture size follows the device: 1000 px files on small screens / low memory, 1600 px otherwise (the server render uses the
+   small one). The SVG works in source px, so the file size never changes the layout. The file only downloads when a car with
+   a signature design is actually drawn (thumbnails are drawn when they come near the screen). */
+const ART_W = (() => {
+  if (typeof window === 'undefined') return 1000;
   const small = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
   const lowMem = (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 4;
-  return small || lowMem ? .5 : .8;
+  return small || lowMem ? 1000 : 1600;
 })();
-const ART_URL: Record<string, string> = {};
-const inRR = (x: number, y: number, [x0, y0, x1, y1, r]: number[]) => {
-  if (x < x0 || x > x1 || y < y0 || y > y1) return false;
-  const cx = Math.min(Math.max(x, x0 + r), x1 - r), cy = Math.min(Math.max(y, y0 + r), y1 - r);
-  return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
-};
-const yieldMain = () => new Promise<void>((r) => setTimeout(r, 0));
-function setArt(key: string, url: string) {
-  ART_URL[key] = url;
-  qa(`image[data-art="${key}"]`, document).forEach((el) => el.setAttribute('href', url));
-}
-function dataToBlobURL(s: string) {
-  try {
-    const comma = s.indexOf(','), mime = s.slice(5, s.indexOf(';')), bin = atob(s.slice(comma + 1));
-    const u8 = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-    return URL.createObjectURL(new Blob([u8], { type: mime }));
-  } catch { return null; }
-}
-async function prepareArt(key: string) {
-  const S = ART_SRC[key], k = ART_K, ck = `ofst-art:${key}:${k}:1`;
-  let cached: string | null = null;
-  try { cached = sessionStorage.getItem(ck); } catch { /* storage unavailable */ }
-  if (cached && /^data:image\/(png|webp);base64,/.test(cached)) { const u = dataToBlobURL(cached); if (u) { setArt(key, u); return; } }
-  const img = new Image(); img.src = S.img; await img.decode();
-  const w = Math.round(S.size[0] * k), h = Math.round(S.size[1] * k), N = w * h;
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const ctx = c.getContext('2d', { willReadFrequently: true })!; ctx.drawImage(img, 0, 0, w, h);
-  const id = ctx.getImageData(0, 0, w, h), d = id.data;
-  await yieldMain();
-  // 1. Mark the badge cut-out ring and the registration mark as holes to fill (only inside their bounding boxes).
-  const hole = new Uint8Array(N), [mx, my, mr] = S.mark;
-  const mark = (x0: number, y0: number, x1: number, y1: number, test: (sx: number, sy: number) => boolean) => {
-    const ya = Math.max(0, Math.floor(y0 * k)), yb = Math.min(h - 1, Math.ceil(y1 * k)), xa = Math.max(0, Math.floor(x0 * k)), xb = Math.min(w - 1, Math.ceil(x1 * k));
-    for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) if (test(x / k, y / k)) hole[y * w + x] = 1;
-  };
-  mark(S.outer[0], S.outer[1], S.outer[2], S.outer[3], (sx, sy) => inRR(sx, sy, S.outer) && !inRR(sx, sy, S.inner));
-  mark(mx - mr, my - mr, mx + mr, my + mr, (sx, sy) => (sx - mx) ** 2 + (sy - my) ** 2 < mr * mr);
-  // 2. Tone labels: 0 black, 1 white, 2 light tone, 3 dark tone.
-  let lab: Uint8Array | null = null;
-  if (S.mode === 'mask') {
-    lab = new Uint8Array(N);
-    for (let i = 0; i < N; i++) {
-      const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2], mx_ = Math.max(r, g, b), mn = Math.min(r, g, b);
-      lab[i] = mx_ - mn < 60 ? (r + g + b > 384 ? 1 : 0) : (mx_ >= 204 ? 2 : 3);
-    }
-    await yieldMain();
-    // Edge pixels between two tones get misread; give isolated pixels the label of their neighbours.
-    const out = lab.slice(), cnt = new Uint8Array(4);
-    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
-      const i = y * w + x; cnt.fill(0);
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) cnt[lab[i + dy * w + dx]]++;
-      if (cnt[lab[i]] < 3) { let best = 0; for (let q2 = 1; q2 < 4; q2++) if (cnt[q2] > cnt[best]) best = q2; out[i] = best; }
-    }
-    lab = out;
-    await yieldMain();
-  }
-  // 3. Fill holes by growing the surrounding shapes inwards (nearest pixel wins).
-  const from = new Int32Array(N).fill(-1), queue = new Int32Array(N); let qh = 0, qt = 0;
-  for (let i = 0; i < N; i++) if (!hole[i]) { from[i] = i; const x = i % w; if ((x > 0 && hole[i - 1]) || (x < w - 1 && hole[i + 1]) || (i >= w && hole[i - w]) || (i + w < N && hole[i + w])) queue[qt++] = i; }
-  const grow = (i: number, j: number) => { if (from[j] < 0) { from[j] = from[i]; queue[qt++] = j; } };
-  while (qh < qt) {
-    const i = queue[qh++], x = i % w;
-    if (x > 0) grow(i, i - 1);
-    if (x < w - 1) grow(i, i + 1);
-    if (i >= w) grow(i, i - w);
-    if (i + w < N) grow(i, i + w);
-  }
-  const TONE = [[0, 0, 0], [0, 0, 255], [255, 0, 0], [0, 255, 0]];
-  for (let i = 0; i < N; i++) {
-    const s = from[i] < 0 ? i : from[i];
-    if (lab) { const t = TONE[lab[s]]; d[i * 4] = t[0]; d[i * 4 + 1] = t[1]; d[i * 4 + 2] = t[2]; }
-    else if (s !== i) { d[i * 4] = d[s * 4]; d[i * 4 + 1] = d[s * 4 + 1]; d[i * 4 + 2] = d[s * 4 + 2]; }
-    d[i * 4 + 3] = 255;
-  }
-  ctx.putImageData(id, 0, 0);
-  // Tone masks must stay lossless (PNG); full-colour art can be WebP (browsers without WebP encoding fall back to PNG).
-  const blobOut: Blob | null = (c as any).toBlob ? await new Promise<Blob | null>((r) => c.toBlob(r, S.mode === 'mask' ? 'image/png' : 'image/webp', .92)) : null;
-  if (!blobOut) { setArt(key, c.toDataURL('image/png')); return; }
-  setArt(key, URL.createObjectURL(blobOut));
-  if (blobOut.size < 1200000 && typeof FileReader !== 'undefined') {
-    const fr = new FileReader();
-    fr.onload = () => { try { sessionStorage.setItem(ck, fr.result as string); } catch { /* quota */ } };
-    fr.readAsDataURL(blobOut);
-  }
-}
 const toneMatrix = (a: string, b: string) => {
   const p = (h: string) => [1, 3, 5].map((i) => (parseInt(h.slice(i, i + 2), 16) / 255).toFixed(4));
   const L = p(a), Dk = p(b);
   return [0, 1, 2].map((ch) => `${L[ch]} ${Dk[ch]} 1 0 0`).join(' ') + ' 0 0 0 1 0';
 };
 SIGNATURE.forEach((s) => {
-  const S = ART_SRC[s.art], [l, t, r, b] = S.pill, i = 6;
+  const S = ART_SRC[s.art], [l, t, r, b] = S.pill, i = 6, href = IMG_DIR + S.files[ART_W];
   const art = (x: number, y: number, w: number, h: number, vb: number[], a: string, bb: string, u: string) => {
-    const k = ART_K;
     const filt = S.mode === 'mask' ? `<filter id="${u}-tone" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${toneMatrix(a, bb)}"/></filter>` : '';
-    return `${filt}<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${vb.map((v) => v * k).join(' ')}" preserveAspectRatio="none" overflow="hidden">
-      <image data-art="${s.art}"${ART_URL[s.art] ? ` href="${ART_URL[s.art]}"` : ''} width="${S.size[0] * k}" height="${S.size[1] * k}"${filt ? ` filter="url(#${u}-tone)"` : ''}/></svg>`;
+    return `${filt}<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${vb.join(' ')}" preserveAspectRatio="none" overflow="hidden">
+      <image href="${href}" width="${S.size[0]}" height="${S.size[1]}"${filt ? ` filter="url(#${u}-tone)"` : ''}/></svg>`;
   };
   ART[s.id] = {
     door: (a, bb, u) => art(872, 654, 279, 112, [l + i, t + i, r - l - 2 * i, b - t - 2 * i], a, bb, u + 'd'),
     win: (a, bb, u) => art(1161, 345, 139, 144, [l + 370, t + 8, 650, b - t - 16], a, bb, u + 'w'),
   };
 });
-/* One artwork at a time (the red flame first: it's the hero's and the configurator's opening design). Call once, in the browser. */
-let artStarted = false;
-export function initArt() {
-  if (artStarted || typeof document === 'undefined') return;
-  artStarted = true;
-  Object.keys(ART_SRC).reduce((p, k) => p.then(() => prepareArt(k)).catch(() => {}), Promise.resolve());
-}
 
 const growPlate = (P: number[]) => [P[0] - 3, P[1] - 3, P[2] + 6, P[3] + 6, P[4] + 3];
 const plateText = (o: Partial<Cfg>) => (o.numberOn && o.number ? esc(o.number) : '');
@@ -435,10 +343,10 @@ export function carSVG(kit: Kit, o: CarOpts): string {
   if (ang !== 'side') return carSVGAt(kit, o, ang);
   const u = o.uid, a = hex(o.c1), b = hex(o.c2), A = ART[o.design] || NO_ART, M = MOD(o.model), V = viewsOf(o.model), v = V[o.view] || V.full, live = !!o.live;
   const img = imgOf(o.model, o.trim, 'side'), Z = zonesOf(o), shine = `style="opacity:${o.finish === 'gloss' ? 1 : .25}"`;
-  // Rims: live, a copy of each wheel turns during the drive-in; the rim sticker (if ordered) sits on that turning copy.
+  // Rim stickers (if ordered), one on each wheel.
   const ring = Z.rims ? rimRing(u, M.rimR, M.rimR, a, b, shine) : '';
-  const rims = M.wheels.map(([x, y]: number[]) => (live || ring ? `<g transform="translate(${x} ${y})"><g class="rimspin">${live ? `<g clip-path="url(#${u}-rim)"><image ${img} transform="translate(${-x} ${-y})"/></g>` : ''}${ring}</g></g>` : '')).join('');
-  const lights = M.lights && Z.accent ? ((L: any) => `<mask id="${u}-lt" maskUnits="userSpaceOnUse" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}"><image href="${L.mask}" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" preserveAspectRatio="none"/></mask><rect class="lights" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" fill="${a}" mask="url(#${u}-lt)" style="transition:fill .6s"/>`)(M.lights) : '';
+  const rims = ring ? M.wheels.map(([x, y]: number[]) => `<g transform="translate(${x} ${y})">${ring}</g>`).join('') : '';
+  const lights = M.lights && Z.accent ? ((L: any) => `<mask id="${u}-lt" maskUnits="userSpaceOnUse" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}"><image href="${L.mask}" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" preserveAspectRatio="none"/></mask><rect class="lights" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" fill="${a}" mask="url(#${u}-lt)"/>`)(M.lights) : '';
   // The brown-with-colour car has a bright green pill in the badge recess: a slightly larger plate keeps it hidden.
   const P = M === MODEL_DEFS.qs && trimOf(o.model, o.trim) === 'browncolor' ? growPlate(M.plate) : M.plate;
   const a11y = o.decorative ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="${esc(carLabel(kit, o, live))}"`;
@@ -455,7 +363,7 @@ export function carSVG(kit: Kit, o: CarOpts): string {
     <image ${img} clip-path="url(#${u}-badge)"/>
     <rect x="${P[0]}" y="${P[1]}" width="${P[2]}" height="${P[3]}" rx="${P[4]}" fill="url(#${u}-pl)"/><g${M.dx ? ` transform="translate(${M.dx} 0)"` : ''}>
     <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="1050" y="684" width="50" height="44"><image href="${LOGO}" x="1056" y="687" width="37" height="37"/></mask>
-    <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1};transition:opacity .4s"/>
+    <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1}"/>
     <text class="plate" x="1074.5" y="711" text-anchor="middle" fill="${a}" style="font:800 15px Archivo,sans-serif;font-stretch:125%;letter-spacing:.06em">${plateText(o)}</text></g>` : '';
   const win = Z.win ? `<g clip-path="url(#${u}-win)"><g${M.winT ? ` transform="${M.winT}"` : ''}>
       <rect x="1150" y="335" width="160" height="165" fill="#1C2022"/>
@@ -464,22 +372,18 @@ export function carSVG(kit: Kit, o: CarOpts): string {
       <rect class="shine" x="1150" y="335" width="145" height="165" fill="url(#${u}-sh)" ${shine}/>
     </g></g>
     <path d="${M.win}" fill="none" ${M.winStroke} stroke-linejoin="round"/>` : '';
-  const zones = (Z.door ? `<rect ${M.door}/>` : '') + (Z.win ? `<path d="${M.win}"/>` : '');
   return `<svg class="car-svg" viewBox="${v.join(' ')}" xmlns="${NS}" ${a11y}>
   <defs>
     <clipPath id="${u}-door"><rect ${M.door}/></clipPath>
     <clipPath id="${u}-win"><path d="${M.win}"/></clipPath>
-    ${zones ? `<clipPath id="${u}-zones">${zones}</clipPath>` : ''}
     <clipPath id="${u}-badge"><rect ${M.badge}/></clipPath>
-    <clipPath id="${u}-rim"><circle r="${M.rimR}"/></clipPath>
     <linearGradient id="${u}-ds" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></linearGradient>
     <linearGradient id="${u}-ws" x1="0" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>
     <linearGradient id="${u}-sh" x1="0" y1="0" x2="1" y2=".4"><stop offset=".25" stop-color="#fff" stop-opacity="0"/><stop offset=".4" stop-color="#fff" stop-opacity=".22"/><stop offset=".47" stop-color="#fff" stop-opacity=".04"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/><stop offset=".78" stop-color="#fff" stop-opacity=".12"/><stop offset=".84" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <linearGradient id="${u}-pl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#141414"/></linearGradient>
-    <linearGradient id="${u}-sq" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".8"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
     ${N.defs}
   </defs>
-  <g class="drive">
+  <g>
     ${N.under}
     <image ${img}/>
     ${lights}
@@ -487,7 +391,6 @@ export function carSVG(kit: Kit, o: CarOpts): string {
     ${door}
     ${win}
     ${N.over}
-    ${live && zones ? `<g clip-path="url(#${u}-zones)"><rect class="squeegee" x="-10" y="330" width="20" height="440" fill="url(#${u}-sq)"/></g>` : ''}
   </g></svg>`;
 }
 
@@ -500,7 +403,7 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
   const a11y = o.decorative ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="${esc(carLabel(kit, o, live, ang))}"`;
   const head = `<svg class="car-svg" viewBox="${v.join(' ')}" xmlns="${NS}" ${a11y}>`;
   const N = nightLayers(u, o, ang, img);
-  if (!z.Hd) return head + `<defs>${N.defs}</defs><g class="drive">${N.under}<image ${img}/>${N.over}</g></svg>`;
+  if (!z.Hd) return head + `<defs>${N.defs}</defs><g>${N.under}<image ${img}/>${N.over}</g></svg>`;
   // The plate is drawn a little larger than in the side view so the factory badge (and the green pill) never peeks out at its edge.
   const shine = `style="opacity:${o.finish === 'gloss' ? 1 : .25}"`, P = growPlate(MODEL_DEFS.qs.plate);
   const D = Z.door ? warp(u + '-dw', z.Hd, [860, 645, 300, 130], `<g class="slot-door"><g>${A.door(a, b, u + 'x')}</g></g>`) : { defs: '', body: '' };
@@ -520,7 +423,7 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
     <g transform="${mat(z.bA)}">
       <rect x="${P[0]}" y="${P[1]}" width="${P[2]}" height="${P[3]}" rx="${P[4]}" fill="url(#${u}-pl)"/>
       <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="1050" y="684" width="50" height="44"><image href="${LOGO}" x="1056" y="687" width="37" height="37"/></mask>
-      <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1};transition:opacity .4s"/>
+      <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1}"/>
       <text class="plate" x="1074.5" y="711" text-anchor="middle" fill="${a}" style="font:800 15px Archivo,sans-serif;font-stretch:125%;letter-spacing:.06em">${plateText(o)}</text>
     </g>` : '';
   const win = Z.win ? `<g clip-path="url(#${u}-win)">
@@ -540,7 +443,7 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
     <linearGradient id="${u}-pl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#141414"/></linearGradient>
     ${D.defs}${W.defs}${N.defs}
   </defs>
-  <g class="drive">
+  <g>
     ${N.under}
     <image ${img}/>
     ${rims}
@@ -550,49 +453,55 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
   </g></svg>`;
 }
 
-/* ---------- Live stage (hero + configurator) ---------- */
-const easeIO = (k: number) => (k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
-const easeOut = (k: number) => 1 - Math.pow(1 - k, 3);
+/* ---------- Live stage (hero + configurator) ----------
+   Every change is instant: no crossfade, camera tween, drive-in or wipe. When a change needs another photo (angle, car colour,
+   Ami version), the old picture stays until the new photo is downloaded and decoded, then the new one replaces it in one step. */
+const photoHref = (m: unknown, t: unknown, ang: Angle) => (MOD(m) === MODEL_DEFS.qs ? photoURL(trimOf(m, t), ang) : POP_IMG);
+const READY = new Map<string, Promise<unknown>>();
+function photoReady(url: string) {
+  let p = READY.get(url);
+  if (!p) {
+    const im = new Image(); im.decoding = 'async'; im.src = url;
+    p = im.decode().catch(() => {}).then(() => im); // keeps the decoded image referenced; a failed load just swaps anyway
+    READY.set(url, p);
+  }
+  return p;
+}
 export class Stage {
   host: HTMLElement; kit: Kit; cfg: Cfg; vname = 'full'; ang: Angle = 'side'; pre = false; night = false;
-  u = ''; lc = 0; vb: number[] = []; vRaf = 0; dRaf = 0;
-  svg: any; slots: any[] = []; sq: any; drive: any; plate: any; logo: any; shines: any[] = []; rims: any[] = []; lights: any[] = []; defs: any;
+  u = ''; lc = 0; vb: number[] = []; seq = 0;
+  svg: any; slots: any[] = []; plate: any; logo: any; shines: any[] = []; lights: any[] = [];
   constructor(host: HTMLElement, kit: Kit, cfg: Cfg, night = false) { this.host = host; this.kit = kit; this.cfg = { ...cfg }; this.night = night; this.build(); }
-  /* (Re)build the SVG for the current config and angle (a different Ami version or car colour needs a different photo), keeping
-     the camera view. fade: the old picture stays on top and fades out (angle and car-colour changes). */
-  build(fade = false) {
+  /* (Re)build the SVG for the current config, angle, camera view and day/night. */
+  build() {
     const cfg = this.cfg;
-    cancelAnimationFrame(this.vRaf); cancelAnimationFrame(this.dRaf);
+    this.seq++; // any rebuild waiting for a photo (swap) is now out of date
     this.ang = angleOf(cfg.model, this.ang);
     const V = viewsAt(cfg.model, this.ang);
     if (!V[this.vname]) this.vname = 'full';
     this.u = 'st' + (++UID); this.lc = 0; this.vb = V[this.vname].slice();
-    const html = carSVG(this.kit, { ...cfg, uid: this.u, view: this.vname, live: true, angle: this.ang, night: this.night });
-    qa(':scope > .car-fade', this.host).forEach((el) => el.remove()); // a fade still running from a quick double press
-    const old = fade && !reduced() ? this.svg : null;
-    if (old && old.parentNode === this.host) {
-      if (getComputedStyle(this.host).position === 'static') this.host.style.position = 'relative';
-      old.classList.add('car-fade'); old.setAttribute('aria-hidden', 'true');
-      Object.assign(old.style, { position: 'absolute', left: '0', top: '0', width: '100%', pointerEvents: 'none' });
-      this.host.insertAdjacentHTML('afterbegin', html);
-      old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, easing: 'ease-in-out' }).onfinish = () => old.remove();
-    } else this.host.innerHTML = html;
+    this.host.innerHTML = carSVG(this.kit, { ...cfg, uid: this.u, view: this.vname, live: true, angle: this.ang, night: this.night });
     this.svg = this.host.firstElementChild;
     this.slots = [q('.slot-door', this.svg), q('.slot-win', this.svg)]; // null where that piece is not in the kit
-    this.sq = q('.squeegee', this.svg); this.drive = q('.drive', this.svg); this.plate = q('.plate', this.svg); this.logo = q('.plate-logo', this.svg);
-    this.shines = qa('.shine', this.svg); this.rims = qa('.rimspin', this.svg); this.lights = qa('.lights', this.svg); this.defs = q('defs', this.svg);
+    this.plate = q('.plate', this.svg); this.logo = q('.plate-logo', this.svg);
+    this.shines = qa('.shine', this.svg); this.lights = qa('.lights', this.svg);
+  }
+  /* Rebuild once the photo for the current config and angle is ready, so there is never a blank frame. */
+  swap() {
+    const n = ++this.seq, go = () => { if (n === this.seq) this.build(); };
+    photoReady(photoHref(this.cfg.model, this.cfg.trim, angleOf(this.cfg.model, this.ang))).then(go, go);
   }
   /* The language changed: new accessible name, same picture. */
   setKit(kit: Kit) { this.kit = kit; if (this.svg) this.svg.setAttribute('aria-label', carLabel(kit, this.cfg, true, this.ang)); }
   set(cfg: Cfg) {
     const p = this.cfg; this.cfg = { ...cfg };
     if (!this.kit.D(cfg.design)) return;
-    if ((p.model || 'qs') !== (cfg.model || 'qs')) { this.build(); this.driveIn(); this.preload(); return; }
-    if (trimOf(p.model, p.trim) !== trimOf(cfg.model, cfg.trim)) { this.build(true); this.preload(); return; }
-    if (zonesKey(p) !== zonesKey(cfg)) { this.build(true); return; } // other kit pieces: crossfade to the new set of stickers
+    // Another Ami version or car colour needs another photo.
+    if ((p.model || 'qs') !== (cfg.model || 'qs') || trimOf(p.model, p.trim) !== trimOf(cfg.model, cfg.trim)) { this.swap(); this.preload(); return; }
+    if (zonesKey(p) !== zonesKey(cfg)) { this.build(); return; } // other kit pieces: same photo, new set of stickers
     this.svg.setAttribute('aria-label', carLabel(this.kit, cfg, true, this.ang));
     if (p.finish !== cfg.finish) this.shines.forEach((s) => (s.style.opacity = cfg.finish === 'gloss' ? 1 : .25));
-    if (p.design !== cfg.design || p.c1 !== cfg.c1 || p.c2 !== cfg.c2) this.wipe();
+    if (p.design !== cfg.design || p.c1 !== cfg.c1 || p.c2 !== cfg.c2) this.paint();
     // Rim stickers take the new colours directly.
     qa('.rs-a', this.svg).forEach((el) => el.setAttribute('stroke', hex(cfg.c1)));
     qa('.rs-b', this.svg).forEach((el) => el.setAttribute('stroke', hex(cfg.c2)));
@@ -604,89 +513,60 @@ export class Stage {
       this.plate.setAttribute('fill', hex(cfg.c1));
       this.logo.setAttribute('fill', hex(cfg.c1));
       this.logo.style.opacity = t ? 0 : 1;
-      if (!reduced() && t && !plateText(p)) this.plate.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500 });
     }
   }
-  /* Turn the car to another camera angle (crossfade), same design and colours, camera back to that angle's full view. */
+  /* Turn the car to another camera angle, same design and colours, camera back to that angle's full view. */
   angle(name: Angle) {
     const a = angleOf(this.cfg.model, name);
     if (a === this.ang) return;
-    this.ang = a; this.vname = 'full'; this.build(true);
+    this.ang = a; this.vname = 'full'; this.swap();
   }
   currentAngle() { return this.ang; }
-  /* Night scene: headlights and rear lights on, the car a little darker; fades in and out (instant with reduced motion). */
+  /* Night scene: headlights and rear lights on, the car a little darker (same photo, so the picture is rebuilt at once). */
   setNight(on: boolean) {
     on = !!on;
     if (on === this.night) return;
     this.night = on;
-    qa('.night', this.svg).forEach((g) => g.setAttribute('style', nightStyle(on)));
+    this.build();
   }
-  /* Fetch the other angles' photos of this car colour in the background, so turning the car is instant (configurator only). */
+  /* Fetch and decode the other angles' photos of this car colour in the background, so turning the car is instant
+     (configurator only). */
   preload(on?: boolean) {
     if (on) this.pre = true;
     if (!this.pre || MOD(this.cfg.model) !== MODEL_DEFS.qs) return;
-    const t = trimOf(this.cfg.model, this.cfg.trim);
-    anglesOf(this.cfg.model).forEach((a) => { const im = new Image(); im.decoding = 'async'; im.src = photoURL(t, a); });
+    anglesOf(this.cfg.model).forEach((a) => photoReady(photoHref(this.cfg.model, this.cfg.trim, a)));
   }
-  wipe() {
-    const C = this.cfg, lid = this.u + 'L' + (++this.lc), A = ART[C.design] || NO_ART, sq = this.sq;
-    // Only the sticker zones in the kit (none in the front view, or when only rims are ordered).
-    const fns = [A.door, A.win], idx = [0, 1].filter((i) => this.slots[i]), slots = idx.map((i) => this.slots[i]);
-    if (!slots.length) return;
-    const layers = idx.map((n) => { const g = document.createElementNS(NS, 'g'); g.innerHTML = fns[n](hex(C.c1), hex(C.c2), lid + n); return g; });
-    if (reduced()) { layers.forEach((g, i) => slots[i].replaceChildren(g)); return; }
-    const cp = document.createElementNS(NS, 'clipPath'); cp.id = lid + 'w';
-    const r = document.createElementNS(NS, 'rect');
-    [['x', 860], ['y', 320], ['height', 460], ['width', 0]].forEach(([k, v]) => r.setAttribute(k as string, String(v)));
-    cp.append(r); this.defs.append(cp);
-    layers.forEach((g, i) => { g.setAttribute('clip-path', `url(#${cp.id})`); slots[i].append(g); });
-    // The squeegee light only exists in the side view; on the other angles the new design just sweeps in.
-    const t0 = performance.now(), dur = 900, span = 440; if (sq) sq.style.opacity = 1;
-    const step = (now: number): void => {
-      const k = Math.min(1, (now - t0) / dur), w = easeIO(k) * span;
-      r.setAttribute('width', w.toFixed(1)); if (sq) sq.setAttribute('transform', `translate(${(860 + w).toFixed(1)} 0)`);
-      if (k < 1) { requestAnimationFrame(step); return; }
-      layers.forEach((g) => { g.removeAttribute('clip-path'); while (g.previousSibling) g.previousSibling.remove(); });
-      cp.remove();
-      if (sq && slots[0].lastChild === layers[0]) sq.style.opacity = 0;
-    };
-    requestAnimationFrame(step);
-  }
-  /* The car drives in from the right (side view); from the other angles it simply fades in. */
-  driveIn() {
-    if (reduced()) return;
-    const t0 = performance.now(), side = this.ang === 'side', dur = side ? 1500 : 600, dist = 560, R = 97;
-    cancelAnimationFrame(this.dRaf);
-    const step = (now: number) => {
-      const k = Math.min(1, (now - t0) / dur), off = side ? dist * (1 - easeOut(k)) : 0;
-      this.drive.setAttribute('transform', `translate(${off.toFixed(1)} 0)`);
-      this.drive.style.opacity = side ? Math.min(1, k * 3) : easeOut(k);
-      const deg = off / R * 180 / Math.PI;
-      this.rims.forEach((g) => g.setAttribute('transform', `rotate(${deg.toFixed(2)})`));
-      if (k < 1) this.dRaf = requestAnimationFrame(step);
-    };
-    this.dRaf = requestAnimationFrame(step);
+  /* New design or colours: swap the sticker artwork in place (only the zones in the kit: none in the front view, or when only
+     rims are ordered). */
+  paint() {
+    const C = this.cfg, lid = this.u + 'L' + (++this.lc), A = ART[C.design] || NO_ART;
+    const fns = [A.door, A.win];
+    [0, 1].forEach((n) => {
+      const slot = this.slots[n]; if (!slot) return;
+      const g = document.createElementNS(NS, 'g'); g.innerHTML = fns[n](hex(C.c1), hex(C.c2), lid + n);
+      slot.replaceChildren(g);
+    });
   }
   /* Camera presets. The door and window close-ups exist only in the side view, so the car turns to the side first. */
   view(name: string) {
-    if ((name === 'door' || name === 'window') && this.ang !== 'side' && anglesOf(this.cfg.model).length > 1) { this.ang = 'side'; this.vname = 'full'; this.build(true); }
+    const turn = (name === 'door' || name === 'window') && this.ang !== 'side' && anglesOf(this.cfg.model).length > 1;
+    if (turn) this.ang = 'side';
     const V = viewsAt(this.cfg.model, this.ang);
     this.vname = V[name] ? name : 'full';
-    this.animateTo(V[this.vname], 800);
+    if (turn) this.swap(); // the rebuilt picture opens on this.vname
+    else this.jump(V[this.vname]);
   }
   /* Zoom in (f < 1) or out (f > 1) around the middle of what is on screen, never wider than the full car or closer than 30%. */
   zoom(f: number) {
     const full = viewsAt(this.cfg.model, this.ang).full, [x, y, w, h] = this.vb;
     const nw = Math.min(full[2], Math.max(full[2] * 0.3, w * f)), nh = nw * (full[3] / full[2]);
-    this.animateTo(this.clampBox([x + w / 2 - nw / 2, y + h / 2 - nh / 2, nw, nh]), 450);
+    this.jump(this.clampBox([x + w / 2 - nw / 2, y + h / 2 - nh / 2, nw, nh]));
   }
   /* Drag the zoomed picture by (dx, dy) screen pixels. */
   pan(dx: number, dy: number) {
     const r = this.svg.getBoundingClientRect(); if (!r.width) return;
     const k = this.vb[2] / r.width;
-    cancelAnimationFrame(this.vRaf);
-    this.vb = this.clampBox([this.vb[0] - dx * k, this.vb[1] - dy * k, this.vb[2], this.vb[3]]);
-    this.svg.setAttribute('viewBox', this.vb.map((n) => n.toFixed(2)).join(' '));
+    this.jump(this.clampBox([this.vb[0] - dx * k, this.vb[1] - dy * k, this.vb[2], this.vb[3]]));
   }
   /* True when closer than the full-car view (the picture can then be dragged). */
   zoomed() { return this.vb[2] < viewsAt(this.cfg.model, this.ang).full[2] - 1; }
@@ -695,19 +575,19 @@ export class Stage {
     const f = viewsAt(this.cfg.model, this.ang).full;
     return [Math.min(Math.max(b[0], f[0]), f[0] + f[2] - b[2]), Math.min(Math.max(b[1], f[1]), f[1] + f[3] - b[3]), b[2], b[3]];
   }
-  animateTo(to: number[], ms: number) {
-    const from = this.vb.slice(), t0 = performance.now(), dur = reduced() ? 1 : ms;
-    cancelAnimationFrame(this.vRaf);
-    const step = (now: number) => {
-      const k = Math.min(1, (now - t0) / dur), e = easeIO(k);
-      this.vb = from.map((f, i) => f + (to[i] - f) * e);
-      this.svg.setAttribute('viewBox', this.vb.map((n) => n.toFixed(2)).join(' '));
-      if (k < 1) this.vRaf = requestAnimationFrame(step);
-    };
-    this.vRaf = requestAnimationFrame(step);
+  /* Move the camera straight to a box (no tween). */
+  jump(box: number[]) {
+    this.vb = box.slice();
+    this.svg.setAttribute('viewBox', this.vb.map((n) => n.toFixed(2)).join(' '));
   }
-  destroy() { cancelAnimationFrame(this.vRaf); cancelAnimationFrame(this.dRaf); }
+  destroy() { this.seq++; } // cancels a rebuild still waiting for its photo
 }
+
+/* Server render and first paint of the live car: the same picture the Stage draws first (side view, full car, by day), so the
+   photo shows before any script runs and nothing moves when the Stage takes over. */
+export const stagePoster = (kit: Kit, cfg: Cfg, uid: string) => carSVG(kit, { ...cfg, uid, view: 'full', live: true, angle: 'side' });
+/* First car photo of the hero and the configurator (preloaded from the page <head>). */
+export const POSTER_PHOTO = photoURL(TRIMS.qs[0], 'side');
 
 /* ---------- Thumbnails ---------- */
 /* decorative: inside a link/button/option that already names the design, so the picture is hidden from assistive tech. */

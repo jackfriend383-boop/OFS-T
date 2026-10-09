@@ -4,6 +4,7 @@ import DATA from './data/designs.json';
 import SITE from './data/site.json';
 import { I18N, getKit, pagePath, type Lang, type PageKey } from './lib/kit';
 import { proseHtml } from './pages/Prose';
+import { POSTER_PHOTO } from './lib/car';
 
 export const SITE_URL: string = String(import.meta.env.VITE_SITE_URL || SITE.SITE_URL).replace(/\/$/, '');
 const BRAND = SITE.name;
@@ -65,6 +66,8 @@ export function headHtml(key: SeoKey, lang: Lang): string {
   const og = abs('/assets/img/og-image.png');
   const t = (s: string) => `<meta data-h ${s}>`;
   return [
+    // Home hero and configurator: the car photo is the biggest thing on screen, so fetch it first (it is in the HTML, inside an SVG).
+    key === 'home' || key === 'configurator' ? `<link data-h rel="preload" as="image" href="${POSTER_PHOTO}" fetchpriority="high">` : '',
     `<title data-h>${e(m.title)}</title>`,
     t(`name="description" content="${e(m.description)}"`),
     noindex ? t(`name="robots" content="${key === 'order' || key === 'account' ? 'noindex,nofollow' : 'noindex'}"`) : '',
