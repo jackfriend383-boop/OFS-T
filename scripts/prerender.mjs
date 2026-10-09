@@ -1,6 +1,7 @@
 /* Prerender: renders every route to static HTML (so search engines and first paint get the full page), then writes the
    sitemap and rewrites the site URL in robots.txt / llms.txt. Runs after `vite build` and `vite build --ssr`. */
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -9,7 +10,17 @@ const dist = join(root, 'dist');
 const ssrDir = join(root, 'dist-ssr');
 const site = JSON.parse(await readFile(join(root, 'src/data/site.json'), 'utf8'));
 
-const { render, routes, SITE_URL, pageUrl, loadAllProse } = await import(pathToFileURL(join(ssrDir, 'entry-server.js')).href);
+/* The server bundle normally comes from `vite build --ssr` in the build script. Some hosts (e.g. a Cloudflare Pages build
+   command set to `vite build && node scripts/prerender.mjs`) skip that step, so build it here if it is missing. */
+const findEntry = () => { try { const f = readdirSync(ssrDir).find((n) => /^entry-server\.(m?js)$/.test(n)); return f ? join(ssrDir, f) : null; } catch { return null; } };
+let entry = findEntry();
+if (!entry) {
+  const { build } = await import('vite');
+  await build({ root, logLevel: 'warn', build: { ssr: 'src/entry-server.tsx', outDir: 'dist-ssr', emptyOutDir: true } });
+  entry = findEntry();
+  if (!entry) throw new Error('prerender: the server build (dist-ssr/entry-server.js) could not be created');
+}
+const { render, routes, SITE_URL, pageUrl, loadAllProse } = await import(pathToFileURL(entry).href);
 await loadAllProse(); // the long text pages are separate files: load them before rendering
 const template = await readFile(join(dist, 'index.html'), 'utf8');
 
