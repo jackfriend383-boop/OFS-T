@@ -2,7 +2,8 @@
    Replaces core.js. The cart is shared between languages and tabs, exactly as before (same storage key). */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { getKit, langOfPath, pageOfPath, pagePath, type Cfg, type CartItem, type Kit, type Lang, type PageKey } from './lib/kit';
+import { cleanRemoteDesigns, getKit, setRemoteDesigns, langOfPath, pageOfPath, pagePath, type Cfg, type CartItem, type Kit, type Lang, type PageKey } from './lib/kit';
+import { registerRemoteArt } from './lib/car';
 import { makeBackend, type Backend, type Customer } from './lib/backend';
 
 export type ModalName = 'cart' | 'search' | null;
@@ -79,7 +80,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const here = useRef(''); here.current = pathname + search;
   const lang = langOfPath(pathname);
+  const [designVer, setDesignVer] = useState(0); // bumps when the designs from the shop's server have been loaded
   const kit = getKit(lang);
+  void designVer;
   const T = kit.T;
   const backend = useMemo(() => makeBackend(kit), [kit]);
   const to = useCallback((key: PageKey | string, query = '') => pagePath(lang, key) + (query ? '?' + query : ''), [lang]);
@@ -88,11 +91,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartReady, setCartReady] = useState(false);
   const kitRef = useRef(kit); kitRef.current = kit;
+  const backendRef0 = useRef(backend); backendRef0.current = backend;
+  const langRef = useRef(lang); langRef.current = lang;
   useEffect(() => {
     setCart(loadCart(kitRef.current)); setCartReady(true);
     const onStorage = (e: StorageEvent) => { if (e.key === CART_KEY) setCart(loadCart(kitRef.current)); };
     addEventListener('storage', onStorage);
     return () => removeEventListener('storage', onStorage);
+  }, []);
+  /* Designs the owner added or changed in the admin: fetched once, then every kit is rebuilt and the cart is read again
+     (so a kit with an added design is not dropped). If the server can't be reached the built-in designs are simply used. */
+  useEffect(() => {
+    let live = true;
+    if (!backendRef0.current.configured) return;
+    (async () => {
+      const list = cleanRemoteDesigns({ designs: await backendRef0.current.designsPublic() });
+      if (!live || !list.length) return;
+      // Pictures first, so a design never shows up without its image.
+      for (const r of list) {
+        if (!r.hasMaster || !r.mode) continue;
+        try {
+          const [u1, u2] = await Promise.all([backendRef0.current.designArtBlob(r.id, 1000, r.ver), backendRef0.current.designArtBlob(r.id, 1600, r.ver)]);
+          registerRemoteArt(r.id, r.mode, { 1000: u1, 1600: u2 });
+        } catch { r.hasMaster = false; if (r.custom) r.hidden = true; }
+      }
+      if (!live) return;
+      setRemoteDesigns(list);
+      setCart(loadCart(getKit(langRef.current)));
+      setDesignVer((v) => v + 1);
+    })();
+    return () => { live = false; };
   }, []);
   const commit = useCallback((next: CartItem[]) => { setCart(next); store.set(CART_KEY, JSON.stringify(next)); }, []);
   const cartRef = useRef(cart); cartRef.current = cart;

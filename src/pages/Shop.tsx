@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../state';
 import { COPY } from '../content';
-import { CATS } from '../lib/kit';
 import { DesignCard, FilterTabs } from '../components/DesignCard';
 import { useFilterFeedback } from '../lib/filter';
 
@@ -17,7 +16,7 @@ export default function Shop() {
         <span className="eyebrow">{c.eyebrow}</span>
         <h1 className="display">{c.h1}</h1>
         <p className="muted" style={{ margin: 0, maxWidth: '56ch' }}>{c.lead}</p>
-        <FilterTabs id="shopTabs" cats={CATS} value={cat} onPick={setCat} label={c.filter} />
+        {kit.CATS.length > 2 && <FilterTabs id="shopTabs" cats={kit.CATS} value={cat} onPick={setCat} label={c.filter} />}
       </div>
       <div className="section" style={{ paddingTop: 24 }}>
         <h2 className="sr">{c.designs}</h2>

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useApp } from '../state';
 import { COPY } from '../content';
-import { CATS, TRIMS, PIECES, PIECE_PRICE, includedPieces, piecesPrice, type Cfg, type Piece } from '../lib/kit';
+import { TRIMS, PIECES, PIECE_PRICE, includedPieces, piecesPrice, type Cfg, type Piece } from '../lib/kit';
 import { CarStage, Thumb, type StageApi } from '../components/Car';
 import { viewIcon, anglesOf, type Angle } from '../lib/car';
 import { FilterTabs } from '../components/DesignCard';
@@ -171,6 +171,16 @@ export default function Configurator() {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A link to a design added in the admin: the design list arrives from the server a moment after the page, so pick it then.
+  const firstKit = useRef(kit);
+  useEffect(() => {
+    if (kit === firstKit.current) return;
+    firstKit.current = kit;
+    const want = new URLSearchParams(search).get('design');
+    const q = want && kit.D(want) && cfgRef.current.design !== want ? kit.cfgFromQuery(search) : null;
+    if (q) { cfgRef.current = q; setCfg(q); requestAnimationFrame(() => scrollToCard(q.design, false)); }
+  }, [kit]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* Search results, design cards and cart "edit" act in place on this page instead of navigating;
      the language switch carries the kit being designed to the other language. */
   useEffect(() => {
@@ -218,10 +228,10 @@ export default function Configurator() {
   if (isFull) lines.push([c.kitFull(d.name), money(d.price)]);
   else (['door', 'window', 'accent'] as const).forEach((p) => { if (ps.includes(p)) lines.push([T('pc_' + p), money(PIECE_PRICE[p])]); });
   if (ps.includes('rims')) lines.push([T('pc_rims'), (lines.length ? '+' : '') + money(PIECE_PRICE.rims)]);
-  if (cfg.numberOn && cfg.number) lines.push([T('badgeText', { text: cfg.number }), '+' + money(kit.EXTRA.badge)]);
+  if (cfg.bcOn) lines.push([T('bcLine', { colour: kit.COLORS[cfg.bcPick === 2 ? cfg.c2 : cfg.c1].name }), '+' + money(kit.EXTRA.badgeColour)]);
   /* "What's included": every piece in the box with its quantity, plus the badge and the fitting guide. */
   const included: string[] = includedPieces(cfg).map((p) => `${p === 'rims' ? 4 : 2} × ${c.inc[p]}`);
-  if (cfg.numberOn && cfg.number) included.push(`1 × ${c.inc.badge}`);
+  if (cfg.bcOn) included.push(`1 × ${c.inc.bc}`);
   included.push(`1 × ${c.inc.guide}`);
   /* Pieces: full kit is exclusive with door/window/accent; rims combine with anything. sanitizeCfg then applies the shared rules
      (e.g. choosing every piece of the full kit becomes the full kit). */
@@ -234,6 +244,8 @@ export default function Configurator() {
     else next = cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p];
     update({ pieces: next });
   };
+  /* Turning a coloured badge on (or changing its colour) turns the car to the front ¾ view, where the badge can be seen. */
+  const showFrontBadge = () => { api.current?.angle('front34'); setAngle('front34'); setView('full'); };
   const pieceItems = PIECES.filter((p) => p !== 'accent' || pop);
   const pers = kit.isPersonalised(cfg), total = kit.priceOf(cfg);
 
@@ -242,7 +254,7 @@ export default function Configurator() {
   const sumLive = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
     if (!started.current) return;
-    const msg = T('cfgSay', { name: d.name, model: kit.modelName(cfg.model), colours: kit.colourLabel(cfg), finish: T(cfg.finish === 'gloss' ? 'glossLc' : 'matteLc'), sides: kit.piecesLabel(cfg), total: money(total) }) + (pers ? T('cfgSayPers') : '');
+    const msg = T('cfgSay', { name: d.name, model: kit.modelName(cfg.model), colours: kit.colourLabel(cfg), sides: kit.piecesLabel(cfg), total: money(total) }) + (pers ? T('cfgSayPers') : '');
     const t = setTimeout(() => { if (sumLive.current) sumLive.current.textContent = msg; }, 600);
     return () => clearTimeout(t);
   }, [cfg, kit]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -264,9 +276,9 @@ export default function Configurator() {
     [c.version, kit.modelName(cfg.model), '', 'optModelCard'],
     ...(trims.length > 1 ? [[c.carColour, c.trims[cfg.trim] || cfg.trim, '', 'optModelCard'] as [string, string, string, string]] : []),
     [c.colours, colourText, '', 'optColourCard'],
-    [c.finish, cfg.finish === 'gloss' ? c.gloss : c.matte, '', 'optFinishCard'],
+    [c.centreTitle, cfg.centre === 'logo' ? c.centreLogo : c.centreFull, '', 'optCentreCard'],
     [c.pieces, kit.piecesLabel(cfg), money(piecesPrice(ps, d.price)), 'optPiecesCard'],
-    [c.extras, cfg.numberOn && cfg.number ? `${c.badgeName} “${cfg.number}”` : c.none, cfg.numberOn && cfg.number ? '+' + money(kit.EXTRA.badge) : '', 'optExtrasCard'],
+    [c.extras, cfg.bcOn ? `${c.bcName} (${colourName(cfg.bcPick === 2 ? cfg.c2 : cfg.c1)})` : c.none, cfg.bcOn ? '+' + money(kit.EXTRA.badgeColour) : '', 'optExtrasCard'],
   ];
   const toggleFull = () => {
     const el = document.getElementById('stageWrap') as any; if (!el) return;
@@ -344,7 +356,7 @@ export default function Configurator() {
           <section className="ocard" id="optDesignCard" aria-labelledby="pickerTitle">
             <div className="ocard-head"><h2 id="pickerTitle">{c.choose}</h2><span className="ocard-price">{money(d.price)}</span></div>
             <div className="picker" id="picker">
-              <FilterTabs id="cfgTabs" cats={CATS} value={cat} onPick={setCat} label={COPY[lang].shop.filter} />
+              {kit.CATS.length > 2 && <FilterTabs id="cfgTabs" cats={kit.CATS} value={cat} onPick={setCat} label={COPY[lang].shop.filter} />}
               <div className="strip" id="strip" role="group" aria-label={c.designsGroup} ref={strip}>
                 {DESIGNS.map((x) => (
                   <button key={x.id} type="button" className={'pcard' + (cat !== 'All' && x.cat !== cat ? ' out' : '')} data-id={x.id} data-cat={x.cat} aria-pressed={x.id === cfg.design} onClick={() => pickDesign(x.id, true)}>
@@ -400,27 +412,26 @@ export default function Configurator() {
             <p className="opt-val pcs-note">{c.piecesNote} {c.piecesAuto}</p>
           </section>
 
-          <section className="ocard" id="optFinishCard" aria-labelledby="optFinishLbl">
-            <div className="ocard-head"><h2 id="optFinishLbl">{c.finishKit}</h2></div>
-            <Seg id="segFinish" label={c.finish} value={cfg.finish} items={[['matte', c.matte], ['gloss', c.gloss]]} onPick={(v) => update({ finish: v as Cfg['finish'] })} />
+          {/* The middle part of the door: the design runs through it (default) or it keeps the OFS/T logo plate. */}
+          <section className="ocard" id="optCentreCard" aria-labelledby="optCentreLbl">
+            <div className="ocard-head"><h2 id="optCentreLbl">{c.centreTitle}</h2></div>
+            <Seg id="segCentre" label={c.centreTitle} value={cfg.centre} items={[['full', c.centreFull], ['logo', c.centreLogo]]} onPick={(v) => update({ centre: v as Cfg['centre'] })} />
+            <p className="opt-val">{c.centreHint}</p>
           </section>
 
-          {/* Extras: for now only the custom badge (Ami 2025 only: the Pop door has no badge plate). */}
+          {/* Extras: coloured Citroën badges on the front and rear of the car (Ami 2025 only). */}
           <section className="ocard" id="optExtrasCard" aria-labelledby="optExtrasLbl">
             <div className="ocard-head"><h2 id="optExtrasLbl">{c.extras}</h2></div>
             <div className={'xtra' + (pop ? ' off' : '')} id="optBadgeCard">
-              <div className="opt-title"><span className="xtra-n" id="numLbl">{c.badgeName}</span>
-                <span className="xtra-r"><span className="pc-p">+{money(kit.EXTRA.badge)}</span>
-                <button type="button" className="toggle" id="numToggle" role="switch" aria-checked={cfg.numberOn} aria-labelledby="numLbl" disabled={pop} aria-describedby={pop ? 'numPop' : undefined}
-                  onClick={() => { update({ numberOn: !cfg.numberOn }); setNumErr(''); if (!cfg.numberOn) requestAnimationFrame(() => numInput.current?.focus()); }} /></span></div>
+              <div className="opt-title"><span className="xtra-n" id="bcLbl">{c.bcName}</span>
+                <span className="xtra-r"><span className="pc-p">+{money(kit.EXTRA.badgeColour)}</span>
+                <button type="button" className="toggle" id="bcToggle" role="switch" aria-checked={cfg.bcOn} aria-labelledby="bcLbl" disabled={pop} aria-describedby={pop ? 'bcPop' : 'bcHint'}
+                  onClick={() => { const on = !cfg.bcOn; update({ bcOn: on }); if (on) showFrontBadge(); }} /></span></div>
               {pop
-                ? <p className="opt-val" id="numPop">{c.popOnly}</p>
+                ? <p className="opt-val" id="bcPop">{c.popOnly}</p>
                 : <>
-                  <label className="opt-val" htmlFor="numInput" id="numHint">{c.badgeHint(money(kit.EXTRA.badge))}</label>
-                  <input className="field" id="numInput" ref={numInput} maxLength={8} placeholder={c.badgePh} value={cfg.number} disabled={!cfg.numberOn} autoComplete="off" spellCheck={false} autoCapitalize="characters"
-                    aria-labelledby="numLbl numHint" aria-invalid={numErr && cfg.numberOn ? true : undefined} aria-describedby={numErr && cfg.numberOn ? 'numErr' : undefined}
-                    onChange={(e) => { const v = kit.cleanNumber(e.target.value); if (v) setNumErr(''); update({ number: v }); }} />
-                  <p className="err" id="numErr" role="alert" hidden={!numErr || !cfg.numberOn}>{numErr}</p>
+                  <p className="opt-val" id="bcHint">{c.bcHint}</p>
+                  <Seg id="segBc" label={c.bcPick} value={String(cfg.bcPick)} items={[['1', `${c.bcC1} · ${colourName(cfg.c1)}`], ['2', `${c.bcC2} · ${colourName(cfg.c2)}`]]} onPick={(v) => { update({ bcPick: v === '2' ? 2 : 1, bcOn: true }); }} />
                 </>}
             </div>
           </section>
@@ -445,7 +456,7 @@ export default function Configurator() {
         </div>
         <section className="summary" aria-labelledby="sumTitle">
           <h2 id="sumTitle">{c.summaryTitle}</h2>
-          <div><h3 id="sumName">{d.name}</h3><span className="muted" id="sumSub">{`${kit.modelName(cfg.model)} · ${kit.colourLabel(cfg)} · ${T(cfg.finish === 'gloss' ? 'gloss' : 'matte')}`}</span></div>
+          <div><h3 id="sumName">{d.name}</h3><span className="muted" id="sumSub">{`${kit.modelName(cfg.model)} · ${kit.colourLabel(cfg)} · ${cfg.centre === 'logo' ? c.centreLogo : c.centreFull}`}</span></div>
           <div className="total"><span className="muted">{c.total}</span><Price id="sumTotal" value={total} /></div>
           <ul className="lines" id="sumLines">{lines.map(([a, b]) => <li key={a + b}><span>{a}</span><span>{b}</span></li>)}</ul>
           <div className="incl"><h4 id="inclTitle">{c.included}</h4><ul aria-labelledby="inclTitle">{included.map((x) => <li key={x}>{x}</li>)}</ul></div>

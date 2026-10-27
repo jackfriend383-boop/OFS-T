@@ -1,4 +1,5 @@
 import { priceItem, isPersonalised, type PricedItem } from './pricing';
+import { DesignError, adminDelete, adminList, adminMaster, adminSave, designArt, pricingDesigns, publicList } from './designs';
 import { createCheckoutSession, expireCheckoutSession, verifyWebhook } from './stripe';
 import { sendMail, signInEmail, paidEmail, invoiceEmail, shippedEmail, newOrderEmail, adminAlertEmail, type MailAttachment } from './mail';
 
@@ -124,7 +125,7 @@ async function readJson(req: Request, max = MAX_BODY): Promise<any> {
 const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /* ---------- order validation (mirrors the CHECK constraints in schema.sql) ---------- */
-function validateOrder(b: any) {
+function validateOrder(b: any, designs: Parameters<typeof priceItem>[2]) {
   if (!isObj(b)) throw new HttpError(400, 'invalid');
   const c = b.customer;
   if (!isObj(c)) throw new HttpError(400, 'invalid');
@@ -146,7 +147,7 @@ function validateOrder(b: any) {
   // Every line is re-validated and priced here from the shared price list; any total the browser sends is ignored.
   if (!Array.isArray(b.items) || b.items.length < 1 || b.items.length > 50) throw new HttpError(400, 'invalid');
   const orderLang: 'pt' | 'en' = b.lang === 'en' ? 'en' : 'pt';
-  const priced = b.items.map((it: any) => priceItem(it, orderLang));
+  const priced = b.items.map((it: any) => priceItem(it, orderLang, designs));
   if (priced.some((i: PricedItem | null) => !i)) throw new HttpError(400, 'invalid');
   const lines = priced as PricedItem[];
   const itemsJson = JSON.stringify(lines);
@@ -190,7 +191,7 @@ async function startCheckout(req: Request, env: Env) {
   if (!env.STRIPE_SECRET_KEY || !env.SITE_URL) throw new HttpError(503, 'not_configured');
   const uid = await customerId(req, env);
   if (!uid) throw new HttpError(401, 'sign_in_required'); // only signed-in customers can buy
-  const o = validateOrder(await readJson(req));
+  const o = validateOrder(await readJson(req), await pricingDesigns(env)); // prices come from the built-in list + the designs table
   // Receipts and invoices go to the account's verified email, never to an address typed at checkout (a typo would leak the order).
   const acct = await env.DB.prepare('SELECT email FROM users WHERE id = ?1').bind(uid).first<{ email: string }>();
   if (!acct) throw new HttpError(401, 'session_expired');
@@ -696,7 +697,7 @@ export default {
       if (req.method === 'OPTIONS') {
         if (!allowedOrigin(req, env)) return respond(null, 403, req, env);
         return respond(null, 204, req, env, {
-          'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Authorization, Content-Type',
           'Access-Control-Max-Age': '86400',
         });
@@ -720,6 +721,16 @@ export default {
         if (path === '/api/me/orders' && req.method === 'GET') return respond(await myOrders(env, uid), 200, req, env);
         throw new HttpError(404, 'not_found');
       }
+      // Designs: the public list (built-in overrides + designs added in the admin) and the preview pictures of the latter.
+      if (path === '/api/designs' && req.method === 'GET') return respond(await publicList(env), 200, req, env, { 'Cache-Control': 'public, max-age=60' });
+      const art = /^\/api\/design-art\/([a-z0-9-]{2,40})\/(1000|1600)$/.exec(path);
+      if (art && req.method === 'GET') {
+        const png = await designArt(env, art[1], Number(art[2]));
+        if (!png) throw new HttpError(404, 'not_found');
+        const h: Record<string, string> = { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'cross-origin' };
+        const origin = allowedOrigin(req, env); if (origin) { h['Access-Control-Allow-Origin'] = origin; h['Vary'] = 'Origin'; }
+        return new Response(png, { status: 200, headers: h });
+      }
       if (path === '/api/checkout' && req.method === 'POST') return respond(await startCheckout(req, env), 201, req, env);
       const cancel = /^\/api\/checkout\/([^/]+)\/cancel$/.exec(path);
       if (cancel && req.method === 'POST') return respond(await cancelCheckout(req, env, cancel[1]), 200, req, env);
@@ -736,6 +747,12 @@ export default {
         if (path === '/api/admin/orders' && req.method === 'GET') return respond(await listOrders(env), 200, req, env);
         if (path === '/api/admin/resend-paid-emails' && req.method === 'POST') return respond(await resendPaidEmails(env), 200, req, env);
         if (path === '/api/admin/invoices' && req.method === 'GET') return respond(await listInvoices(env), 200, req, env);
+        if (path === '/api/admin/designs' && req.method === 'GET') return respond(await adminList(env), 200, req, env);
+        const dz = /^\/api\/admin\/designs\/([a-z0-9-]{2,40})$/.exec(path);
+        if (dz && req.method === 'PUT') return respond(await adminSave(env, dz[1], await readJson(req, 1_900_000)), 200, req, env);
+        if (dz && req.method === 'DELETE') return respond(await adminDelete(env, dz[1]), 200, req, env);
+        const dzm = /^\/api\/admin\/designs\/([a-z0-9-]{2,40})\/master$/.exec(path);
+        if (dzm && req.method === 'GET') return respond({ master: await adminMaster(env, dzm[1]) }, 200, req, env);
         const m = /^\/api\/admin\/orders\/([^/]+)$/.exec(path);
         if (m && req.method === 'PATCH') return respond(await setStatus(req, env, m[1]), 200, req, env);
         const invoice = /^\/api\/admin\/orders\/([^/]+)\/invoice$/.exec(path);
@@ -743,7 +760,7 @@ export default {
       }
       throw new HttpError(404, 'not_found');
     } catch (e: any) {
-      if (e instanceof HttpError) return respond({ error: e.code }, e.status, req, env);
+      if (e instanceof HttpError || e instanceof DesignError) return respond({ error: e.code }, e.status, req, env);
       console.error('unhandled', e && e.message);
       return respond({ error: 'server' }, 500, req, env);
     }

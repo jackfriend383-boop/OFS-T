@@ -247,6 +247,38 @@ export function makeBackend(kit: Kit) {
     const r = await authed('/api/admin/resend-paid-emails', { method: 'POST' });
     return { total: +r?.total || 0, sent: +r?.sent || 0, failed: +r?.failed || 0, remaining: +r?.remaining || 0, reason: typeof r?.reason === 'string' ? r.reason : null };
   }
-  return { configured: backendConfigured, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus, resendPaidEmails };
+
+  /* ---------- Designs (added in the admin; the two built-in ones live in designs.json) ---------- */
+  /* Public list of the owner's design changes and extra designs. Failing is fine: the site then shows the built-in designs. */
+  async function designsPublic(): Promise<unknown[]> {
+    try { const r = await request('/api/designs'); return Array.isArray(r) ? r : (r && Array.isArray(r.designs) ? r.designs : []); }
+    catch { return []; }
+  }
+  /* Preview picture of an extra design as a blob: address (the page may only load images from itself, data: and blob:). */
+  async function designArtBlob(id: string, w: 1000 | 1600, ver: number): Promise<string> {
+    if (!backendConfigured || !/^[a-z0-9][a-z0-9-]{1,38}$/.test(id)) throw new BackendError(MSG.invalid, 'invalid');
+    const res = await fetch(URL_ + '/api/design-art/' + id + '/' + w + '?v=' + (Math.floor(+ver) || 1), { credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin' });
+    if (!res.ok) throw new BackendError(MSG.generic, 'http_' + res.status);
+    return URL.createObjectURL(await res.blob());
+  }
+  const idOk = (id: string) => /^[a-z0-9][a-z0-9-]{1,38}$/.test(String(id));
+  async function listDesigns(): Promise<any[]> {
+    const r = await authed('/api/admin/designs');
+    return Array.isArray(r) ? r : (r && Array.isArray(r.designs) ? r.designs : []);
+  }
+  async function designMaster(id: string): Promise<string> {
+    if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
+    const r = await authed('/api/admin/designs/' + id + '/master');
+    return typeof r === 'string' ? r : String(r && r.master || '');
+  }
+  async function saveDesign(id: string, body: Record<string, unknown>) {
+    if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
+    return authed('/api/admin/designs/' + id, { method: 'PUT', body });
+  }
+  async function deleteDesign(id: string) {
+    if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
+    return authed('/api/admin/designs/' + id, { method: 'DELETE' });
+  }
+  return { configured: backendConfigured, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus, resendPaidEmails };
 }
 export type Backend = ReturnType<typeof makeBackend>;

@@ -11,7 +11,7 @@ const en = {
     specs: [['Material', 'Outdoor vinyl'], ['Finish', 'Matte or gloss'], ['Shape', 'Pre-cut'], ['Fitting', 'At home']],
     popular: 'Popular designs', all: (n: number) => `All ${n} designs`,
     how: 'How it works',
-    steps: [['Pick a design', 'Choose from fifteen designs, then set a primary and an accent vinyl colour.'], ['Preview it', 'Zoom in on the door panel and rear window, and compare matte with gloss.'], ['Apply at home', 'Panels arrive pre-cut, with a step-by-step fitting guide for doing it yourself.']],
+    steps: [['Pick a design', 'Choose a design, then set a primary and an accent vinyl colour.'], ['Preview it', 'Zoom in on the door panel and rear window, and compare matte with gloss.'], ['Apply at home', 'Panels arrive pre-cut, with a step-by-step fitting guide for doing it yourself.']],
     fitEyebrow: 'Fitment', fitTitle: 'Cut for the Citroën Ami',
     fitText: 'The full kit covers the rounded panel around the door badge and the rear quarter window, plus the front accents on the Ami Pop. The roof stays black, and nothing goes over seals or hinges.',
     fitList: [['Citroën Ami', '2020 →'], ['Finish', 'matte or gloss'], ['Sold as', 'left + right pairs'], ['Full kit', 'doors + windows (+ Pop accents)']],
@@ -70,8 +70,10 @@ const en = {
     fullNote: (pop: boolean): string => (pop ? 'Doors, rear windows and front accents' : 'Doors and rear windows'), pair: 'Pair', set4: 'Set of 4',
     kitFull: (name: string) => `${name} full kit`,
     extras: 'Extras', badgeName: 'Custom badge', popOnly: 'Only for Ami 2025', none: 'None',
+    centreTitle: 'Door centre', centreFull: 'Full design', centreLogo: 'Logo only', centreHint: 'The design runs through the middle of the door, or keep the OFS/T logo there.',
+    bcName: 'Coloured Citroën badges', bcHint: 'Recolours the Citroën logo on the front and rear bumpers in one of your design colours. Turn the car to see it.', bcPick: 'Badge colour', bcC1: 'Colour 1', bcC2: 'Colour 2',
     included: "What's included",
-    inc: { door: 'door stickers', window: 'window stickers', accent: 'front accents', rims: 'rim stickers', badge: 'custom badge', guide: 'fitting guide' } as Record<string, string>,
+    inc: { door: 'door stickers', window: 'window stickers', accent: 'front accents', rims: 'rim stickers', badge: 'custom badge', bc: 'set of coloured Citroën badges (front + rear)', guide: 'fitting guide' } as Record<string, string>,
   },
   notFound: { eyebrow: 'Error 404', h1: 'Page not found', text: "That page doesn't exist or has moved. Try the shop, or design your own kit in the configurator.", browse: 'Browse designs', home: 'Back to home', other: null as null | [string, string] },
   admin: {
@@ -89,7 +91,7 @@ const en = {
     signIn: 'Sign in', email: 'Email', password: 'Password',
     lockedTitle: "This account isn't an admin", lockedText: 'You are signed in, but this account is not listed in the <code>admins</code> table, so no orders are shown.', signOut: 'Sign out',
     listTitle: 'Order list', refresh: 'Refresh',
-    toolTitle: 'Mold file of a design', toolNote: "A test print file in the design's default colours, to check the printer setup.", design: 'Design', png: 'Download PNG', svg: 'SVG + cut line', invoiceSent: 'Invoice sent to the buyer.',
+    toolTitle: 'Mold file of a design', toolNote: "A test print file (true-scale vector PDF) in the design's default colours, to check the printer setup.", design: 'Design', pdf: 'Print PDF', svg: 'SVG + cut line', invoiceSent: 'Invoice sent to the buyer.',
   },
 };
 
@@ -102,7 +104,7 @@ const pt: typeof en = {
     specs: [['Material', 'Vinil de exterior'], ['Acabamento', 'Mate ou brilhante'], ['Formato', 'Pré-cortado'], ['Aplicação', 'Em casa']],
     popular: 'Designs populares', all: (n: number) => `Todos os ${n} designs`,
     how: 'Como funciona',
-    steps: [['Escolha um design', 'Escolha entre quinze designs e defina uma cor de vinil principal e uma cor de destaque.'], ['Pré-visualize', 'Aproxime a vista do painel da porta e do vidro traseiro e compare o acabamento mate com o brilhante.'], ['Aplique em casa', 'Os painéis chegam pré-cortados, com um guia de aplicação passo a passo para fazer tudo por conta própria.']],
+    steps: [['Escolha um design', 'Escolha um design e defina uma cor de vinil principal e uma cor de destaque.'], ['Pré-visualize', 'Aproxime a vista do painel da porta e do vidro traseiro e compare o acabamento mate com o brilhante.'], ['Aplique em casa', 'Os painéis chegam pré-cortados, com um guia de aplicação passo a passo para fazer tudo por conta própria.']],
     fitEyebrow: 'Compatibilidade', fitTitle: 'Cortado para o Citroën Ami',
     fitText: 'O kit completo cobre o painel arredondado à volta do emblema da porta e o vidro lateral traseiro, e ainda os acentos frontais no Ami Pop. O tejadilho fica preto e nada é aplicado sobre borrachas ou dobradiças.',
     fitList: [['Citroën Ami', '2020 →'], ['Acabamento', 'mate ou brilhante'], ['Vendido em', 'pares esquerda + direita'], ['Kit completo', 'portas + vidros (+ acentos Pop)']],
@@ -159,8 +161,10 @@ const pt: typeof en = {
     fullNote: (pop: boolean) => (pop ? 'Portas, vidros traseiros e acentos frontais' : 'Portas e vidros traseiros'), pair: 'Par', set4: 'Conjunto de 4',
     kitFull: (name: string) => `Kit completo ${name}`,
     extras: 'Extras', badgeName: 'Emblema personalizado', popOnly: 'Só para o Ami 2025', none: 'Nenhum',
+    centreTitle: 'Centro da porta', centreFull: 'Design completo', centreLogo: 'Só o logótipo', centreHint: 'O design continua pelo meio da porta, ou fica lá o logótipo OFS/T.',
+    bcName: 'Emblemas Citroën a cores', bcHint: 'Muda a cor do logótipo Citroën nos para-choques da frente e de trás para uma das cores do seu design. Rode o carro para ver.', bcPick: 'Cor do emblema', bcC1: 'Cor 1', bcC2: 'Cor 2',
     included: 'O que inclui',
-    inc: { door: 'autocolantes de porta', window: 'autocolantes de vidro', accent: 'acentos frontais', rims: 'autocolantes de jantes', badge: 'emblema personalizado', guide: 'guia de aplicação' } as Record<string, string>,
+    inc: { door: 'autocolantes de porta', window: 'autocolantes de vidro', accent: 'acentos frontais', rims: 'autocolantes de jantes', badge: 'emblema personalizado', bc: 'conjunto de emblemas Citroën a cores (frente + trás)', guide: 'guia de aplicação' } as Record<string, string>,
   },
   notFound: { eyebrow: 'Erro 404', h1: 'Página não encontrada', text: 'Esta página não existe ou mudou de endereço. Experimente a loja ou crie o seu próprio kit no configurador.', browse: 'Ver designs', home: 'Voltar ao início', other: ["Page not found: this page doesn't exist or has moved.", 'Go to the English site'] },
   admin: {
@@ -178,7 +182,7 @@ const pt: typeof en = {
     signIn: 'Iniciar sessão', email: 'Email', password: 'Palavra-passe',
     lockedTitle: 'Esta conta não é de administrador', lockedText: 'Tem sessão iniciada, mas esta conta não consta da tabela <code>admins</code>, por isso não são apresentadas encomendas.', signOut: 'Terminar sessão',
     listTitle: 'Lista de encomendas', refresh: 'Atualizar',
-    toolTitle: 'Ficheiro de molde de um design', toolNote: 'Um ficheiro de impressão de teste nas cores predefinidas do design, para verificar a configuração da impressora.', design: 'Design', png: 'Descarregar PNG', svg: 'SVG + linha de corte', invoiceSent: 'Fatura enviada ao comprador.',
+    toolTitle: 'Ficheiro de molde de um design', toolNote: 'Um ficheiro de impressão de teste (PDF vetorial à escala real) nas cores predefinidas do design, para verificar a configuração da impressora.', design: 'Design', pdf: 'PDF de impressão', svg: 'SVG + linha de corte', invoiceSent: 'Fatura enviada ao comprador.',
   },
 };
 

@@ -18,7 +18,7 @@ New database: `npm run db:remote`. Existing database (created before payments): 
 7. Test with card `4242 4242 4242 4242`. An order only turns "paid" (and shows in the admin) after the webhook arrives.
 8. Going live: repeat with live keys (`sk_live_...` and a live webhook endpoint).
 
-Prices are always calculated by the Worker from `src/data/designs.json`; the browser's total is ignored. Shipping is not charged yet.
+Prices are always calculated by the Worker from `src/data/designs.json` plus any changes made in the admin Designs tab; the browser's total is ignored. Shipping is not charged yet.
 
 ## 3. Sign-in emails and order emails (Resend)
 1. Create a free Resend account, add and verify `ofstdesigns.com` (it gives you DNS records to add).

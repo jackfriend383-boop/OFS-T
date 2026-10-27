@@ -3,6 +3,8 @@
    thumbnails, and by the server render of the live car); the Stage updates the live copy imperatively and is wrapped by the
    <CarStage> React component. Every change on the live car is instant (no animation). The Stage never runs on the server. */
 import DATA from '../data/designs.json';
+import BADGES from '../data/badges.json';
+import PANEL from '../data/panel.json';
 import { TRIMS, includedPieces, normPieces, type Cfg, type Kit } from './kit';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -16,25 +18,21 @@ const IMG_DIR = import.meta.env.BASE_URL + 'assets/img/';
 let UID = 0;
 
 /* ---------- Helpers ---------- */
-function rng(seed: number) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function mix(a: string, b: string, t: number) { const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
-function blob(cx: number, cy: number, r: number, R: () => number, n: number) {
-  const pts: number[][] = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, rr = r * (.65 + R() * .6); pts.push([cx + Math.cos(a) * rr * 1.45, cy + Math.sin(a) * rr * .8]); }
-  let d = ''; for (let i = 0; i < n; i++) { const p = pts[i], q2 = pts[(i + 1) % n]; if (!i) { const l = pts[n - 1]; d += `M${((l[0] + p[0]) / 2).toFixed(1)} ${((l[1] + p[1]) / 2).toFixed(1)}`; } d += ` Q${p[0].toFixed(1)} ${p[1].toFixed(1)} ${((p[0] + q2[0]) / 2).toFixed(1)} ${((p[1] + q2[1]) / 2).toFixed(1)}`; } return d + 'Z';
-}
-const wave = (x0: number, x1: number, yb: number, amp: number, f: number, ph: number) => { let d = ''; for (let x = x0; x <= x1; x += 4) d += (x === x0 ? 'M' : 'L') + x + ' ' + (yb + Math.sin(x / f + ph) * amp).toFixed(1); return d; };
 
-/* Signature artwork from supplied door files (flame-red.webp, flame-stealth.webp, 2000 px wide).
-   pill = door outline inside the image, in source px. 'mask' art is split into black, white, light tone and dark tone so the
-   two tones can be recoloured (a colour-matrix filter, see toneMatrix); 'rgb' art keeps its own colours.
-   The ready-made versions (badge cut-out filled in, tones separated) are static files made once with scripts/make-art.mjs, at
-   two widths: 1000 px for phones and low-memory devices, 1600 px otherwise. The browser no longer processes pixels. */
-const ART_SRC: Record<string, any> = {
-  flame: { mode: 'mask', size: [2000, 846], pill: [22, 60, 1976, 788], files: { 1000: 'art-flame-1000.png', 1600: 'art-flame-1600.png' } },
-  stealth: { mode: 'rgb', size: [2000, 859], pill: [39, 73, 1964, 792], files: { 1000: 'art-stealth-1000.webp', 1600: 'art-stealth-1600.webp' } },
+/* Signature artwork = the print master of each design, drawn as a picture (made from the masters by scripts/make-art.mjs, or by the
+   admin "Designs" tab for designs added there), so the preview on the car is exactly what is printed.
+   size = picture size in source px, pill = the sticker sheet inside it. 'mask' art is split into black, white (blue), first colour
+   (red) and second colour (green) so the two colours can be recoloured (a colour-matrix filter, see toneMatrix); 'rgb' art keeps
+   its own colours. Built-in designs are static files at two widths: 1000 px for phones and low-memory devices, 1600 px otherwise.
+   Designs added in the admin come from the shop's server (src(w) = their picture URL) and are registered at run time (registerArt). */
+interface ArtSrc { mode: 'mask' | 'rgb'; size: number[]; pill: number[]; src: (w: number) => string }
+const ART_SIZE = [2000, 764], ART_PILL = [0, 0, 2000, 764];
+const staticSrc = (name: string, ext: string) => (w: number) => IMG_DIR + `art-${name}-${w}.${ext}`;
+const ART_SRC: Record<string, ArtSrc> = {
+  flame: { mode: 'mask', size: ART_SIZE, pill: ART_PILL, src: staticSrc('flame', 'png') },
+  stealth: { mode: 'rgb', size: ART_SIZE, pill: ART_PILL, src: staticSrc('stealth', 'webp') },
 };
 const NO_ART = { door: (..._a: any[]) => '', win: (..._a: any[]) => '' };
-const SIGNATURE = (DATA.designs as any[]).filter((d) => d.art && ART_SRC[d.art]);
 
 /* ---------- Car photo + sticker zones (coordinates in the 2000×1125 photo) ---------- */
 const IMG = IMG_DIR + 'ami-side.webp';
@@ -63,8 +61,6 @@ const MODEL_DEFS: Record<string, any> = {
 };
 const MOD = (m: unknown) => (typeof m === 'string' && Object.prototype.hasOwnProperty.call(MODEL_DEFS, m) ? MODEL_DEFS[m] : MODEL_DEFS.qs);
 const viewsOf = (m: unknown): Record<string, number[]> => MOD(m).views || VIEWS;
-const fillDoor = (c: string) => `<rect x="860" y="645" width="300" height="130" fill="${c}"/>`;
-const fillWin = (c: string) => `<rect x="1150" y="335" width="160" height="165" fill="${c}"/>`;
 
 /* ---------- Camera angles (Ami 2025) ----------
    Photos: assets/img/ami/<car colour>-<angle>.webp, all 2000×1125 and lined up with the side photo's car. The side view keeps the
@@ -191,6 +187,32 @@ const zonesOf = (o: Partial<Cfg>) => {
   return { door: inc.includes('door'), win: inc.includes('window'), accent: inc.includes('accent'), rims: inc.includes('rims') };
 };
 const zonesKey = (o: Partial<Cfg>) => Object.values(zonesOf(o)).join();
+
+/* ---------- Coloured Citroën badges (Ami 2025 only) ----------
+   The logo on the front and rear of the car can be ordered in colour 1 or colour 2 of the design. For every car colour and view
+   (front, front ¾, rear) scripts/make-badges.py cut the factory logo out of the photo: a "bg" patch (the photo without the logo)
+   and an "a" picture (the logo's shape and shading). The preview draws the patch, then the shape tinted with the chosen colour
+   (a colour-matrix filter, like the stickers). badges.json says where each patch sits in the 2000×1125 photo. */
+/* Colour of the bare door panel (what shows in the gap of the sticker): sampled from the photo around the door, per car colour and angle (scripts/make-panel.py). */
+const panelOf = (m: unknown, t: unknown, ang: Angle): string => { const P = PANEL as Record<string, string>; return (MOD(m) === MODEL_DEFS.qs ? P[trimOf(m, t) + '-' + ang] : P.pop) || '#18191A'; };
+const badgeBox = (trim: string, ang: Angle): number[] | undefined => (BADGES as Record<string, number[]>)[trim + '-' + ang];
+const badgeOn = (o: Partial<Cfg>) => !!o.bcOn && MOD(o.model) === MODEL_DEFS.qs;
+const badgeURLs = (o: Partial<Cfg>, ang: Angle): string[] => {
+  const k = trimOf(o.model, o.trim) + '-' + ang;
+  return badgeOn(o) && badgeBox(trimOf(o.model, o.trim), ang) ? [`${IMG_DIR}badge/badge-${k}-bg.png`, `${IMG_DIR}badge/badge-${k}-a.png`] : [];
+};
+const badgeHex = (o: Partial<Cfg>) => hex(o.bcPick === 2 ? o.c2 as string : o.c1 as string);
+/* Logo shape: grey = shading (204 = 1.0), so each channel is multiplied by colour / 0.8. */
+const badgeMatrix = (h: string) => [1, 3, 5].map((i) => ((parseInt(h.slice(i, i + 2), 16) / 255) * 1.25).toFixed(4)).map((v) => `${v} 0 0 0 0`).join(' ') + ' 0 0 0 1 0';
+function badgeLayer(u: string, o: Partial<Cfg>, ang: Angle) {
+  const [bg, a] = badgeURLs(o, ang), B = badgeBox(trimOf(o.model, o.trim), ang);
+  if (!bg || !B) return { defs: '', body: '' };
+  const at = `x="${B[0]}" y="${B[1]}" width="${B[2]}" height="${B[3]}"`;
+  return {
+    defs: `<filter id="${u}-bc" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feColorMatrix class="bc-fm" type="matrix" values="${badgeMatrix(badgeHex(o))}"/></filter>`,
+    body: `<image href="${bg}" ${at}/><image href="${a}" ${at} filter="url(#${u}-bc)"/>`,
+  };
+}
 /* Rims of each photo: [cx, cy, rx, ry] of the outer rim edge. Side views come from MODEL_DEFS; the ¾ view sees them as ellipses;
    the front and rear views show no rim face. */
 const RIMS34: Record<string, number[][]> = {
@@ -248,49 +270,7 @@ function nightLayers(u: string, o: CarOpts, ang: Angle, img: string) {
 }
 
 /* Each design draws into the door panel and the rear window; everything is clipped to those two shapes. */
-export const ART: Record<string, { door: (a: string, b: string, u: string) => string; win: (a: string, b: string, u: string) => string }> = {
-  'street-flow': {
-    door: (a, b) => fillDoor(a) + `<path d="M860 744 C925 668 1040 648 1160 684 L1160 708 C1050 676 958 690 904 775 L860 775Z" fill="${b}"/><circle cx="906" cy="688" r="12" fill="${b}"/>`,
-    win: (a, b) => fillWin(a) + `<path d="M1150 402 C1200 382 1252 396 1300 432 L1300 452 C1250 420 1200 412 1150 428Z" fill="${b}"/><ellipse cx="1262" cy="480" rx="46" ry="27" fill="${b}"/>` },
-  'racing-lines': {
-    door: (a, b) => [[892, 42], [946, 22], [980, 11], [1003, 5]].map(([s, w]) => `<polygon points="${s},775 ${s + w},775 ${s + w + 52},645 ${s + 52},645" fill="${a}"/>`).join('') + `<rect x="860" y="667" width="300" height="5" fill="${b}"/>`,
-    win: (a, b) => `<polygon points="1160,500 1202,500 1272,335 1230,335" fill="${a}"/><polygon points="1214,500 1228,500 1298,335 1284,335" fill="${b}"/>` },
-  'neon-wave': {
-    door: (a, b) => [[9, a, 1, 700], [3, b, 1, 716], [6, a, .7, 729], [2, b, .9, 684], [4, a, .5, 752]].map(([w, c, o, y]: any[], k) => `<path d="${wave(860, 1160, y, 8, 24, k * .9)}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" opacity="${o}"/>`).join(''),
-    win: (a, b) => [[8, a, 1, 392], [3, b, 1, 408], [6, a, .7, 424], [2, b, .9, 440], [5, a, .55, 458]].map(([w, c, o, y]: any[], k) => `<path d="${wave(1150, 1308, y, 7, 16, k * .9)}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" opacity="${o}"/>`).join('') },
-  'retro-stripe': {
-    door: (a, b) => `<rect x="860" y="688" width="300" height="17" fill="${a}"/><rect x="860" y="711" width="300" height="9" fill="${b}"/><rect x="860" y="726" width="300" height="5" fill="${a}"/>`,
-    win: (a, b) => `<g transform="rotate(-24 1222 450)"><rect x="1120" y="428" width="240" height="17" fill="${a}"/><rect x="1120" y="451" width="240" height="9" fill="${b}"/><rect x="1120" y="466" width="240" height="5" fill="${a}"/></g>` },
-  'urban-camo': {
-    door: (a, b) => { const R = rng(7), c = [b, mix(a, '#000000', .45), mix(b, '#000000', .4)]; let s = fillDoor(a); for (let i = 0; i < 40; i++) s += `<path d="${blob(866 + R() * 290, 650 + R() * 120, 8 + R() * 12, R, 7)}" fill="${c[i % 3]}"/>`; return s; },
-    win: (a, b) => { const R = rng(19), c = [b, mix(a, '#000000', .45), mix(b, '#000000', .4)]; let s = fillWin(a); for (let i = 0; i < 26; i++) s += `<path d="${blob(1152 + R() * 156, 338 + R() * 160, 7 + R() * 11, R, 7)}" fill="${c[i % 3]}"/>`; return s; } },
-  'pixel': {
-    door: (a, b) => { const R = rng(11); let s = ''; for (let x = 876; x < 1150; x += 11) for (let y = 658; y < 764; y += 11) { const t = (x - 876) / 271; if (R() < t * t * 1.15 + .03) s += `<rect x="${x + 1}" y="${y + 1}" width="9" height="9" fill="${R() < .72 ? a : b}"/>`; } return s; },
-    win: (a, b) => { const R = rng(5); let s = ''; for (let x = 1158; x < 1306; x += 11) for (let y = 345; y < 492; y += 11) { const t = (y - 345) / 144; if (R() < t * 1.05 + .05) s += `<rect x="${x + 1}" y="${y + 1}" width="9" height="9" fill="${R() < .72 ? a : b}"/>`; } return s; } },
-  'checker': {
-    door: (a, b, u) => `<defs><pattern id="${u}-ck" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${a}"/><rect x="8" y="8" width="8" height="8" fill="${a}"/></pattern></defs>
-      <polygon points="985,775 1062,645 1160,645 1160,775" fill="url(#${u}-ck)"/><line x1="966" y1="775" x2="1043" y2="645" stroke="${b}" stroke-width="7"/><line x1="950" y1="775" x2="1027" y2="645" stroke="${b}" stroke-width="2.5"/>`,
-    win: (a, b, u) => `<defs><pattern id="${u}-cw" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${a}"/><rect x="8" y="8" width="8" height="8" fill="${a}"/></pattern></defs>
-      ${fillWin('url(#' + u + '-cw)')}<rect x="1150" y="335" width="160" height="40" fill="${b}"/>` },
-  'halftone': {
-    door: (a, b) => { let s = '', row = 0; for (let y = 660; y < 766; y += 8, row++) for (let x = 878 + (row % 2) * 4.5; x < 1150; x += 9) { const r = (x - 876) / 271 * 4.6 - .3; if (r > .4) s += `<circle cx="${x}" cy="${y}" r="${Math.min(r, 4.7).toFixed(2)}" fill="${a}"/>`; } return s + `<rect x="860" y="660" width="300" height="4" fill="${b}"/>`; },
-    win: (a, b) => { let s = '', row = 0; for (let y = 347; y < 492; y += 8, row++) for (let x = 1156 + (row % 2) * 4.5; x < 1306; x += 9) { const r = (y - 345) / 144 * 4.6 + .2; s += `<circle cx="${x}" cy="${y}" r="${Math.min(r, 4.7).toFixed(2)}" fill="${a}"/>`; } return s; } },
-  'pinstripe': {
-    door: (a, b) => `<rect x="885" y="667" width="253" height="86" rx="34" fill="none" stroke="${a}" stroke-width="4"/><rect x="894" y="676" width="235" height="68" rx="26" fill="none" stroke="${b}" stroke-width="1.5"/>`,
-    win: (a, b) => `<path d="M1169 355 L1221 364 L1286 481 L1205 481 Z" fill="none" stroke="${a}" stroke-width="4" stroke-linejoin="round"/><path d="M1177 365 L1216 372 L1274 473 L1211 473 Z" fill="none" stroke="${b}" stroke-width="1.5" stroke-linejoin="round"/>` },
-  'bolt': {
-    door: (a, b) => { const p = '886,690 1002,670 968,706 1084,686 928,758 962,722 894,730'; return `<polygon points="${p}" fill="${b}" transform="translate(5 4)"/><polygon points="${p}" fill="${a}"/>`; },
-    win: (a, b) => fillWin(a) + `<polygon points="1180,370 1236,380 1214,414 1262,422 1203,486 1220,434 1188,429" fill="${b}"/>` },
-  'contour': {
-    door: (a, b) => { let s = ''; for (let k = 1; k <= 16; k++) { const r = 12 * k; let d = ''; for (let i = 0; i <= 64; i++) { const t = i / 64 * Math.PI * 2, rr = r * (1 + .12 * Math.sin(3 * t + k * .6) + .06 * Math.sin(5 * t - k)); d += (i ? 'L' : 'M') + (930 + Math.cos(t) * rr * 1.6).toFixed(1) + ' ' + (770 + Math.sin(t) * rr * .8).toFixed(1); } s += `<path d="${d}Z" fill="none" stroke="${k % 4 === 0 ? b : a}" stroke-width="${k % 4 === 0 ? 2.6 : 1.5}"/>`; } return s; },
-    win: (a, b) => { let s = ''; for (let k = 1; k <= 16; k++) { const r = 11 * k; let d = ''; for (let i = 0; i <= 64; i++) { const t = i / 64 * Math.PI * 2, rr = r * (1 + .12 * Math.sin(3 * t + k * .5) + .06 * Math.sin(4 * t - k)); d += (i ? 'L' : 'M') + (1292 + Math.cos(t) * rr * 1.1).toFixed(1) + ' ' + (342 + Math.sin(t) * rr).toFixed(1); } s += `<path d="${d}Z" fill="none" stroke="${k % 4 === 0 ? b : a}" stroke-width="${k % 4 === 0 ? 2.6 : 1.5}"/>`; } return s; } },
-  'sunset': {
-    door: (a, b, u) => `<defs><linearGradient id="${u}-sd" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${b}"/><stop offset="1" stop-color="${a}"/></linearGradient></defs>
-      <rect x="860" y="690" width="300" height="13" fill="url(#${u}-sd)"/><rect x="860" y="709" width="300" height="9" fill="url(#${u}-sd)"/><rect x="860" y="724" width="300" height="6" fill="url(#${u}-sd)"/>`,
-    win: (a, b, u) => { let bands = '', y = 372, h = 20, g = 3; while (y < 492) { bands += `<rect x="1150" y="${y.toFixed(1)}" width="160" height="${h.toFixed(1)}"/>`; y += h + g; h = Math.max(5, h - 3); g += 1.6; }
-      return `<defs><linearGradient id="${u}-sw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset=".55" stop-color="${b}"/></linearGradient><clipPath id="${u}-sb">${bands}</clipPath></defs>
-      <circle cx="1236" cy="492" r="126" fill="url(#${u}-sw)" clip-path="url(#${u}-sb)"/>`; } },
-};
+export const ART: Record<string, { door: (a: string, b: string, u: string) => string; win: (a: string, b: string, u: string) => string }> = {};
 
 /* Signature artwork: the whole door shape maps onto the door panel; a section of the same art (left of the badge) fills the rear window.
    The picture size follows the device: 1000 px files on small screens / low memory, 1600 px otherwise (the server render uses the
@@ -307,20 +287,31 @@ const toneMatrix = (a: string, b: string) => {
   const L = p(a), Dk = p(b);
   return [0, 1, 2].map((ch) => `${L[ch]} ${Dk[ch]} 1 0 0`).join(' ') + ' 0 0 0 1 0';
 };
-SIGNATURE.forEach((s) => {
-  const S = ART_SRC[s.art], [l, t, r, b] = S.pill, i = 6, href = IMG_DIR + S.files[ART_W];
+/* Draws a design's picture into the door panel (whole sheet) and the rear window (a section of the same art, left of the badge). */
+export function registerArt(id: string, S: ArtSrc) {
+  const [l, t, r, b] = S.pill, i = 0;
   const art = (x: number, y: number, w: number, h: number, vb: number[], a: string, bb: string, u: string) => {
     const filt = S.mode === 'mask' ? `<filter id="${u}-tone" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${toneMatrix(a, bb)}"/></filter>` : '';
     return `${filt}<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${vb.join(' ')}" preserveAspectRatio="none" overflow="hidden">
-      <image href="${href}" width="${S.size[0]}" height="${S.size[1]}"${filt ? ` filter="url(#${u}-tone)"` : ''}/></svg>`;
+      <image href="${S.src(ART_W)}" width="${S.size[0]}" height="${S.size[1]}"${filt ? ` filter="url(#${u}-tone)"` : ''}/></svg>`;
   };
-  ART[s.id] = {
+  ART[id] = {
     door: (a, bb, u) => art(872, 654, 279, 112, [l + i, t + i, r - l - 2 * i, b - t - 2 * i], a, bb, u + 'd'),
     win: (a, bb, u) => art(1161, 345, 139, 144, [l + 370, t + 8, 650, b - t - 16], a, bb, u + 'w'),
   };
-});
+}
+/* Built-in designs (designs.json "art" names one of ART_SRC). */
+(DATA.designs as any[]).forEach((d) => { if (d.art && ART_SRC[d.art]) registerArt(d.id, ART_SRC[d.art]); });
+/* A design added in the admin: its preview pictures live on the shop's server and are passed in as ready-to-use blob: addresses
+   (the page's security policy only lets images load from itself, data: and blob:). */
+export function registerRemoteArt(id: string, mode: 'mask' | 'rgb', urls: { 1000: string; 1600: string }) {
+  registerArt(id, { mode, size: ART_SIZE, pill: ART_PILL, src: (w) => (w >= 1600 ? urls[1600] : urls[1000]) });
+}
+export { ART_W };
 
 const growPlate = (P: number[]) => [P[0] - 3, P[1] - 3, P[2] + 6, P[3] + 6, P[4] + 3];
+/* The door's middle part: the design runs through it (default) or it keeps the OFS/T logo plate. */
+const centreFull = (o: Partial<Cfg>) => o.centre !== 'logo';
 const plateText = (o: Partial<Cfg>) => (o.numberOn && o.number ? esc(o.number) : '');
 
 /* Accessible name of a car picture: design, colours (live stage only), Ami version and badge text. */
@@ -328,12 +319,13 @@ function carLabel(kit: Kit, o: Cfg, full: boolean, ang: Angle = 'side') {
   const d = kit.D(o.design)!, T = kit.T;
   let s = T('carDesign', { name: d.name });
   if (full) {
-    const c1 = kit.COLORS[o.c1], c2 = kit.COLORS[o.c2], finish = T(o.finish === 'gloss' ? 'glossLc' : 'matteLc');
-    s += d.fixed || !c1 || !c2 ? T('carInOrig', { finish }) : T('carIn', { c1: c1.name, c2: c2.name, finish });
+    const c1 = kit.COLORS[o.c1], c2 = kit.COLORS[o.c2];
+    s += d.fixed || !c1 || !c2 ? T('carInOrig') : T('carIn', { c1: c1.name, c2: c2.name });
   }
   s += T('carOn', { model: MOD(o.model).name });
   if (full && ang !== 'side') s += T('carAngle_' + ang);
   if (full && o.numberOn && o.number) s += T('carBadge', { text: o.number });
+  if (full && badgeOn(o)) s += T('carBadgeColour', { colour: kit.COLORS[o.bcPick === 2 ? o.c2 : o.c1]?.name || '' });
   return s;
 }
 
@@ -342,7 +334,7 @@ export function carSVG(kit: Kit, o: CarOpts): string {
   const ang = angleOf(o.model, o.angle);
   if (ang !== 'side') return carSVGAt(kit, o, ang);
   const u = o.uid, a = hex(o.c1), b = hex(o.c2), A = ART[o.design] || NO_ART, M = MOD(o.model), V = viewsOf(o.model), v = V[o.view] || V.full, live = !!o.live;
-  const img = imgOf(o.model, o.trim, 'side'), Z = zonesOf(o), shine = `style="opacity:${o.finish === 'gloss' ? 1 : .25}"`;
+  const img = imgOf(o.model, o.trim, 'side'), Z = zonesOf(o), shine = `style="opacity:.25"`;
   // Rim stickers (if ordered), one on each wheel.
   const ring = Z.rims ? rimRing(u, M.rimR, M.rimR, a, b, shine) : '';
   const rims = ring ? M.wheels.map(([x, y]: number[]) => `<g transform="translate(${x} ${y})">${ring}</g>`).join('') : '';
@@ -353,18 +345,18 @@ export function carSVG(kit: Kit, o: CarOpts): string {
   const N = nightLayers(u, o, 'side', img);
   // Door sticker: panel artwork, its shading, the panel lines and the OFS/T badge plate over the factory badge.
   const door = Z.door ? `<g clip-path="url(#${u}-door)">
-      <rect x="860" y="645" width="300" height="130" fill="#18191A"/>
+      <rect x="860" y="645" width="300" height="130" fill="${panelOf(o.model, o.trim, 'side')}"/>
       <g class="slot-door"><g>${A.door(a, b, u + 'x')}</g></g>
       <rect x="860" y="645" width="300" height="130" fill="url(#${u}-ds)"/>
       <rect class="shine" x="860" y="645" width="300" height="130" fill="url(#${u}-sh)" ${shine}/>
     </g>
     <rect ${M.door} fill="none" stroke="#0E0F10" stroke-width="2.5"/>
     <path d="M876 741.5 H1147" stroke="#060606" stroke-width="3"/><path d="M880 744.2 H1143" stroke="#fff" stroke-opacity=".07" stroke-width="1"/><path d="M1011.5 743 V762" stroke="#060606" stroke-width="2.5"/>
-    <image ${img} clip-path="url(#${u}-badge)"/>
+    ${centreFull(o) ? '' : `<image ${img} clip-path="url(#${u}-badge)"/>
     <rect x="${P[0]}" y="${P[1]}" width="${P[2]}" height="${P[3]}" rx="${P[4]}" fill="url(#${u}-pl)"/><g${M.dx ? ` transform="translate(${M.dx} 0)"` : ''}>
     <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="1050" y="684" width="50" height="44"><image href="${LOGO}" x="1056" y="687" width="37" height="37"/></mask>
     <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1}"/>
-    <text class="plate" x="1074.5" y="711" text-anchor="middle" fill="${a}" style="font:800 15px Archivo,sans-serif;font-stretch:125%;letter-spacing:.06em">${plateText(o)}</text></g>` : '';
+    <text class="plate" x="1074.5" y="711" text-anchor="middle" fill="${a}" style="font:800 15px Archivo,sans-serif;font-stretch:125%;letter-spacing:.06em">${plateText(o)}</text></g>`}` : '';
   const win = Z.win ? `<g clip-path="url(#${u}-win)"><g${M.winT ? ` transform="${M.winT}"` : ''}>
       <rect x="1150" y="335" width="160" height="165" fill="#1C2022"/>
       <g class="slot-win"><g>${A.win(a, b, u + 'x')}</g></g>
@@ -402,10 +394,10 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
   const trim = trimOf(o.model, o.trim), z = zoneOf(trim, ang), v = z.views[o.view] || z.views.full, Z = zonesOf(o);
   const a11y = o.decorative ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="${esc(carLabel(kit, o, live, ang))}"`;
   const head = `<svg class="car-svg" viewBox="${v.join(' ')}" xmlns="${NS}" ${a11y}>`;
-  const N = nightLayers(u, o, ang, img);
-  if (!z.Hd) return head + `<defs>${N.defs}</defs><g>${N.under}<image ${img}/>${N.over}</g></svg>`;
+  const N = nightLayers(u, o, ang, img), BC = badgeLayer(u, o, ang);
+  if (!z.Hd) return head + `<defs>${N.defs}${BC.defs}</defs><g>${N.under}<image ${img}/>${BC.body}${N.over}</g></svg>`;
   // The plate is drawn a little larger than in the side view so the factory badge (and the green pill) never peeks out at its edge.
-  const shine = `style="opacity:${o.finish === 'gloss' ? 1 : .25}"`, P = growPlate(MODEL_DEFS.qs.plate);
+  const shine = `style="opacity:.25"`, P = growPlate(MODEL_DEFS.qs.plate);
   const D = Z.door ? warp(u + '-dw', z.Hd, [860, 645, 300, 130], `<g class="slot-door"><g>${A.door(a, b, u + 'x')}</g></g>`) : { defs: '', body: '' };
   const W = Z.win ? warp(u + '-ww', z.Hw, [1150, 335, 160, 165], `<g class="slot-win"><g>${A.win(a, b, u + 'x')}</g></g>`) : { defs: '', body: '' };
   // Door panel lines of the side view (lower crease and the short upright), mapped as straight lines.
@@ -413,19 +405,19 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
   const sw = (n: number) => (n * z.ds).toFixed(2); // stroke widths scale with the door; the outlines keep a minimum so no factory graphic edge shows
   const rims = Z.rims ? (RIMS34[trim + '-' + ang] || RIMS34[ang] || []).map(([x, y, rx, ry]) => `<g transform="translate(${x} ${y})">${rimRing(u, rx, ry, a, b, shine)}</g>`).join('') : '';
   const door = Z.door ? `<g clip-path="url(#${u}-door)">
-      <path d="${z.door}" fill="#18191A"/>
+      <path d="${z.door}" fill="${panelOf(o.model, o.trim, ang)}"/>
       ${D.body}
       <g transform="${mat(z.dA)}"><rect x="860" y="645" width="300" height="130" fill="url(#${u}-ds)"/><rect class="shine" x="860" y="645" width="300" height="130" fill="url(#${u}-sh)" ${shine}/></g>
     </g>
     <path d="${z.door}" fill="none" stroke="#0E0F10" stroke-width="${Math.max(3.2 * z.ds, 2.8).toFixed(2)}" stroke-linejoin="round"/>
     ${line(876, 741.5, 1147, 741.5, `stroke="#060606" stroke-width="${sw(3)}"`)}${line(880, 744.2, 1143, 744.2, `stroke="#fff" stroke-opacity=".07" stroke-width="${sw(1)}"`)}${line(1011.5, 743, 1011.5, 762, `stroke="#060606" stroke-width="${sw(2.5)}"`)}
-    <image ${img} clip-path="url(#${u}-badge)"/>
+    ${centreFull(o) ? '' : `<image ${img} clip-path="url(#${u}-badge)"/>
     <g transform="${mat(z.bA)}">
       <rect x="${P[0]}" y="${P[1]}" width="${P[2]}" height="${P[3]}" rx="${P[4]}" fill="url(#${u}-pl)"/>
       <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="1050" y="684" width="50" height="44"><image href="${LOGO}" x="1056" y="687" width="37" height="37"/></mask>
       <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1}"/>
       <text class="plate" x="1074.5" y="711" text-anchor="middle" fill="${a}" style="font:800 15px Archivo,sans-serif;font-stretch:125%;letter-spacing:.06em">${plateText(o)}</text>
-    </g>` : '';
+    </g>`}` : '';
   const win = Z.win ? `<g clip-path="url(#${u}-win)">
       <path d="${z.win}" fill="#1C2022"/>
       ${W.body}
@@ -441,11 +433,12 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
     <linearGradient id="${u}-ws" x1="0" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>
     <linearGradient id="${u}-sh" x1="0" y1="0" x2="1" y2=".4"><stop offset=".25" stop-color="#fff" stop-opacity="0"/><stop offset=".4" stop-color="#fff" stop-opacity=".22"/><stop offset=".47" stop-color="#fff" stop-opacity=".04"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/><stop offset=".78" stop-color="#fff" stop-opacity=".12"/><stop offset=".84" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <linearGradient id="${u}-pl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#141414"/></linearGradient>
-    ${D.defs}${W.defs}${N.defs}
+    ${D.defs}${W.defs}${N.defs}${BC.defs}
   </defs>
   <g>
     ${N.under}
     <image ${img}/>
+    ${BC.body}
     ${rims}
     ${door}
     ${win}
@@ -488,8 +481,8 @@ export class Stage {
   }
   /* Rebuild once the photo for the current config and angle is ready, so there is never a blank frame. */
   swap() {
-    const n = ++this.seq, go = () => { if (n === this.seq) this.build(); };
-    photoReady(photoHref(this.cfg.model, this.cfg.trim, angleOf(this.cfg.model, this.ang))).then(go, go);
+    const n = ++this.seq, go = () => { if (n === this.seq) this.build(); }, ang = angleOf(this.cfg.model, this.ang);
+    Promise.all([photoReady(photoHref(this.cfg.model, this.cfg.trim, ang)), ...badgeURLs(this.cfg, ang).map(photoReady)]).then(go, go);
   }
   /* The language changed: new accessible name, same picture. */
   setKit(kit: Kit) { this.kit = kit; if (this.svg) this.svg.setAttribute('aria-label', carLabel(kit, this.cfg, true, this.ang)); }
@@ -499,8 +492,10 @@ export class Stage {
     // Another Ami version or car colour needs another photo.
     if ((p.model || 'qs') !== (cfg.model || 'qs') || trimOf(p.model, p.trim) !== trimOf(cfg.model, cfg.trim)) { this.swap(); this.preload(); return; }
     if (zonesKey(p) !== zonesKey(cfg)) { this.build(); return; } // other kit pieces: same photo, new set of stickers
+    // The door's middle part or the coloured badges were switched: other layers, same photo (badge pictures load first).
+    if (centreFull(p) !== centreFull(cfg) || badgeOn(p) !== badgeOn(cfg)) { this.swap(); return; }
+    if (badgeOn(cfg)) qa('.bc-fm', this.svg).forEach((el) => el.setAttribute('values', badgeMatrix(badgeHex(cfg))));
     this.svg.setAttribute('aria-label', carLabel(this.kit, cfg, true, this.ang));
-    if (p.finish !== cfg.finish) this.shines.forEach((s) => (s.style.opacity = cfg.finish === 'gloss' ? 1 : .25));
     if (p.design !== cfg.design || p.c1 !== cfg.c1 || p.c2 !== cfg.c2) this.paint();
     // Rim stickers take the new colours directly.
     qa('.rs-a', this.svg).forEach((el) => el.setAttribute('stroke', hex(cfg.c1)));

@@ -21,7 +21,7 @@ src/
   content/{pt,en}/*.html       long prose pages (about, privacy, terms, refunds, cookies)
   data/designs.json, site.json designs, prices, business details, order API address (same files as before)
   i18n/{pt,en}.json            UI strings (same files as before)
-  lib/                         kit (data helpers), car (SVG renderer + live stage), backend (Cloudflare Worker API), mold, motion
+  lib/                         kit (data helpers), car (SVG renderer + live stage), backend (Cloudflare Worker API), printfile (print-ready PDF/SVG from a design's master), motion
   components/, pages/          React components
   styles/site.css              the original stylesheet, unchanged apart from the font paths
 scripts/prerender.mjs          renders every route, writes sitemap.xml, fixes the site URL in robots.txt / llms.txt
@@ -29,7 +29,7 @@ scripts/prerender.mjs          renders every route, writes sitemap.xml, fixes th
 
 ## Editing
 
-- Designs, prices, colours: `src/data/designs.json`; Portuguese tags and colour names in `src/i18n/pt.json`; artwork in `src/lib/car.ts` (`ART`).
+- Designs, prices, colours: `src/data/designs.json`; Portuguese tags and colour names in `src/i18n/pt.json`; print masters in `src/data/masters/*.svg`; the car-preview pictures are made from them with `node scripts/make-art.mjs` (output in `public/assets/img/art-*`). Designs can also be added, hidden or re-priced in the admin "Designs" tab (stored in the `designs` table, see `worker/migrations/0009_designs.sql`).
 - Business details and the optional order backend address (`apiUrl`): `src/data/site.json`.
 - Prose pages: edit the HTML in `src/content/pt/` and `src/content/en/` (keep both in step; `{{root}}` is the language root).
 - Interactive page text: `src/content.ts`; interface strings: `src/i18n/*.json`.

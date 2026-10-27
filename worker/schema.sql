@@ -117,3 +117,25 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 CREATE INDEX IF NOT EXISTS login_attempts_at_idx ON login_attempts (at);
+
+-- Round 5: designs managed from the admin (see migrations/0009_designs.sql)
+CREATE TABLE IF NOT EXISTS designs (
+  id          TEXT PRIMARY KEY CHECK (length(id) BETWEEN 2 AND 40),
+  name        TEXT CHECK (name IS NULL OR length(name) BETWEEN 1 AND 60),
+  tag         TEXT CHECK (tag IS NULL OR length(tag) <= 120),
+  tag_pt      TEXT CHECK (tag_pt IS NULL OR length(tag_pt) <= 120),
+  cat         TEXT CHECK (cat IS NULL OR length(cat) BETWEEN 1 AND 30),
+  price       INTEGER CHECK (price IS NULL OR price BETWEEN 1 AND 999),
+  c1          TEXT CHECK (c1 IS NULL OR length(c1) <= 20),
+  c2          TEXT CHECK (c2 IS NULL OR length(c2) <= 20),
+  fixed       INTEGER CHECK (fixed IS NULL OR fixed IN (0, 1)),
+  hidden      INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1)),
+  mode        TEXT CHECK (mode IS NULL OR mode IN ('mask', 'rgb')),
+  master      TEXT CHECK (master IS NULL OR length(master) <= 1000000),
+  art1000     TEXT CHECK (art1000 IS NULL OR length(art1000) <= 400000),
+  art1600     TEXT CHECK (art1600 IS NULL OR length(art1600) <= 400000),
+  ver         INTEGER NOT NULL DEFAULT 1,
+  sort        INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);

@@ -64,7 +64,7 @@ export default function Home() {
   const c = COPY[lang].home;
   const navigate = useNavigate();
   const { hash } = useLocation();
-  const cycle = HERO_CYCLE.filter((id) => kit.D(id));
+  const cycle = [...HERO_CYCLE.filter((id) => kit.D(id)), ...kit.DESIGNS.map((x) => x.id).filter((id) => !HERO_CYCLE.includes(id))].slice(0, 6); // the chosen ones, then designs added later
   const [i, setI] = useState(0);
   const stopped = useRef(false), paused = useRef(false), visible = useRef(true);
   const hostWrap = useRef<HTMLDivElement>(null);
@@ -144,7 +144,7 @@ export default function Home() {
 
       <div className="section">
         <div className="sec-head"><h2 className="display">{c.popular}</h2><Link className="btn btn-ghost" to={to('shop')}>{c.all(kit.DESIGNS.length)}</Link></div>
-        <div className="grid-cards" id="featured">{FEATURED.map((id) => <DesignCard key={id} d={kit.D(id)!} />)}</div>
+        <div className="grid-cards" id="featured">{[...FEATURED.filter((id) => kit.D(id)), ...kit.DESIGNS.map((x) => x.id).filter((id) => !FEATURED.includes(id))].slice(0, 4).map((id) => <DesignCard key={id} d={kit.D(id)!} />)}</div>
       </div>
 
       <div className="section" style={{ paddingTop: 0 }}>
