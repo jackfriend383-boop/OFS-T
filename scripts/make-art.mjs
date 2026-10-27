@@ -33,7 +33,9 @@ function prepare(svg, d) {
   }
   const base = d.mode === 'mask' ? '#FF0000' : d.base;
   const baseShape = outline ? `<path d="${outline}" fill="${base}" fill-rule="evenodd"/>` : `<rect x="-5" y="-5" width="${SHEET[0] + 10}" height="${SHEET[1] + 10}" fill="${base}"/>`;
-  s = s.replace('<g id="Artwork">', `<g id="Artwork">${baseShape}`);
+  // The art is also clipped at the cut outlines: the printed bleed (5 mm past the cut) would otherwise narrow the gap in the preview.
+  const clip = outline ? `<clipPath id="cutclip"><path d="${outline}" clip-rule="evenodd"/></clipPath>` : '';
+  s = s.replace('<g id="Artwork">', `${clip}<g id="Artwork"${outline ? ' clip-path="url(#cutclip)"' : ''}>${baseShape}`);
   return s;
 }
 

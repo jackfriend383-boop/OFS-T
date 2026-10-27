@@ -270,7 +270,7 @@ function nightLayers(u: string, o: CarOpts, ang: Angle, img: string) {
 }
 
 /* Each design draws into the door panel and the rear window; everything is clipped to those two shapes. */
-export const ART: Record<string, { door: (a: string, b: string, u: string) => string; win: (a: string, b: string, u: string) => string }> = {};
+export const ART: Record<string, { door: (a: string, b: string, u: string, logo?: boolean) => string; win: (a: string, b: string, u: string) => string }> = {};
 
 /* Signature artwork: the whole door shape maps onto the door panel; a section of the same art (left of the badge) fills the rear window.
    The picture size follows the device: 1000 px files on small screens / low memory, 1600 px otherwise (the server render uses the
@@ -287,16 +287,26 @@ const toneMatrix = (a: string, b: string) => {
   const L = p(a), Dk = p(b);
   return [0, 1, 2].map((ch) => `${L[ch]} ${Dk[ch]} 1 0 0`).join(' ') + ' 0 0 0 1 0';
 };
+/* "Logo only" middle part: a plain dark plate with the OFS/T logo, exactly the shape and size of the middle piece of the door sticker
+   (INNER, in millimetres on the sticker sheet, the same for every design), drawn over the design inside the picture so it follows the
+   door in every view. */
+const SHEET_MM = [746, 285];
+const INNER = 'M551 203.6 L544.4 203.7 L537.8 203.7 L531.2 203.7 L524.6 203.7 L518 203.7 L511.4 203.7 L504.8 203.6 L498.2 203.5 L491.6 203.4 L485 203.2 L478.4 203 L471.8 202.9 L465.2 202.7 L458.6 202.4 L452 201.9 L445.6 200.2 L439.7 197.3 L434.3 193.5 L429.6 188.9 L425.9 183.5 L422.9 177.6 L420.9 171.3 L419.8 164.8 L419.4 158.2 L419.4 151.6 L419.4 145 L419.5 138.4 L419.5 131.8 L419.5 125.2 L419.8 118.6 L420.4 112.1 L422.1 105.7 L424.8 99.7 L428.4 94.2 L432.9 89.3 L438.2 85.5 L444.1 82.5 L450.4 80.7 L456.9 79.6 L463.5 78.7 L470 78.2 L476.6 77.6 L483.2 77.2 L489.8 76.9 L496.4 76.5 L503 76.1 L509.6 75.9 L516.2 75.8 L522.8 75.7 L529.4 75.7 L536 75.7 L542.6 75.7 L549.2 75.8 L555.8 75.9 L562.4 76.1 L569 76.4 L575.5 76.6 L582.1 77 L588.7 77.4 L595.3 77.9 L601.9 78.7 L608.4 79.3 L615 80.3 L621.3 82.1 L627.4 84.6 L632.9 88.2 L637.7 92.8 L641.6 98 L644.6 103.9 L646.7 110.2 L647.8 116.7 L648.2 123.2 L648.3 129.8 L648.3 136.4 L648.3 143 L648.3 149.6 L648.2 156.2 L647.9 162.8 L646.7 169.3 L644.7 175.6 L642.1 181.6 L638.5 187.2 L634 192 L628.8 196.1 L623.1 199.3 L616.8 201.5 L610.3 202.4 L603.7 202.8 L597.1 202.9 L590.5 203.1 L583.9 203.3 L577.3 203.4 L570.7 203.4 L564.1 203.5 L557.5 203.6Z';
+const logoPlate = (a: string, u: string, kx: number, ky: number) => `<g transform="scale(${kx.toFixed(4)} ${ky.toFixed(4)})">
+    <linearGradient id="${u}-pl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#141414"/></linearGradient>
+    <path d="${INNER}" fill="url(#${u}-pl)" stroke="#1D1D1D" stroke-width=".5" stroke-linejoin="round"/>
+    <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="490" y="96" width="88" height="88"><image href="${LOGO}" x="494.8" y="100.7" width="78" height="78"/></mask>
+    <rect class="plate-logo" x="490" y="96" width="88" height="88" fill="${a}" mask="url(#${u}-lg)"/></g>`;
 /* Draws a design's picture into the door panel (whole sheet) and the rear window (a section of the same art, left of the badge). */
 export function registerArt(id: string, S: ArtSrc) {
   const [l, t, r, b] = S.pill, i = 0;
-  const art = (x: number, y: number, w: number, h: number, vb: number[], a: string, bb: string, u: string) => {
+  const art = (x: number, y: number, w: number, h: number, vb: number[], a: string, bb: string, u: string, logo = false) => {
     const filt = S.mode === 'mask' ? `<filter id="${u}-tone" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${toneMatrix(a, bb)}"/></filter>` : '';
     return `${filt}<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${vb.join(' ')}" preserveAspectRatio="none" overflow="hidden">
-      <image href="${S.src(ART_W)}" width="${S.size[0]}" height="${S.size[1]}"${filt ? ` filter="url(#${u}-tone)"` : ''}/></svg>`;
+      <image href="${S.src(ART_W)}" width="${S.size[0]}" height="${S.size[1]}"${filt ? ` filter="url(#${u}-tone)"` : ''}/>${logo ? logoPlate(a, u, (r - l) / SHEET_MM[0], (b - t) / SHEET_MM[1]) : ''}</svg>`;
   };
   ART[id] = {
-    door: (a, bb, u) => art(872, 654, 279, 112, [l + i, t + i, r - l - 2 * i, b - t - 2 * i], a, bb, u + 'd'),
+    door: (a, bb, u, logo) => art(872, 654, 279, 112, [l + i, t + i, r - l - 2 * i, b - t - 2 * i], a, bb, u + 'd', !!logo),
     win: (a, bb, u) => art(1161, 345, 139, 144, [l + 370, t + 8, 650, b - t - 16], a, bb, u + 'w'),
   };
 }
@@ -346,17 +356,12 @@ export function carSVG(kit: Kit, o: CarOpts): string {
   // Door sticker: panel artwork, its shading, the panel lines and the OFS/T badge plate over the factory badge.
   const door = Z.door ? `<g clip-path="url(#${u}-door)">
       <rect x="860" y="645" width="300" height="130" fill="${panelOf(o.model, o.trim, 'side')}"/>
-      <g class="slot-door"><g>${A.door(a, b, u + 'x')}</g></g>
+      <g class="slot-door"><g>${A.door(a, b, u + 'x', !centreFull(o))}</g></g>
       <rect x="860" y="645" width="300" height="130" fill="url(#${u}-ds)"/>
       <rect class="shine" x="860" y="645" width="300" height="130" fill="url(#${u}-sh)" ${shine}/>
     </g>
     <rect ${M.door} fill="none" stroke="#0E0F10" stroke-width="2.5"/>
-    <path d="M876 741.5 H1147" stroke="#060606" stroke-width="3"/><path d="M880 744.2 H1143" stroke="#fff" stroke-opacity=".07" stroke-width="1"/><path d="M1011.5 743 V762" stroke="#060606" stroke-width="2.5"/>
-    ${centreFull(o) ? '' : `<image ${img} clip-path="url(#${u}-badge)"/>
-    <rect x="${P[0]}" y="${P[1]}" width="${P[2]}" height="${P[3]}" rx="${P[4]}" fill="url(#${u}-pl)"/><g${M.dx ? ` transform="translate(${M.dx} 0)"` : ''}>
-    <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="1050" y="684" width="50" height="44"><image href="${LOGO}" x="1056" y="687" width="37" height="37"/></mask>
-    <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1}"/>
-    <text class="plate" x="1074.5" y="711" text-anchor="middle" fill="${a}" style="font:800 15px Archivo,sans-serif;font-stretch:125%;letter-spacing:.06em">${plateText(o)}</text></g>`}` : '';
+    <path d="M876 741.5 H1147" stroke="#060606" stroke-width="3"/><path d="M880 744.2 H1143" stroke="#fff" stroke-opacity=".07" stroke-width="1"/><path d="M1011.5 743 V762" stroke="#060606" stroke-width="2.5"/>` : '';
   const win = Z.win ? `<g clip-path="url(#${u}-win)"><g${M.winT ? ` transform="${M.winT}"` : ''}>
       <rect x="1150" y="335" width="160" height="165" fill="#1C2022"/>
       <g class="slot-win"><g>${A.win(a, b, u + 'x')}</g></g>
@@ -398,7 +403,7 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
   if (!z.Hd) return head + `<defs>${N.defs}${BC.defs}</defs><g>${N.under}<image ${img}/>${BC.body}${N.over}</g></svg>`;
   // The plate is drawn a little larger than in the side view so the factory badge (and the green pill) never peeks out at its edge.
   const shine = `style="opacity:.25"`, P = growPlate(MODEL_DEFS.qs.plate);
-  const D = Z.door ? warp(u + '-dw', z.Hd, [860, 645, 300, 130], `<g class="slot-door"><g>${A.door(a, b, u + 'x')}</g></g>`) : { defs: '', body: '' };
+  const D = Z.door ? warp(u + '-dw', z.Hd, [860, 645, 300, 130], `<g class="slot-door"><g>${A.door(a, b, u + 'x', !centreFull(o))}</g></g>`) : { defs: '', body: '' };
   const W = Z.win ? warp(u + '-ww', z.Hw, [1150, 335, 160, 165], `<g class="slot-win"><g>${A.win(a, b, u + 'x')}</g></g>`) : { defs: '', body: '' };
   // Door panel lines of the side view (lower crease and the short upright), mapped as straight lines.
   const line = (x0: number, y0: number, x1: number, y1: number, st: string) => { const p = hp(z.Hd, x0, y0), q2 = hp(z.Hd, x1, y1); return `<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)} L${q2[0].toFixed(1)} ${q2[1].toFixed(1)}" ${st}/>`; };
@@ -410,14 +415,7 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
       <g transform="${mat(z.dA)}"><rect x="860" y="645" width="300" height="130" fill="url(#${u}-ds)"/><rect class="shine" x="860" y="645" width="300" height="130" fill="url(#${u}-sh)" ${shine}/></g>
     </g>
     <path d="${z.door}" fill="none" stroke="#0E0F10" stroke-width="${Math.max(3.2 * z.ds, 2.8).toFixed(2)}" stroke-linejoin="round"/>
-    ${line(876, 741.5, 1147, 741.5, `stroke="#060606" stroke-width="${sw(3)}"`)}${line(880, 744.2, 1143, 744.2, `stroke="#fff" stroke-opacity=".07" stroke-width="${sw(1)}"`)}${line(1011.5, 743, 1011.5, 762, `stroke="#060606" stroke-width="${sw(2.5)}"`)}
-    ${centreFull(o) ? '' : `<image ${img} clip-path="url(#${u}-badge)"/>
-    <g transform="${mat(z.bA)}">
-      <rect x="${P[0]}" y="${P[1]}" width="${P[2]}" height="${P[3]}" rx="${P[4]}" fill="url(#${u}-pl)"/>
-      <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="1050" y="684" width="50" height="44"><image href="${LOGO}" x="1056" y="687" width="37" height="37"/></mask>
-      <rect class="plate-logo" x="1050" y="684" width="50" height="44" fill="${a}" mask="url(#${u}-lg)" style="opacity:${plateText(o) ? 0 : 1}"/>
-      <text class="plate" x="1074.5" y="711" text-anchor="middle" fill="${a}" style="font:800 15px Archivo,sans-serif;font-stretch:125%;letter-spacing:.06em">${plateText(o)}</text>
-    </g>`}` : '';
+    ${line(876, 741.5, 1147, 741.5, `stroke="#060606" stroke-width="${sw(3)}"`)}${line(880, 744.2, 1143, 744.2, `stroke="#fff" stroke-opacity=".07" stroke-width="${sw(1)}"`)}${line(1011.5, 743, 1011.5, 762, `stroke="#060606" stroke-width="${sw(2.5)}"`)}` : '';
   const win = Z.win ? `<g clip-path="url(#${u}-win)">
       <path d="${z.win}" fill="#1C2022"/>
       ${W.body}
@@ -538,7 +536,7 @@ export class Stage {
     const fns = [A.door, A.win];
     [0, 1].forEach((n) => {
       const slot = this.slots[n]; if (!slot) return;
-      const g = document.createElementNS(NS, 'g'); g.innerHTML = fns[n](hex(C.c1), hex(C.c2), lid + n);
+      const g = document.createElementNS(NS, 'g'); g.innerHTML = fns[n](hex(C.c1), hex(C.c2), lid + n, n === 0 && !centreFull(C));
       slot.replaceChildren(g);
     });
   }

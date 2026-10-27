@@ -240,6 +240,11 @@ export async function artPictures(master: string, mode: ArtMode): Promise<{ w100
   }
   bg.setAttribute('fill', baseFill);
   const art = root.querySelector('#Artwork')!; art.insertBefore(bg, art.firstChild);
+  if (outline) { // also clip the art at the cut outlines: the printed bleed (past the cut) would otherwise narrow the gap in the preview
+    const cp = doc.createElementNS(NS, 'clipPath'), cpp = doc.createElementNS(NS, 'path');
+    cp.setAttribute('id', 'cutclip'); cpp.setAttribute('d', outline); cpp.setAttribute('clip-rule', 'evenodd'); cp.append(cpp);
+    root.insertBefore(cp, art); art.setAttribute('clip-path', 'url(#cutclip)');
+  }
   root.setAttribute('viewBox', `0 0 ${sheet.w} ${sheet.h}`);
   root.setAttribute('shape-rendering', 'geometricPrecision');
   const make = async (W: number) => {
