@@ -24,17 +24,17 @@ and `[CONFIRM: …]` = `[CONFIRMAR: …]`.
 | `[LEGAL NAME]` (person's full name or company name) | footer (`src/components/Layout.tsx`), `src/data/site.json` `legalName`, privacy, terms, refunds |
 | `[NIF]` | footer, `site.json` `nif`, privacy, terms |
 | `[STREET ADDRESS]`, `[POSTCODE]`, `[CITY]` | footer, `site.json` `address`, privacy, terms, refunds |
-| `[CONTACT EMAIL]` | footer, `site.json` `email`, privacy, terms, refunds |
+| `[CONTACT EMAIL]` | done: `geral@ofstdesigns.com` in footer, `site.json`, privacy, terms and refunds |
 | `[PHONE (optional)]` | `site.json` `phone`, terms (remove if not used) |
 | `[SECURITY CONTACT EMAIL]` / `[security contact email]`, `[N]` working days | `site.json` `securityEmail`, `SECURITY.md` |
 | `[COMMERCIAL REGISTRY DETAILS, if a company.]` | terms §1 |
-| `[DATA PROTECTION OFFICER: …]` | privacy §1 (a DPO is normally not required for a small shop; say "not appointed" or remove) |
-| `[HOSTING PROVIDER, e.g. GitHub, Inc. (GitHub Pages)]`, `[HOSTING PROVIDER]` | privacy §2 and §4, cookies §5 |
+| `[DATA PROTECTION OFFICER: …]` | removed from privacy §1; no DPO designated |
+| `[HOSTING PROVIDER, e.g. GitHub, Inc. (GitHub Pages)]`, `[HOSTING PROVIDER]` | done: `dominios.pt` in privacy and cookies |
 | `[EMAIL PROVIDER]` | privacy §4 |
-| `[CARRIER NAME]` | privacy §4 |
+| `[CARRIER NAME]` | removed from privacy §4; no carrier is named |
 | `[PAYMENT PROVIDER]`, `[PAYMENT: …]` | privacy §2 and §4 |
 | `[PAYMENT METHODS, …]` | terms §6 |
-| `[CERTIFIED INVOICING SOFTWARE PROVIDER]`, `[ACCOUNTANT]` | privacy §4 |
+| `[CERTIFIED INVOICING SOFTWARE PROVIDER]`, `[ACCOUNTANT]` | removed from privacy §4; invoices are reported to the tax authority |
 | `[CONFIRM: … international transfers …]` | privacy §5 (GitHub Pages is a US provider, so a transfer note is likely needed while hosted there) |
 | `[RETENTION PERIOD]`, `[RETENTION PERIOD, e.g. 2 years]` | privacy §6 |
 | `[DELIVERY COUNTRIES]`, `[CONFIRM: in case of any discrepancy, the Portuguese version prevails]` | terms §2 (both versions now exist; decide which prevails) |

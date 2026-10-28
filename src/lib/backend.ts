@@ -242,12 +242,6 @@ export function makeBackend(kit: Kit) {
     if (!row || typeof row !== 'object') throw new BackendError(MSG.denied, 'denied');
     return row;
   }
-  /* Admin: send the payment confirmation email again to paid orders (the server sends at most 40 per call). */
-  async function resendPaidEmails(): Promise<{ total: number; sent: number; failed: number; remaining: number; reason: string | null }> {
-    const r = await authed('/api/admin/resend-paid-emails', { method: 'POST' });
-    return { total: +r?.total || 0, sent: +r?.sent || 0, failed: +r?.failed || 0, remaining: +r?.remaining || 0, reason: typeof r?.reason === 'string' ? r.reason : null };
-  }
-
   /* ---------- Designs (added in the admin; the two built-in ones live in designs.json) ---------- */
   /* Public list of the owner's design changes and extra designs. Failing is fine: the site then shows the built-in designs. */
   async function designsPublic(): Promise<unknown[]> {
@@ -279,6 +273,6 @@ export function makeBackend(kit: Kit) {
     if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
     return authed('/api/admin/designs/' + id, { method: 'DELETE' });
   }
-  return { configured: backendConfigured, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus, resendPaidEmails };
+  return { configured: backendConfigured, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus };
 }
 export type Backend = ReturnType<typeof makeBackend>;

@@ -19,7 +19,6 @@ import { sendMail, signInEmail, paidEmail, invoiceEmail, shippedEmail, newOrderE
             POST   /api/admin/logout           revokes every admin session
             GET    /api/admin/orders           newest 500 orders
             PATCH  /api/admin/orders/:id       {status}
-            POST   /api/admin/resend-paid-emails  send the payment confirmation again to paid orders (max 40 per call)
    Trust boundaries: every byte of a request is untrusted (the site's JS can be modified by anyone). Orders are checked
    against the same limits as worker/schema.sql. Admin identity is a random bearer token issued after a correct password;
    only its SHA-256 hash is stored. Prices are computed here (pricing.ts), never taken from the browser. */
@@ -298,23 +297,6 @@ async function notifyPaid(env: Env, orderId: string): Promise<string | null> {
     }
     return null; // sent
   } catch (e: any) { console.error('paid email not sent', e && e.message); return String((e && e.message) || 'mail_failed'); }
-}
-
-/* Admin: send the payment confirmation email again to every paid order (newest first). At most RESEND_BATCH per click,
-   because a free Cloudflare Worker may make about 50 outgoing requests per run; `remaining` tells the admin to click again.
-   Spaced out to stay under Resend's rate limit. Returns counts and the first error reason (e.g. mail_not_configured). */
-const RESEND_BATCH = 40;
-async function resendPaidEmails(env: Env) {
-  // Only orders whose confirmation was never sent, oldest first, so each click moves on instead of re-sending the same ones.
-  const { results } = await env.DB.prepare("SELECT id FROM orders WHERE payment_status = 'paid' AND paid_email_sent_at IS NULL ORDER BY created_at ASC").all<{ id: string }>();
-  const batch = results.slice(0, RESEND_BATCH);
-  let sent = 0, failed = 0, reason: string | null = null;
-  for (const [i, r] of batch.entries()) {
-    if (i) await new Promise((ok) => setTimeout(ok, 600));
-    const err = await notifyPaid(env, r.id);
-    if (err) { failed++; reason = reason || err; if (err === 'mail_not_configured') break; } else sent++;
-  }
-  return { total: results.length, sent, failed, remaining: Math.max(0, results.length - batch.length), reason };
 }
 
 /* Stripe -> us. The signature is checked before anything in the body is trusted; the amount must match our own total.
@@ -768,7 +750,6 @@ export default {
           return respond({ ok: true }, 200, req, env);
         }
         if (path === '/api/admin/orders' && req.method === 'GET') return respond(await listOrders(env), 200, req, env);
-        if (path === '/api/admin/resend-paid-emails' && req.method === 'POST') return respond(await resendPaidEmails(env), 200, req, env);
         if (path === '/api/admin/invoices' && req.method === 'GET') return respond(await listInvoices(env), 200, req, env);
         if (path === '/api/admin/designs' && req.method === 'GET') return respond(await adminList(env), 200, req, env);
         const dz = /^\/api\/admin\/designs\/([a-z0-9-]{2,40})$/.exec(path);
