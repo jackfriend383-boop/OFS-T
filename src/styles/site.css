@@ -9,7 +9,7 @@
    Light is the default; dark applies only when the visitor picks it with the header toggle (data-ofst="dark"). */
 :root{
   --bg:#FFFFFF; --panel:#FFFFFF; --raise:#EEEFF2; --line:#E2E3E7; --line-2:#C9CACF;
-  --fg:#0E0F12; --muted:#5B5C63; --dim:#8E8F96;
+  --fg:#0E0F12; --muted:#5B5C63; --dim:#6B6C73; /* --dim darkened for 4.5:1 text contrast */
   --accent:#0E0F12; --accent-ink:#FFFFFF; --accent-hover:#2C2D33; --accent-text:#0E0F12;
   --stage-hi:#E7E8EB; --stage-mid:#E2E3E6; --stage-lo:#DCDDE1; --stage-shade:rgba(0,0,0,.14);
   --mini-hi:#EEEFF2; --mini-lo:#E4E5E9; --glass:rgba(255,255,255,.86); --hero-glow:#F2F3F5;
@@ -30,7 +30,7 @@
 }
 :root[data-ofst="dark"]{
   --bg:#0E0F12; --panel:#17181C; --raise:#202127; --line:#2A2B31; --line-2:#3A3B42;
-  --fg:#F2F2F4; --muted:#A3A4AB; --dim:#6E6F76;
+  --fg:#F2F2F4; --muted:#A3A4AB; --dim:#8A8B92;
   --accent:#F2F2F4; --accent-ink:#0E0F12; --accent-hover:#FFFFFF; --accent-text:#F2F2F4;
   --stage-hi:#202127; --stage-mid:#1B1C21; --stage-lo:#16171B; --stage-shade:rgba(0,0,0,.45);
   --mini-hi:#24252B; --mini-lo:#1A1B20; --glass:rgba(23,24,28,.86); --hero-glow:#1B1C21;
@@ -46,6 +46,7 @@
 html.theming *,html.theming *::before,html.theming *::after{transition:background-color .45s var(--ease),color .45s var(--ease),border-color .45s var(--ease),fill .45s var(--ease)!important}
 *{box-sizing:border-box}
 html{background:var(--bg);scroll-behavior:smooth}
+html:has(.cbar){scroll-padding-top:calc(var(--cbar,64px) + 12px)} /* focus not hidden under the sticky configurator bar */
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
 a{color:inherit;text-decoration:none}
@@ -303,6 +304,7 @@ html:lang(pt) .hero h1{font-size:clamp(1.45rem,4.4vw,4.7rem)}
 .drawer-foot{border-top:1px solid var(--line);padding:18px 20px;display:grid;gap:12px}
 .drawer-foot .row{display:flex;justify-content:space-between;font-size:14px}
 .drawer-foot .row.big{font-size:18px;font-weight:700}
+.drawer-foot .cart-vat{margin:-4px 0 4px;font-size:12px;text-align:right}
 .empty{padding:50px 0;text-align:center;color:var(--muted);display:grid;gap:14px;justify-items:center}
 .co{display:grid;gap:10px;padding:16px 0}
 .co-f{display:grid;gap:5px}
@@ -418,6 +420,7 @@ html:lang(pt) .hero h1{font-size:clamp(1.45rem,4.4vw,4.7rem)}
   .hero-cta .btn{flex:1 1 auto}
   .canvas-band .btn{width:100%}
   .mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px var(--gutter) calc(12px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(12px);border-top:1px solid var(--line-2);align-items:center;justify-content:space-between;gap:14px}
+  html:has(.mbar){scroll-padding-bottom:96px} /* keyboard focus never hides behind the bottom bar */
   .mbar strong{font-family:var(--display);font-stretch:125%;font-size:22px}
   .mbar .btn{height:44px}
 }
@@ -449,7 +452,7 @@ html:lang(pt) .hero h1{font-size:clamp(1.45rem,4.4vw,4.7rem)}
   .dcard h3{font-size:14px}
   .dcard .tag,.dcard .dcard-row .eyebrow{display:none}
   .dcard-actions{flex-direction:column;gap:6px}
-  .dcard-actions .btn{height:36px;width:100%}
+  .dcard-actions .btn{height:36px;width:100%;flex:none} /* flex:1 squashed them in the column */
   .foot{grid-template-columns:1fr}
   .citem{grid-template-columns:84px minmax(0,1fr)}
   .search{top:calc(var(--top-h) + 8px)}
@@ -772,7 +775,7 @@ body{margin:0;font-size:15.5px;letter-spacing:.005em}
 .hero h1 em{font-style:normal;color:var(--fg);background:none;padding:0}
 .hero-stage{border-radius:var(--r-xl);border:0;padding:clamp(14px,2.6vw,36px) clamp(10px,2.4vw,32px) 18px;background:radial-gradient(70% 75% at 50% 48%,var(--stage-hi),var(--stage-lo))}
 .hero-name strong{font-family:var(--body);font-stretch:100%;font-weight:600;font-size:19px;text-transform:none}
-.dots button{background:var(--line-2)}
+.dots button{background:var(--muted)} /* inactive dots visible (3:1) */
 .dots button[aria-pressed="true"]{background:var(--fg)}
 .specs-strip{border:0;gap:12px;margin:14px var(--gutter) 0}
 .specs-strip div:nth-child(n){border:0;border-radius:var(--r-lg);background:var(--raise);padding:20px 22px}

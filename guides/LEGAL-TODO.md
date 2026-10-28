@@ -39,7 +39,7 @@ and `[CONFIRM: …]` = `[CONFIRMAR: …]`.
 | `[RETENTION PERIOD]`, `[RETENTION PERIOD, e.g. 2 years]` | privacy §6 |
 | `[DELIVERY COUNTRIES]`, `[CONFIRM: in case of any discrepancy, the Portuguese version prevails]` | terms §2 (both versions now exist; decide which prevails) |
 | `[CONFIRM: or when payment is taken]` | terms §4 |
-| `[CONFIRM VAT regime …]` | terms §5 (normal IVA, art. 53 CIVA exemption, OSS for B2C sales to other EU countries) |
+| ~~`[CONFIRM VAT regime …]`~~ | terms §5: done (no VAT, art. 53 CIVA exemption). If turnover passes the exemption limit, switch to normal IVA and update terms §5, the cart note, Stripe text and emails. |
 | `[PRODUCTION TIME]`, `[DELIVERY TIME]`, `[DELIVERY REGIONS]`, `[SHIPPING COSTS]` | terms §7 |
 | `[CONFIRM the competent RAL entity …]` | terms §14 (the regional arbitration centre for the seller's area, or CNIACC; Law 144/2015 requires naming it) |
 | `[CONFIRM whether any EU ODR reference is still required.]` | terms §14 and the ODR note in the footer (the ODR platform closed in July 2025 under Regulation (EU) 2024/3228) |

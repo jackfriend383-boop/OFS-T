@@ -44,8 +44,8 @@
 
   "pages": {
     "home": {"title": "{brand} — Kits de autocolantes para o Citroën Ami", "description": "Kits de autocolantes em vinil pré-cortados para a porta e o vidro lateral traseiro do Citroën Ami. Escolha entre {count} designs, defina duas cores e veja o kit no seu carro antes de encomendar."},
-    "shop": {"title": "Loja: todos os designs — {brand}", "crumb": "Loja", "description": "Os {count} designs de kits de autocolantes OFS/T para o Citroën Ami: camuflado de chamas exclusivo, urbano, corrida, retro e minimalista. A partir de {min} por lado."},
-    "configurator": {"title": "Configurador: crie o kit do seu Ami — {brand}", "crumb": "Configurador", "description": "Crie o seu kit de autocolantes para o Citroën Ami em direto, num Ami  2025 ou Ami Pop: escolha o design, duas cores de vinil, acabamento mate ou brilhante, um ou os dois lados e texto personalizado no emblema, e adicione-o ao carrinho."},
+    "shop": {"title": "Loja: todos os designs — {brand}", "crumb": "Loja", "description": "Os {count} designs de kits de autocolantes OFS/T para o Citroën Ami: camuflado de chamas exclusivo, urbano, corrida, retro e minimalista. Kit completo a partir de {min}, os dois lados."},
+    "configurator": {"title": "Configurador: crie o kit do seu Ami — {brand}", "crumb": "Configurador", "description": "Crie o seu kit de autocolantes para o Citroën Ami em direto, num Ami 2025 ou Ami Pop: escolha o design, duas cores de vinil, acabamento mate ou brilhante, kit completo ou peças individuais e texto personalizado no emblema, e adicione-o ao carrinho."},
     "about": {"title": "Sobre nós e perguntas frequentes — {brand}", "crumb": "Sobre nós e perguntas frequentes", "description": "Quem faz os kits de autocolantes OFS/T para o Citroën Ami, como são cortados e respostas sobre aplicação, lavagens, remoção e compatibilidade."},
     "privacy": {"title": "Política de privacidade — {brand}", "crumb": "Política de privacidade", "description": "Como a OFS/T trata os dados pessoais na sua loja online de kits de autocolantes para o Citroën Ami."},
     "terms": {"title": "Condições de venda — {brand}", "crumb": "Condições de venda", "description": "Condições de venda dos kits de autocolantes OFS/T para o Citroën Ami."},
@@ -79,11 +79,11 @@
 
   "llms": {
     "heading": "Português",
-    "intro": "A {brand} vende kits de autocolantes em vinil pré-cortados para o Citroën Ami. Cada kit cobre o painel inferior da porta e o vidro lateral traseiro dos dois lados. {count} designs, a partir de {min} por lado, preços em EUR.",
+    "intro": "A {brand} vende kits de autocolantes em vinil pré-cortados para o Citroën Ami. Cada kit cobre o painel inferior da porta e o vidro lateral traseiro dos dois lados. {count} designs, kit completo a partir de {min}, preços em EUR.",
     "pages": [
       ["home", "Início", "apresentação, designs populares, como encomendar e aplicar, carros compatíveis"],
-      ["shop", "Loja", "os {count} designs, com categoria e preço por lado"],
-      ["configurator", "Configurador", "pré-visualização em direto no Ami 2025 ou Ami Pop; design, cores, acabamento, tamanho do kit e texto do emblema. Ligação direta a um design com ?design=<id> (acrescente &model=pop para o Ami Pop)"],
+      ["shop", "Loja", "os {count} designs, com categoria e preço do kit completo"],
+      ["configurator", "Configurador", "pré-visualização em direto no Ami 2025 ou Ami Pop; design, cores, acabamento, peças e texto do emblema. Ligação direta a um design com ?design=<id> (acrescente &model=pop para o Ami Pop)"],
       ["about", "Sobre nós e perguntas frequentes", "quem faz os kits; tempo de aplicação, lavagens, remoção, compatibilidade, designs personalizados"]
     ],
     "legal": [
@@ -92,7 +92,7 @@
       ["refunds", "Reembolsos e devoluções", "devoluções e direito de livre resolução"],
       ["cookies", "Política de cookies", "cookies e armazenamento local"]
     ],
-    "design_line": "{cat}, {price} por lado. {tag}"
+    "design_line": "{cat}, {price} kit completo (os dois lados). {tag}"
   },
 
   "placeholders": {
@@ -112,20 +112,7 @@
   },
   "tags": {
     "flame-red": "Chamas em dois tons, recortes a preto",
-    "flame-blue": "Chamas em dois tons, recortes a preto",
-    "flame-stealth": "Grafite com filetes dourados",
-    "street-flow": "Arrojado e limpo",
-    "racing-lines": "Desportivo e dinâmico",
-    "neon-wave": "Energia elétrica",
-    "retro-stripe": "Toque clássico",
-    "urban-camo": "Estilo discreto",
-    "pixel": "Futuro digital",
-    "checker": "Energia de linha de meta",
-    "halftone": "Textura de tipografia",
-    "pinstripe": "Detalhe discreto",
-    "bolt": "Ousado de propósito",
-    "contour": "Curvas de nível",
-    "sunset": "Horizonte dos anos 70"
+    "flame-stealth": "Grafite com filetes dourados"
   },
 
   "js": {
@@ -143,6 +130,7 @@
     "subtotal": "Subtotal",
     "shipping": "Envio",
     "shippingCalc": "Calculado ao finalizar a compra",
+    "vatNote": "IVA não aplicável – regime de isenção (art. 53.º do CIVA).",
     "total": "Total",
     "checkout": "Finalizar compra",
     "openCart_one": "Abrir carrinho, {n} artigo",
@@ -158,6 +146,10 @@
     "oneSideLc": "um lado",
     "bothSidesLc": "os dois lados",
     "badgeDesc": "Emblema “{text}”",
+    "centreLogoDesc": "Centro com logótipo",
+    "bcDesc": "Emblemas Citroën em {colour}",
+    "carBadgeColour": ", emblemas Citroën em {colour}",
+    "bcLine": "Emblemas Citroën em {colour}",
     "personalised": "Personalizado",
     "pc_full": "Kit completo",
     "pc_door": "Autocolantes de porta (par)",
@@ -178,7 +170,7 @@
     "countries": ["Portugal", "Espanha", "França", "Itália", "Alemanha", "Países Baixos", "Bélgica"],
     "msgTerms": "Confirme que aceita as condições de venda e a política de reembolsos e devoluções, e que leu a política de privacidade.",
     "msgPers": "Confirme que compreende que os kits personalizados não podem ser devolvidos por mudança de opinião.",
-    "termsCheck": "Li e aceito as {terms} e a {refunds}, e li a {privacy}.",
+    "termsCheck": "Li e aceito as {terms} e a {refunds}, li a {privacy} e declaro ter 18 ou mais anos (ou autorização dos meus pais ou tutores).",
     "termsLink": "condições de venda",
     "refundsLink": "política de reembolsos e devoluções",
     "privacyLink": "política de privacidade",
@@ -220,8 +212,8 @@
     "themeToDark": "Mudar para o tema escuro",
 
     "carDesign": "Design {name}",
-    "carIn": " em {c1} e {c2}, {finish}",
-    "carInOrig": " nas cores originais, {finish}",
+    "carIn": " em {c1} e {c2}",
+    "carInOrig": " nas cores originais",
     "carOn": " num Citroën {model}",
     "carBadge": ", texto do emblema “{text}”",
     "carAngle_front": ", vista de frente",
@@ -235,7 +227,7 @@
     "kitOneSide": "Kit {name}, os dois lados",
     "secondSide": "Segundo lado",
     "badgeText": "Texto do emblema “{text}”",
-    "cfgSay": "{name}, {model}, {colours}, {finish}, {sides}. Total {total}.",
+    "cfgSay": "{name}, {model}, {colours}, {sides}. Total {total}.",
     "cfgSayPers": " Kit personalizado: sem devolução por mudança de opinião.",
     "numErr": "Escreva o texto do emblema ou desative esta opção.",
     "added": "Adicionado ✓",
@@ -253,11 +245,18 @@
     "sRevenue": "Receita",
     "noOrders": "Ainda não há encomendas. Aparecem aqui assim que um cliente finalizar a compra.",
     "moldPreview": "Pré-visualização do molde de impressão: {name}",
+    "refund_partial": "Reembolsado em parte na Stripe.",
+    "refund_refunded": "Reembolsado na Stripe: não enviar.",
+    "refund_disputed": "Pagamento contestado (chargeback): responda no painel da Stripe antes do prazo.",
+    "refund_dispute_won": "Disputa ganha.",
+    "refund_dispute_lost": "Disputa perdida: o pagamento foi devolvido ao cliente.",
+    "discountNote": "Código promocional usado: menos {amount}.",
+    "printLine": "Para imprimir: {list}",
     "doorStickers_one": "{n} autocolante de porta",
     "doorStickers_other": "{n} autocolantes de porta",
     "qtyLine": "Qtd. {q} · {price}",
     "badgeIn": "Texto do emblema: {text} em {colour}",
-    "dlPng": "Descarregar PNG",
+    "dlPdf": "PDF de impressão",
     "dlSvg": "SVG + linha de corte",
     "forOrder": " de {name}, encomenda {ref}",
     "payPaid": "Pago via Stripe", "warnMismatch": "A Stripe indica um valor diferente do total da encomenda. Verifique este pagamento no painel da Stripe antes de enviar.",

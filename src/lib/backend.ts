@@ -175,7 +175,8 @@ export function makeBackend(kit: Kit) {
      Best effort (nothing to show if it fails: an unpaid draft is never turned into an order and is cleaned up later). */
   async function cancelCheckout(id: string) {
     if (!UUID.test(String(id))) return;
-    try { await request('/api/checkout/' + encodeURIComponent(id) + '/cancel', { method: 'POST' }); } catch { /* ignore */ }
+    const sess = ls.get(); // only the customer who started the checkout may cancel it
+    try { await request('/api/checkout/' + encodeURIComponent(id) + '/cancel', { method: 'POST', token: sess?.access_token }); } catch { /* ignore */ }
   }
   /* ---------- Customer account ---------- */
   const hasCustomerSession = () => backendConfigured && !!ls.get();
@@ -186,15 +187,17 @@ export function makeBackend(kit: Kit) {
     catch (e: any) { if (e.code === 'session_expired') ls.clear(); throw e; }
   }
   /* Emails a one-time sign-in link (the answer is the same whether or not the address already has an account). */
-  async function requestLink(email: string, birthDate: string): Promise<{ needsBirthDate: boolean }> {
+  async function requestLink(email: string, birthDate = ''): Promise<{ needsBirthDate: boolean }> {
     email = String(email || '').trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BackendError(T('badEmail'), 'invalid');
     const r = await request('/api/auth/request', { method: 'POST', body: { email, birth_date: birthDate, lang: kit.lang } });
     return { needsBirthDate: r && r.needs_birth_date === true };
   }
-  /* Uses the token from the emailed link; on success the customer is signed in. */
-  async function verifyLink(token: string): Promise<Customer> {
-    const r = await request('/api/auth/verify', { method: 'POST', body: { token, lang: kit.lang } });
+  /* Uses the token from the emailed link; on success the customer is signed in. A new customer is first asked for their date of
+     birth (needsBirthDate): the same link is then sent again together with it. */
+  async function verifyLink(token: string, birthDate = ''): Promise<Customer | { needsBirthDate: true }> {
+    const r = await request('/api/auth/verify', { method: 'POST', body: birthDate ? { token, birth_date: birthDate, lang: kit.lang } : { token, lang: kit.lang } });
+    if (r && r.needs_birth_date === true) return { needsBirthDate: true };
     if (!r || typeof r.access_token !== 'string' || !r.user) throw new BackendError(MSG.generic, 'bad_response');
     ls.set({ access_token: r.access_token, expires_at: Date.now() + Math.max(60, +r.expires_in || 3600) * 1000 });
     return r.user as Customer;
@@ -244,6 +247,38 @@ export function makeBackend(kit: Kit) {
     const r = await authed('/api/admin/resend-paid-emails', { method: 'POST' });
     return { total: +r?.total || 0, sent: +r?.sent || 0, failed: +r?.failed || 0, remaining: +r?.remaining || 0, reason: typeof r?.reason === 'string' ? r.reason : null };
   }
-  return { configured: backendConfigured, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus, resendPaidEmails };
+
+  /* ---------- Designs (added in the admin; the two built-in ones live in designs.json) ---------- */
+  /* Public list of the owner's design changes and extra designs. Failing is fine: the site then shows the built-in designs. */
+  async function designsPublic(): Promise<unknown[]> {
+    try { const r = await request('/api/designs'); return Array.isArray(r) ? r : (r && Array.isArray(r.designs) ? r.designs : []); }
+    catch { return []; }
+  }
+  /* Preview picture of an extra design as a blob: address (the page may only load images from itself, data: and blob:). */
+  async function designArtBlob(id: string, w: 1000 | 1600, ver: number): Promise<string> {
+    if (!backendConfigured || !/^[a-z0-9][a-z0-9-]{1,38}$/.test(id)) throw new BackendError(MSG.invalid, 'invalid');
+    const res = await fetch(URL_ + '/api/design-art/' + id + '/' + w + '?v=' + (Math.floor(+ver) || 1), { credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin' });
+    if (!res.ok) throw new BackendError(MSG.generic, 'http_' + res.status);
+    return URL.createObjectURL(await res.blob());
+  }
+  const idOk = (id: string) => /^[a-z0-9][a-z0-9-]{1,38}$/.test(String(id));
+  async function listDesigns(): Promise<any[]> {
+    const r = await authed('/api/admin/designs');
+    return Array.isArray(r) ? r : (r && Array.isArray(r.designs) ? r.designs : []);
+  }
+  async function designMaster(id: string): Promise<string> {
+    if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
+    const r = await authed('/api/admin/designs/' + id + '/master');
+    return typeof r === 'string' ? r : String(r && r.master || '');
+  }
+  async function saveDesign(id: string, body: Record<string, unknown>) {
+    if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
+    return authed('/api/admin/designs/' + id, { method: 'PUT', body });
+  }
+  async function deleteDesign(id: string) {
+    if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
+    return authed('/api/admin/designs/' + id, { method: 'DELETE' });
+  }
+  return { configured: backendConfigured, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus, resendPaidEmails };
 }
 export type Backend = ReturnType<typeof makeBackend>;

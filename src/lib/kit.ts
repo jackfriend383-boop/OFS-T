@@ -5,15 +5,52 @@ import PT from '../i18n/pt.json';
 import EN from '../i18n/en.json';
 
 export type Lang = 'pt' | 'en';
-export interface Design { id: string; name: string; tag: string; cat: string; catName: string; price: number; c1: string; c2: string; art?: string; fixed?: boolean }
-export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; finish: 'matte' | 'gloss'; kit: 'one' | 'both'; numberOn: boolean; number: string; trim: string; pieces: Piece[] }
+export interface Design { id: string; name: string; tag: string; cat: string; catName: string; price: number; c1: string; c2: string; art?: string; fixed?: boolean; master?: string; custom?: boolean; hidden?: boolean }
+export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; finish: 'matte' | 'gloss'; kit: 'one' | 'both'; numberOn: boolean; number: string; trim: string; pieces: Piece[]; centre: 'full' | 'logo'; bcOn: boolean; bcPick: 1 | 2 }
 export interface CartItem { key: string; cfg: Cfg; qty: number }
 
 export const I18N: Record<Lang, any> = { pt: PT, en: EN };
-export const CATS: string[] = DATA.cats;
 export const HERO_CYCLE: string[] = DATA.heroCycle;
 export const FEATURED: string[] = DATA.featured;
-export const MODELS = { qs: 'Ami  2025', pop: 'Ami Pop' } as const;
+/* ---------- Designs added / changed in the admin "Designs" tab ----------
+   The built-in designs (designs.json) always exist. The shop's server also sends a short list (GET /api/designs): designs the owner
+   added, and changes to built-in ones (price, name, hidden...). It is checked and merged here, then every kit is rebuilt. */
+export interface RemoteDesign { id: string; name: string | null; tag: string | null; tagPt: string | null; cat: string | null; price: number | null; c1: string | null; c2: string | null; fixed: boolean | null; hidden: boolean; mode: 'mask' | 'rgb' | null; ver: number; custom: boolean; hasMaster: boolean }
+let REMOTE: RemoteDesign[] = [];
+const COLOR_IDS = DATA.colors as Record<string, unknown>;
+const okText = (v: unknown, n: number) => (typeof v === 'string' && v.trim() ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n) : null);
+/* Keeps only well-formed entries (the list comes from the network). */
+export function cleanRemoteDesigns(raw: unknown): RemoteDesign[] {
+  const list = raw && typeof raw === 'object' && Array.isArray((raw as any).designs) ? (raw as any).designs : [];
+  const out: RemoteDesign[] = [];
+  for (const r of list.slice(0, 80)) {
+    if (!r || typeof r.id !== 'string' || !/^[a-z0-9][a-z0-9-]{1,38}$/.test(r.id)) continue;
+    const price = Number.isInteger(r.price) && r.price >= 1 && r.price <= 999 ? r.price : null;
+    out.push({
+      id: r.id, name: okText(r.name, 60), tag: okText(r.tag, 120), tagPt: okText(r.tagPt, 120), cat: okText(r.cat, 30), price,
+      c1: typeof r.c1 === 'string' && has(COLOR_IDS, r.c1) ? r.c1 : null, c2: typeof r.c2 === 'string' && has(COLOR_IDS, r.c2) ? r.c2 : null,
+      fixed: r.fixed == null ? null : !!r.fixed, hidden: !!r.hidden, mode: r.mode === 'rgb' ? 'rgb' : r.mode === 'mask' ? 'mask' : null, ver: Number.isInteger(r.ver) ? r.ver : 1, custom: !!r.custom, hasMaster: !!r.hasMaster,
+    });
+  }
+  return out;
+}
+export function setRemoteDesigns(list: RemoteDesign[]) { REMOTE = list; (Object.keys(cache) as Lang[]).forEach((k) => { delete cache[k]; }); }
+export const remoteDesigns = () => REMOTE;
+function mergedDesigns(all = false): (Record<string, any>)[] {
+  const by = new Map(REMOTE.map((r) => [r.id, r])), out: Record<string, any>[] = [];
+  for (const d of DATA.designs as any[]) {
+    const r = by.get(d.id);
+    if (r && r.hidden && !all) continue;
+    out.push(r ? { ...d, hidden: r.hidden || undefined, name: r.name ?? d.name, cat: r.cat ?? d.cat, price: r.price ?? d.price, c1: r.c1 ?? d.c1, c2: r.c2 ?? d.c2, fixed: r.fixed ?? d.fixed, tagEn: r.tag, tagPt: r.tagPt, tag: r.tag ?? d.tag } : d);
+  }
+  for (const r of REMOTE) {
+    if (!r.custom || (r.hidden && !all) || !r.name || !r.price || !r.c1 || !r.c2 || (DATA.designs as any[]).some((d) => d.id === r.id)) continue;
+    out.push({ id: r.id, name: r.name, tag: r.tag || '', tagEn: r.tag, tagPt: r.tagPt, cat: r.cat || 'Signature', price: r.price, c1: r.c1, c2: r.c2, fixed: !!r.fixed, custom: true, art: r.id, hidden: r.hidden || undefined });
+  }
+  return out;
+}
+
+export const MODELS = { qs: 'Ami 2025', pop: 'Ami Pop' } as const;
 /* Factory colour schemes of the car in each version (preview only: not part of the kit key, not saved with orders). First = default. */
 export const TRIMS: Record<'qs' | 'pop', string[]> = { qs: ['yellow', 'purple', 'brown', 'browncolor'], pop: ['base'] };
 
@@ -86,17 +123,20 @@ function build(lang: Lang) {
   const T = makeT(lang);
   const COLORS: Record<string, { name: string; hex: string; metal?: boolean }> = {};
   Object.entries(DATA.colors as Record<string, { name: string; hex: string; metal?: boolean }>).forEach(([k, c]) => { COLORS[k] = { ...c, name: has(L.colors, k) ? L.colors[k] : c.name }; });
-  const DESIGNS: Design[] = (DATA.designs as any[]).map((d) => ({ ...d, tag: has(L.tags, d.id) ? L.tags[d.id] : d.tag, catName: T.cat(d.cat) }));
-  const EXTRA = DATA.extras as { secondSide: number; badge: number };
-  const D = (id: unknown): Design | undefined => DESIGNS.find((d) => d.id === id);
+  const mapD = (d: Record<string, any>) => ({ ...d, tag: (lang === 'pt' ? d.tagPt : d.tagEn) || (has(L.tags, d.id) ? L.tags[d.id] : d.tag), catName: T.cat(d.cat) }) as Design;
+  const ALL_D: Design[] = mergedDesigns(true).map(mapD); // includes hidden designs (old orders still need them)
+  const DESIGNS: Design[] = mergedDesigns().map((d) => ({ ...d, tag: (lang === 'pt' ? d.tagPt : d.tagEn) || (has(L.tags, d.id) ? L.tags[d.id] : d.tag), catName: T.cat(d.cat) })) as Design[];
+  const CATS: string[] = ['All', ...Array.from(new Set(DESIGNS.map((d) => d.cat)))];
+  const EXTRA = DATA.extras as { secondSide: number; badge: number; badgeColour: number };
+  const D = (id: unknown): Design | undefined => ALL_D.find((d) => d.id === id);
   const modelName = (m: unknown) => (has(MODELS, m) ? MODELS[m as keyof typeof MODELS] : MODELS.qs);
-  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'AMI', trim: TRIMS.qs[0], pieces: ['full'] }); // every kit covers both sides
+  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'OFST', trim: TRIMS.qs[0], pieces: ['full'], centre: 'full', bcOn: false, bcPick: 1 }); // every kit covers both sides
   const cleanNumber = (v: unknown) => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9 .#&!-]/g, '').slice(0, 8);
 
   /* Validate a config from an untrusted source (query string, localStorage, order rows). Returns a full config or null. */
-  function sanitizeCfg(c: any): Cfg | null {
+  function sanitizeCfg(c: any, keepHidden = false): Cfg | null {
     if (!c || typeof c !== 'object') return null;
-    const d = D(c.design); if (!d) return null;
+    const d = D(c.design); if (!d || (d.hidden && !keepHidden)) return null;
     const out = defaultCfg(d);
     if (has(MODELS, c.model)) out.model = c.model;
     // Car colour must belong to the chosen version; otherwise (e.g. after switching version) use that version's first.
@@ -108,28 +148,36 @@ function build(lang: Lang) {
     if (typeof c.number === 'string') out.number = cleanNumber(c.number);
     // The custom badge is only offered on the Ami 2025 (the Pop door has no badge plate).
     out.numberOn = !!c.numberOn && !!out.number && out.model !== 'pop';
+    // Door centre: the design runs through it by default; 'logo' keeps the OFS/T logo plate.
+    out.centre = c.centre === 'logo' ? 'logo' : 'full';
+    // Coloured Citroën badges (front and rear): only on the Ami 2025; colour 1 or colour 2 of the design.
+    out.bcOn = !!c.bcOn && out.model !== 'pop';
+    out.bcPick = c.bcPick === 2 || c.bcPick === '2' ? 2 : 1;
     // Missing pieces (older carts, saved orders) = the full kit.
     out.pieces = normPieces(c.pieces, out.model, d.price);
-    if (!out.numberOn && !out.number) out.number = 'AMI';
+    if (!out.numberOn && !out.number) out.number = 'OFST';
     return out;
   }
-  /* Personalised = made to the buyer's choices (no change-of-mind returns): badge text, or colours that differ from the defaults. */
+  /* Personalised = made to the buyer's own specification (no change-of-mind returns): only custom badge text. Choosing other
+     colours from our own palette is a standard option, so the 14-day withdrawal right still applies (DL 24/2014 art. 17). */
   function isPersonalised(c: Cfg | null | undefined) {
     const d = c && D(c.design); if (!d) return false;
-    if (c!.numberOn && c!.number) return true;
-    return !d.fixed && (c!.c1 !== d.c1 || c!.c2 !== d.c2);
+    return !!(c!.numberOn && c!.number);
   }
   const piecesOf = (c: Cfg) => normPieces(c.pieces, c.model, D(c.design)?.price ?? 0);
-  const priceOf = (c: Cfg) => piecesPrice(piecesOf(c), D(c.design)!.price) + (c.kit === 'both' ? EXTRA.secondSide : 0) + (c.numberOn && c.number ? EXTRA.badge : 0);
-  const keyOf = (c: Cfg) => [c.design, c.c1, c.c2, c.finish, c.kit, c.numberOn ? c.number : '', c.model || 'qs', piecesOf(c).join(',')].join('|');
+  const priceOf = (c: Cfg) => piecesPrice(piecesOf(c), D(c.design)!.price) + (c.kit === 'both' ? EXTRA.secondSide : 0) + (c.numberOn && c.number ? EXTRA.badge : 0) + (c.bcOn ? EXTRA.badgeColour : 0);
+  const keyOf = (c: Cfg) => [c.design, c.c1, c.c2, c.kit, c.numberOn ? c.number : '', c.model || 'qs', piecesOf(c).join(','), c.centre === 'logo' ? 'logo' : 'full', c.bcOn ? c.bcPick : 0].join('|');
   /* "Full kit · Rims" / "Door stickers (pair) · Window stickers (pair)", in display order. */
   const piecesLabel = (c: Cfg) => { const ps = piecesOf(c); return PIECES.filter((p) => ps.includes(p)).map((p) => T('pc_' + p)).join(' · '); };
   const colourLabel = (c: Cfg) => (D(c.design)!.fixed ? T('originalColours') : `${COLORS[c.c1].name} / ${COLORS[c.c2].name}`);
   const descOf = (c: Cfg) =>
-    `${modelName(c.model)} · ${colourLabel(c)} · ${T(c.finish === 'gloss' ? 'gloss' : 'matte')} · ${piecesLabel(c)}` +
+    `${modelName(c.model)} · ${colourLabel(c)} · ${piecesLabel(c)}` +
+    `${c.centre === 'logo' ? ' · ' + T('centreLogoDesc') : ''}${c.bcOn ? ' · ' + T('bcDesc', { colour: COLORS[c.bcPick === 2 ? c.c2 : c.c1].name }) : ''}` +
     `${c.numberOn && c.number ? ' · ' + T('badgeDesc', { text: c.number }) : ''}${isPersonalised(c) ? ' · ' + T('personalised') : ''}`;
   const cfgQuery = (c: Cfg) => {
-    const p = new URLSearchParams({ design: c.design, c1: c.c1, c2: c.c2, finish: c.finish, kit: c.kit });
+    const p = new URLSearchParams({ design: c.design, c1: c.c1, c2: c.c2, kit: c.kit });
+    if (c.centre === 'logo') p.set('centre', 'logo');
+    if (c.bcOn) p.set('bc', String(c.bcPick));
     if (c.numberOn && c.number) p.set('number', c.number);
     if (c.model && c.model !== 'qs') p.set('model', c.model);
     if (c.trim && c.trim !== TRIMS[c.model || 'qs'][0]) p.set('trim', c.trim);
@@ -143,9 +191,9 @@ function build(lang: Lang) {
     // same for a link with only ?trim= (car colour).
     const d = D(q.get('design')) || (q.get('model') || q.get('trim') ? DESIGNS[0] : null); if (!d) return null;
     const num = q.has('number') ? cleanNumber(q.get('number')) : '';
-    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, finish: q.get('finish'), kit: q.get('kit'), number: num || 'AMI', numberOn: !!num, trim: q.get('trim'), pieces: q.get('pieces') });
+    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, kit: q.get('kit'), number: num || 'OFST', numberOn: !!num, centre: q.get('centre'), bcOn: q.has('bc'), bcPick: Number(q.get('bc')), trim: q.get('trim'), pieces: q.get('pieces') });
   }
-  return { lang, L, T, COLORS, DESIGNS, EXTRA, D, has, modelName, defaultCfg, cleanNumber, sanitizeCfg, isPersonalised, priceOf, keyOf, piecesOf, piecesLabel, colourLabel, descOf, cfgQuery, cfgFromQuery, money: T.price };
+  return { lang, L, T, COLORS, DESIGNS, CATS, EXTRA, D, has, modelName, defaultCfg, cleanNumber, sanitizeCfg, isPersonalised, priceOf, keyOf, piecesOf, piecesLabel, colourLabel, descOf, cfgQuery, cfgFromQuery, money: T.price };
 }
 
 const cache: Partial<Record<Lang, Kit>> = {};

@@ -8,27 +8,33 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type
 import { useApp } from '../state';
 import { COPY } from '../content';
 import { isUUID } from '../lib/backend';
-import { fileBase, moldPNG, moldSVG, saveFile, svgBlob } from '../lib/mold';
+import { fileBase, loadMaster, moldSVG, pdfBlob, saveFile, slotColours, svgBlob } from '../lib/printfile';
 import type { Cfg } from '../lib/kit';
 import { DASH } from './admin/copy';
-import { RANGES, customers as groupCustomers, dayKey, delta, inRange, kpis, rangeBounds, reports, series, sheetsOf, toCSV, type CustomerRow, type Point, type RangeKey } from './admin/stats';
+import { RANGES, customers as groupCustomers, dayKey, delta, inRange, kpis, rangeBounds, printCounts, reports, series, sheetsOf, toCSV, type CustomerRow, type Point, type RangeKey } from './admin/stats';
 import { BarList, Columns, TrendChart } from './admin/Charts';
+import Designs from './admin/Designs';
 
 type Panel = 'boot' | 'setup' | 'login' | 'locked' | 'main';
-type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'tools';
-const TABS: Tab[] = ['overview', 'reports', 'orders', 'invoices', 'customers', 'tools'];
+type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'designs' | 'tools';
+const TABS: Tab[] = ['overview', 'reports', 'orders', 'invoices', 'customers', 'designs', 'tools'];
 const TAB_KEY = 'ofst-admin-tab', RANGE_KEY = 'ofst-admin-range';
 const remember = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* private mode */ } };
 const recall = (k: string) => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } };
 const pct = (v: number, locale: string) => new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 }).format(v);
-interface Order { id: string; ref: string; status: string; created: Date; name: string; email: string; street: string; postcode: string; city: string; country: string; nif: string; items: { cfg: Cfg; qty: number; list: number }[]; dropped: number; total: number; listTotal: number; pers: boolean; pay: string }
+interface Order { id: string; ref: string; status: string; created: Date; name: string; email: string; street: string; postcode: string; city: string; country: string; nif: string; items: { cfg: Cfg; qty: number; list: number }[]; dropped: number; total: number; listTotal: number; pers: boolean; pay: string; refund: string; discount: number }
 const NEXT: Record<string, string> = { new: 'printed', printed: 'shipped', shipped: 'new' };
 const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
 const Rich = ({ html, as: Tag = 'span', ...p }: { html: string; as?: any } & Record<string, any>) => <Tag {...p} dangerouslySetInnerHTML={{ __html: html }} />; // our own copy, never user input
 
 function Mold({ cfg, label, className }: { cfg: Cfg; label: string; className?: string }) {
   const { kit } = useApp();
-  const html = useMemo(() => moldSVG(kit, cfg, { guide: true, label }), [kit, cfg, label]);
+  const [html, setHtml] = useState('');
+  useEffect(() => {
+    let live = true;
+    loadMaster(kit, cfg.design).then((m) => { if (live) { const [a, b] = slotColours(kit, cfg); setHtml(moldSVG(m, a, b, { label })); } }).catch(() => { if (live) setHtml(''); });
+    return () => { live = false; };
+  }, [kit, cfg, label]);
   return <div className={className || 'moldp'} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
@@ -92,16 +98,20 @@ export default function Admin() {
     const cu = o.customer && typeof o.customer === 'object' ? o.customer : {};
     const raw = Array.isArray(o.items) ? o.items.slice(0, 50) : [];
     const items = raw.map((i: any) => {
-      const cfg = i && typeof i === 'object' && kit.sanitizeCfg(i.cfg); if (!cfg) return null;
+      const cfg = i && typeof i === 'object' && kit.sanitizeCfg(i.cfg, true); if (!cfg) return null;
       return { cfg, qty: Math.min(99, Math.max(1, Math.floor(+i.qty) || 1)), list: Math.round(kit.priceOf(cfg) * 100) };
     }).filter(Boolean) as Order['items'];
-    const total = Number.isFinite(+o.total_cents) ? Math.round(+o.total_cents) : 0;
+    const list = Number.isFinite(+o.total_cents) ? Math.round(+o.total_cents) : 0;
+    // What the customer paid: lower than the order total when a Stripe promotion code was used (older orders: the total).
+    const total = o.paid_cents != null && Number.isFinite(+o.paid_cents) ? Math.round(+o.paid_cents) : list;
     return {
       id: String(o.id), ref: String(o.id).slice(-6).toUpperCase(), status: STATUS[o.status] ? o.status : 'new', created: new Date(o.created_at),
       name: str(cu.name, 200), email: str(cu.email, 254), street: str(cu.street, 300), postcode: str(cu.postcode, 20), city: str(cu.city, 120), country: str(cu.country, 60),
       nif: /^\d{9}$/.test(String(cu.nif || '')) ? String(cu.nif) : '', // optional Portuguese tax number
       items, dropped: raw.length - items.length, total, listTotal: items.reduce((s, i) => s + i.list * i.qty, 0), pers: o.consent_personalised === true,
       pay: o.payment_status === 'paid' ? 'paid' : o.payment_status === 'mismatch' ? 'mismatch' : 'unpaid', // set only by Stripe's signed webhook
+      refund: ['partial', 'refunded', 'disputed', 'dispute_won', 'dispute_lost'].includes(o.refund_status) ? o.refund_status : '', // from Stripe
+      discount: Math.max(0, list - total),
     };
   }
 
@@ -156,12 +166,15 @@ export default function Admin() {
   }
   const testCfgV = useMemo(() => kit.defaultCfg(kit.D(testId) || kit.DESIGNS[0]), [kit, testId]);
   const testCfg = () => testCfgV;
-  async function download(cfg: Cfg, kind: 'png' | 'svg', tag: string, key: string) {
+  /* One print file: the design's master with this kit's colours, as a true-scale vector PDF (print) or an SVG. */
+  async function makeFile(cfg: Cfg, kind: 'pdf' | 'svg', name: string) {
+    const m = await loadMaster(kit, cfg.design), [a, b] = slotColours(kit, cfg);
+    if (kind === 'svg') saveFile(name + '.svg', svgBlob(m, a, b)); else saveFile(name + '.pdf', await pdfBlob(m, a, b, name));
+  }
+  async function download(cfg: Cfg, kind: 'pdf' | 'svg', tag: string, key: string) {
     setBusy(key);
-    try {
-      if (kind === 'svg') saveFile(fileBase(kit, cfg, tag) + '.svg', svgBlob(kit, cfg));
-      else { say(T('preparing')); saveFile(fileBase(kit, cfg, tag) + '.png', await moldPNG(kit, cfg)); say(T('fileReady')); }
-    } catch { say(T('fileFailed')); } finally { setBusy(null); }
+    try { say(T('preparing')); await makeFile(cfg, kind, fileBase(kit, cfg, tag)); say(T('fileReady')); }
+    catch { say(T('fileFailed')); } finally { setBusy(null); }
   }
   async function advance(id: string) {
     const o = orders.find((x) => x.id === id); if (!o) return;
@@ -244,7 +257,7 @@ export default function Admin() {
     ]));
     saveFile(`ofst-orders-${dayKey(new Date())}.csv`, new Blob([toCSV(rows)], { type: 'text/csv;charset=utf-8' }));
   }
-  async function bulk(kind: 'png' | 'svg') {
+  async function bulk(kind: 'pdf' | 'svg') {
     const jobs = allOpen.flatMap((o) => o.items.map((it) => ({ cfg: it.cfg, ref: o.ref })));
     if (!jobs.length) { say(d.bulkNone); return; }
     setBusy('bulk');
@@ -252,7 +265,7 @@ export default function Admin() {
       for (let i = 0; i < jobs.length; i++) {
         say(d.bulkProgress(i + 1, jobs.length));
         const j = jobs[i], name = fileBase(kit, j.cfg, j.ref) + (jobs.length > 1 ? `-${i + 1}` : '');
-        if (kind === 'svg') saveFile(name + '.svg', svgBlob(kit, j.cfg)); else saveFile(name + '.png', await moldPNG(kit, j.cfg));
+        await makeFile(j.cfg, kind, name);
         await new Promise((r) => setTimeout(r, 350)); // browsers drop downloads fired in the same instant
       }
       say(d.bulkDone(jobs.length));
@@ -273,9 +286,10 @@ export default function Admin() {
 
   const ordersList = (list: Order[], compact: boolean) => list.map((o) => {
     const warn: string[] = [];
-    if (o.total !== o.listTotal) warn.push(T('warnTotal', { sent: euro(o.total), list: euro(o.listTotal) }));
+    // The total shown is what Stripe confirmed; the price list may have changed since, so no warning for that any more.
     if (o.dropped) warn.push(T.n('warnDropped', o.dropped));
     if (o.pay === 'mismatch') warn.push(T('warnMismatch'));
+    if (o.refund) warn.push(T('refund_' + o.refund));
     const when = isNaN(o.created.getTime()) ? '' : o.created.toLocaleString(locale);
     const kits = o.items.reduce((s, i) => s + i.qty, 0);
     return (
@@ -285,8 +299,9 @@ export default function Admin() {
             <h3 id={'ord-' + o.ref}>{o.name || T('customer')} <span className="muted mono adm-ref">#{o.ref}</span></h3>
             {compact
               ? <p>{when} · {d.kits(kits)} · <span className="price">{euro(o.total)}</span>{o.city ? ' · ' + o.city : ''}</p>
-              : <p>{o.email}<br />{o.street}, {o.postcode} {o.city}, {o.country}{o.nif ? <> · NIF <span className="mono">{o.nif}</span></> : null}<br />{when} · <span className="price">{euro(o.listTotal)}</span>{o.pay === 'paid' ? ' · ' + T('payPaid') : ''}{o.pers ? ' · ' + T('persAck') : ''}</p>}
+              : <p>{o.email}<br />{o.street}, {o.postcode} {o.city}, {o.country}{o.nif ? <> · NIF <span className="mono">{o.nif}</span></> : null}<br />{when} · <span className="price">{euro(o.total)}</span>{o.pay === 'paid' ? ' · ' + T('payPaid') : ''}{o.pers ? ' · ' + T('persAck') : ''}</p>}
             {warn.map((w) => <p className="err" key={w}>{w}</p>)}
+            {o.discount > 0 && <p className="muted">{T('discountNote', { amount: euro(o.discount) })}</p>}
           </div>
           <div className="adm-st">
             <span className="status" data-s={o.status}>{STATUS[o.status]}</span>
@@ -297,16 +312,17 @@ export default function Admin() {
           <details className="oitems" open={o.status === 'new'}>
             <summary>{d.details} · {d.kits(kits)}</summary>
             {o.items.map((it, ii) => {
-              const cf = it.cfg, n = sheetsOf(it), dz = kit.D(cf.design)!, forOrder = T('forOrder', { name: dz.name, ref: o.ref }), key = `dl${o.id}.${ii}`;
+              const cf = it.cfg, dz = kit.D(cf.design)!, forOrder = T('forOrder', { name: dz.name, ref: o.ref }), key = `dl${o.id}.${ii}`;
               return (
                 <div className="oitem" key={ii}>
                   <Mold cfg={cf} label={T('moldPreview', { name: dz.name })} />
                   <div>
-                    <h4>{dz.name} · {T.n('doorStickers', n)}</h4>
+                    <h4>{dz.name}</h4>
+                    <p className="adm-print"><b>{T('printLine', { list: printCounts(it).map(([p, c]) => `${c} × ${T('pc_' + p)}`).join(' · ') })}</b></p>
                     <p>{kit.descOf(cf)}<br />{T('qtyLine', { q: it.qty, price: euro(it.list * it.qty) })}
                       {cf.numberOn && cf.number && <><br />{T('badgeIn', { text: '\u0000', colour: kit.COLORS[cf.c1].name }).split('\u0000').map((p, k) => (k ? [<b key="b">{cf.number}</b>, p] : p))}</>}</p>
                     <div className="btns">
-                      <button className="btn btn-primary" type="button" disabled={busy === key} onClick={() => download(cf, 'png', o.ref, key)}>{T('dlPng')}<span className="sr">{forOrder}</span></button>
+                      <button className="btn btn-primary" type="button" disabled={busy === key} onClick={() => download(cf, 'pdf', o.ref, key)}>{T('dlPdf')}<span className="sr">{forOrder}</span></button>
                       <button className="btn btn-ghost" type="button" onClick={() => download(cf, 'svg', o.ref, key)}>{T('dlSvg')}<span className="sr">{forOrder}</span></button>
                     </div>
                   </div>
@@ -331,7 +347,7 @@ export default function Admin() {
       <div className="adm-bar">
         <label htmlFor="admDesign">{c.design}</label>
         <select className="field adm-select" id="admDesign" value={testId} onChange={(e) => setTestId(e.target.value)}>{kit.DESIGNS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
-        <button className="btn btn-primary" type="button" id="admTestPng" disabled={busy === 'tpng'} aria-busy={busy === 'tpng' || undefined} onClick={() => download(testCfg(), 'png', 'TEST', 'tpng')}>{c.png}</button>
+        <button className="btn btn-primary" type="button" id="admTestPng" disabled={busy === 'tpng'} aria-busy={busy === 'tpng' || undefined} onClick={() => download(testCfg(), 'pdf', 'TEST', 'tpng')}>{c.pdf}</button>
         <button className="btn btn-ghost" type="button" id="admTestSvg" onClick={() => download(testCfg(), 'svg', 'TEST', 'tsvg')}>{c.svg}</button>
       </div>
       <Mold cfg={testCfgV} className="moldp adm-test-prev" label={T('moldPreview', { name: kit.D(testId)!.name })} />
@@ -475,7 +491,7 @@ export default function Admin() {
                     : <span className="adm-confirm" role="group" aria-label={d.mailAll}><span>{d.mailConfirm(paidCount)}</span>
                         <button className="btn btn-primary" type="button" onClick={mailAllPaid}>{d.mailYes}</button>
                         <button className="btn btn-ghost" type="button" onClick={() => setMailAsk(false)}>{d.mailNo}</button></span>}
-                  <button className="btn btn-primary" type="button" onClick={() => bulk('png')} disabled={!openKits || busy === 'bulk'} aria-busy={busy === 'bulk' || undefined}>{d.bulkPng}</button>
+                  <button className="btn btn-primary" type="button" onClick={() => bulk('pdf')} disabled={!openKits || busy === 'bulk'} aria-busy={busy === 'bulk' || undefined}>{d.bulkPdf}</button>
                   <button className="btn btn-ghost" type="button" onClick={() => bulk('svg')} disabled={!openKits || busy === 'bulk'}>{d.bulkSvg}</button>
                 </div>
                 <div className="orders" id="admOrders">
@@ -534,6 +550,7 @@ export default function Admin() {
                 </Card>
               </>)}
 
+              {tab === 'designs' && <Designs />}
               {tab === 'tools' && toolSection}
             </div>
           </div>

@@ -114,7 +114,7 @@ function Header() {
       {/* Menu on the left, the logo centred, tools on the right. The page links live in the menu panel at every width. */}
       <header className="top">
         <div className="top-l">
-          <button type="button" className="menu-btn" id="menuBtn" ref={menuBtn} aria-expanded={menu} aria-controls="mnav" onClick={() => setMenu((m) => !m)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg><span>{ui.t_menu}</span></button>
+          <button type="button" className="menu-btn" id="menuBtn" ref={menuBtn} aria-label={ui.t_menu} aria-expanded={menu} aria-controls="mnav" onClick={() => setMenu((m) => !m)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg><span>{ui.t_menu}</span></button>
         </div>
         <Link to={to('home')} className="brand" aria-label={ui.t_home_aria}><Logo /></Link>
         <div className="tools">
@@ -163,7 +163,7 @@ function Footer() {
       <div>
         <h2>{ui.t_legal}</h2>
         <Link to={to('privacy')}>{ui.t_privacy}</Link><Link to={to('terms')}>{ui.t_terms}</Link><Link to={to('refunds')}>{dec(ui.t_refunds)}</Link><Link to={to('cookies')}>{ui.t_cookies}</Link>
-        <a href="https://www.livroreclamacoes.pt" rel="noopener">Livro de Reclamações</a>
+        <a href="https://www.livroreclamacoes.pt" rel="noopener" lang="pt">Livro de Reclamações</a>
         <Html as="span" html={ui.t_odr} style={{ display: 'block', marginTop: 8, fontSize: 12, maxWidth: '30ch' }} />
       </div>
     </footer>

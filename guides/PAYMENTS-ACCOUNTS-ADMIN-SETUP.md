@@ -11,13 +11,14 @@ New database: `npm run db:remote`. Existing database (created before payments): 
 2. `npx wrangler secret put STRIPE_SECRET_KEY`
 3. Deploy the Worker (`npm run deploy`), note its address (`https://ofst-api.<you>.workers.dev`).
 4. Stripe Dashboard -> Developers -> Webhooks -> Add endpoint: `https://<worker address>/api/stripe/webhook`.
-   Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`.
+   Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`,
+   plus `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed` (refunds and chargebacks then show in the admin).
 5. Copy the endpoint's **signing secret** (`whsec_...`): `npx wrangler secret put STRIPE_WEBHOOK_SECRET`.
 6. Stripe Dashboard -> Settings -> Payment methods: enable the ones you want (cards, MB WAY, ...). They appear on Stripe's page automatically.
 7. Test with card `4242 4242 4242 4242`. An order only turns "paid" (and shows in the admin) after the webhook arrives.
 8. Going live: repeat with live keys (`sk_live_...` and a live webhook endpoint).
 
-Prices are always calculated by the Worker from `src/data/designs.json`; the browser's total is ignored. Shipping is not charged yet.
+Prices are always calculated by the Worker from `src/data/designs.json` plus any changes made in the admin Designs tab; the browser's total is ignored. Shipping is not charged yet.
 
 ## 3. Sign-in emails and order emails (Resend)
 1. Create a free Resend account, add and verify `ofstdesigns.com` (it gives you DNS records to add).

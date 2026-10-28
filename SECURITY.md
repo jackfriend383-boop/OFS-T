@@ -97,7 +97,7 @@ Implemented:
 - [x] No uploads. Admin page `noindex,nofollow`, not linked, not in the sitemap or `llms.txt`.
 
 Still to do:
-- [ ] Payments (hosted checkout) with **verified webhooks** and server-side prices; until then the owner verifies totals by hand.
+- [x] Payments (hosted checkout) with **verified webhooks** and server-side prices; promotion-code discounts are checked against Stripe's subtotal; refunds and disputes are recorded from the webhook.
 - [ ] Order confirmation emails (needs an email provider called from the Worker; durable-medium requirement, see `LEGAL-TODO.md`).
 - [ ] Stronger abuse protection for order inserts: per-IP rate limiting (Cloudflare Rate Limiting rules) and a CAPTCHA
       (Cloudflare Turnstile verified inside the Worker). Today there are only the global caps above.
@@ -122,7 +122,7 @@ Still to do:
 - [ ] **Compute prices on the server** from the product catalogue; never trust amounts from the client.
 - [ ] **Verify webhook signatures** with the endpoint secret against the **raw request body** (e.g. `stripe.webhooks.constructEvent(rawBody, sigHeader, endpointSecret)`); reject on failure; enforce the timestamp tolerance.
 - [ ] **Idempotency**: store processed `event.id`s and ignore duplicates; use idempotency keys on outgoing API calls; make order fulfilment idempotent.
-- [ ] Mark orders paid only from the verified webhook, not from the browser redirect.
+- [x] Mark orders paid only from the verified webhook, not from the browser redirect.
 
 ### File uploads (e.g. custom artwork)
 - [ ] **Allowlist** both MIME type (checked server-side by content / magic bytes, not the client's `Content-Type`) and extension, e.g. `.png .jpg .jpeg .pdf` (and `.ai/.eps` only if really needed).

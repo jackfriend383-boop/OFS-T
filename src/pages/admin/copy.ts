@@ -1,6 +1,6 @@
 /* Interface text for the dashboard tabs (pt-PT + English). Plain text only, rendered by React as text. */
 const en = {
-  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', invoices: 'Invoices', customers: 'Customers', tools: 'Print tools' },
+  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', invoices: 'Invoices', customers: 'Customers', designs: 'Designs', tools: 'Print tools' },
   tabsLabel: 'Dashboard sections',
   range: 'Period', ranges: { today: 'Today', '7': '7 days', '30': '30 days', '90': '90 days', all: 'All time' },
   vsPrev: 'vs previous period',
@@ -23,7 +23,7 @@ const en = {
   mailAll: 'Email all paid orders', mailConfirm: (n: number) => `Send the confirmation email to ${n} paid ${n === 1 ? 'order' : 'orders'}?`, mailYes: 'Send', mailNo: 'Cancel',
   mailSending: 'Sending emails…', mailDone: (s: number, f: number, r: number) => `${s} sent${f ? `, ${f} failed` : ''}${r ? `. ${r} left: click again to send them.` : '.'}`,
   mailNotConfigured: 'Emails are not set up on the order server yet (RESEND_API_KEY missing).', mailFailed: 'Resend refused the emails: check the API key and that ofstdesigns.com is verified in Resend.',
-  exportCsv: 'Export CSV', bulkPng: 'All print files (PNG)', bulkSvg: 'All print files (SVG)',
+  exportCsv: 'Export CSV', bulkPdf: 'All print files (PDF)', bulkSvg: 'All print files (SVG)',
   bulkNote: (n: number) => (n === 1 ? '1 kit waiting to print' : `${n} kits waiting to print`), bulkNone: 'Nothing waiting to print.',
   bulkProgress: (a: number, b: number) => `Preparing file ${a} of ${b}…`, bulkDone: (n: number) => `${n} files downloaded.`,
   details: 'Print files', hideDetails: 'Hide',
@@ -36,7 +36,7 @@ const en = {
   limitNote: 'Figures cover the newest 500 paid orders.',
 };
 const pt: typeof en = {
-  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', tools: 'Ficheiros de impressão' },
+  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', designs: 'Designs', tools: 'Ficheiros de impressão' },
   tabsLabel: 'Secções do painel',
   range: 'Período', ranges: { today: 'Hoje', '7': '7 dias', '30': '30 dias', '90': '90 dias', all: 'Sempre' },
   vsPrev: 'vs período anterior',
@@ -59,7 +59,7 @@ const pt: typeof en = {
   mailAll: 'Enviar email às pagas', mailConfirm: (n: number) => `Enviar o email de confirmação a ${n} ${n === 1 ? 'encomenda paga' : 'encomendas pagas'}?`, mailYes: 'Enviar', mailNo: 'Cancelar',
   mailSending: 'A enviar emails…', mailDone: (s: number, f: number, r: number) => `${s} ${s === 1 ? 'enviado' : 'enviados'}${f ? `, ${f} falharam` : ''}${r ? `. Faltam ${r}: clique outra vez para os enviar.` : '.'}`,
   mailNotConfigured: 'Os emails ainda não estão configurados no servidor (falta o RESEND_API_KEY).', mailFailed: 'A Resend recusou os emails: verifique a chave API e se o domínio ofstdesigns.com está verificado na Resend.',
-  exportCsv: 'Exportar CSV', bulkPng: 'Todos os ficheiros (PNG)', bulkSvg: 'Todos os ficheiros (SVG)',
+  exportCsv: 'Exportar CSV', bulkPdf: 'Todos os ficheiros (PDF)', bulkSvg: 'Todos os ficheiros (SVG)',
   bulkNote: (n: number) => (n === 1 ? '1 kit por imprimir' : `${n} kits por imprimir`), bulkNone: 'Nada por imprimir.',
   bulkProgress: (a: number, b: number) => `A preparar ficheiro ${a} de ${b}…`, bulkDone: (n: number) => `${n} ficheiros transferidos.`,
   details: 'Ficheiros de impressão', hideDetails: 'Ocultar',

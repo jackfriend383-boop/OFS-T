@@ -17,6 +17,7 @@ export default function Account() {
   const [birthDate, setBirthDate] = useState('');
   const [busy, setBusy] = useState(false);
   const used = useRef('');
+  const linkToken = useRef(''); // kept while a new customer enters their date of birth
   const { hash } = useLocation();
   // Sent here from "Add to cart" / checkout as a guest: explain why (read after mount: localStorage is browser-only).
   const [mustSignIn, setMustSignIn] = useState(false);
@@ -31,16 +32,22 @@ export default function Account() {
     history.replaceState(null, '', location.pathname + location.search);
     setPhase('verifying');
     // Signed in: if they came from "Add to cart", the kit is added and they go back to where they were with the cart open.
-    backend.verifyLink(m[1]).then((u) => { setCustomer(u); setPhase('idle'); finishPendingAdd(); })
-      .catch((e) => { setErr(e.message || T('beGeneric')); setPhase('idle'); });
+    backend.verifyLink(m[1]).then((r) => {
+      if ('needsBirthDate' in r) { linkToken.current = m[1]; setPhase('age'); return; } // new account: confirm age first
+      setCustomer(r); setPhase('idle'); finishPendingAdd();
+    }).catch((e) => { setErr(e.message || T('beGeneric')); setPhase('idle'); });
   }, [hash, backend, setCustomer, T, finishPendingAdd]);
 
-  async function sendLink(e: FormEvent) {
+  /* New customer, after opening the emailed link: confirm the date of birth, then the account is created and signed in. */
+  async function confirmAge(e: FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || !birthDate) return;
     setErr(''); setBusy(true);
-    try { await backend.requestLink(email, birthDate); setPhase('sent'); }
-    catch (x: any) { setErr(x.message || T('beGeneric')); }
+    try {
+      const r = await backend.verifyLink(linkToken.current, birthDate);
+      if ('needsBirthDate' in r) return;
+      linkToken.current = ''; setCustomer(r); setPhase('idle'); finishPendingAdd();
+    } catch (x: any) { setErr(x.message || T('beGeneric')); if (x.code !== 'invalid') setPhase('idle'); }
     finally { setBusy(false); }
   }
 
@@ -49,8 +56,8 @@ export default function Account() {
     if (!email.trim() || busy) return;
     setErr(''); setBusy(true);
     try {
-      const result = await backend.requestLink(email, '');
-      if (result.needsBirthDate) setPhase('age'); else setPhase('sent');
+      await backend.requestLink(email);
+      setPhase('sent');
     } catch (x: any) { setErr(x.message || T('beGeneric')); }
     finally { setBusy(false); }
   }
@@ -62,7 +69,8 @@ export default function Account() {
     <section className="view" data-view="account">
       <div className="page-head">
         <span className="eyebrow">{T('acctEyebrow')}</span>
-        <h1 className="display" role="status" aria-live="polite">{h1}</h1>
+        <h1 className="display">{h1}</h1>
+        <p className="sr" role="status" aria-live="polite">{h1}</p>
         {!user && phase !== 'verifying' && mustSignIn && <p className="note" role="status" style={{ margin: 0, maxWidth: '56ch' }}>{T('acctSignInFirst')}</p>}
         {!user && phase === 'idle' && <p className="muted" style={{ margin: 0, maxWidth: '56ch' }}>{T('acctLeadOut')}</p>}
         {user && <p className="muted" style={{ margin: 0 }}>{T('acctSignedInAs')} <b>{user.email}</b></p>}
@@ -79,8 +87,7 @@ export default function Account() {
               <button type="button" className="btn btn-ghost" onClick={() => { setPhase('idle'); setErr(''); }}>{T('acctOtherEmail')}</button>
             </div>
           ) : phase === 'age' ? (
-            <form className="acct-card co" noValidate onSubmit={sendLink}>
-              <p className="muted">{email}</p>
+            <form className="acct-card co" noValidate onSubmit={confirmAge}>
               <div className="co-f">
                 <label htmlFor="acBirthDate">{T('acctBirthDate')}</label>
                 <input className="field" id="acBirthDate" type="date" autoComplete="bday" required max={new Date().toISOString().slice(0, 10)}
@@ -88,8 +95,7 @@ export default function Account() {
                 <p className="muted">{T('acctAgeNote')}</p>
               </div>
               <div className="acct-actions">
-                <button className="btn btn-primary" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? T('acctSendingLink') : T('acctSendLink')}</button>
-                <button className="btn btn-ghost" type="button" onClick={() => setPhase('idle')} disabled={busy}>{T('acctOtherEmail')}</button>
+                <button className="btn btn-primary" type="submit" disabled={busy || !birthDate} aria-busy={busy || undefined}>{T('acctContinue')}</button>
               </div>
             </form>
           ) : (

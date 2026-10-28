@@ -21,17 +21,18 @@ export default function Order() {
     setRef(id.slice(-6).toUpperCase());
     // Came back from Stripe without paying: close that payment session so no unpaid order is kept.
     if (q.get('cancelled') === '1') { setView('cancelled'); void backend.cancelCheckout(id); return; }
-    // Stripe only sends the customer here (without ?cancelled) after the checkout was completed, so the cart is done with.
-    // Cleared now rather than waiting for the paid confirmation, which can take a while (or days for Multibanco).
-    clearCart();
-    let stop = false, tries = 0, timer: ReturnType<typeof setTimeout>;
+    // The cart is emptied only once the order is paid or waiting for a slow payment (Multibanco); after a failed or expired
+    // payment it stays, so the "Open cart" button still has the kit in it.
+    let stop = false, tries = 0, cleared = false, timer: ReturnType<typeof setTimeout>;
+    const done = () => { if (!cleared) { cleared = true; clearCart(); } };
     const tick = async () => {
       let status: string | null = null;
       try { status = await backend.orderStatus(id); } catch { /* network blip: keep trying */ }
       if (stop) return;
-      if (status === 'paid') { setView('paid'); return; }
+      if (status === 'paid') { done(); setView('paid'); return; }
       if (status === 'failed' || status === 'expired') { setView('failed'); return; }
       if (status === null && tries === 0) { setView('unknown'); return; }
+      if (status) done(); // 'unpaid' = Stripe finished, payment still on its way
       setView('pending');
       if (++tries < POLL_MAX) timer = setTimeout(tick, POLL_MS);
     };
@@ -52,7 +53,8 @@ export default function Order() {
     <section className="view" data-view="order">
       <div className="page-head">
         <span className="eyebrow">{T('orderEyebrow')}</span>
-        <h1 className="display" role="status" aria-live="polite">{h}</h1>
+        <h1 className="display">{h}</h1>
+        <p className="sr" role="status" aria-live="polite">{h}</p>
         {text && <p className="muted" style={{ margin: 0, maxWidth: '56ch' }}>{text}</p>}
         {ref && view !== 'unknown' && <p className="muted" style={{ margin: 0 }}>{T('orderRef')}: <b className="mono">{ref}</b></p>}
         <div className="hero-cta">
