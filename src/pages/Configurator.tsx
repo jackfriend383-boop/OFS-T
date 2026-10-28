@@ -121,14 +121,19 @@ export default function Configurator() {
   const [scene, setScene] = useState<'studio' | 'beach'>('studio');
   useEffect(() => { try { if (sessionStorage.getItem('ofst-scene') === 'beach') setScene('beach'); } catch { /* private mode */ } }, []);
   // Night preview follows the site theme (light = day scenes above, dark = night city).
-  const [night, setNightState] = useState(false);
+  // In the dark theme the button switches between the night city (lights on) and a dark grey studio (lights off).
+  const [dark, setDark] = useState(false);
+  const [darkStudio, setDarkStudio] = useState(false);
+  const night = dark && !darkStudio;
+  useEffect(() => { try { if (sessionStorage.getItem('ofst-scene-dark') === 'studio') setDarkStudio(true); } catch { /* private mode */ } }, []);
   useEffect(() => {
-    const sync = () => setNightState(isDarkSite());
+    const sync = () => setDark(isDarkSite());
     sync();
     const mo = new MutationObserver(sync);
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-ofst'] });
     return () => mo.disconnect();
   }, []);
+  const toggleDarkScene = () => setDarkStudio((v) => { const n = !v; try { sessionStorage.setItem('ofst-scene-dark', n ? 'studio' : 'night'); } catch { /* private mode */ } return n; });
   const toggleScene = () => setScene((v) => { const n = v === 'beach' ? 'studio' : 'beach'; try { sessionStorage.setItem('ofst-scene', n); } catch { /* private mode */ } return n; });
   const api = useRef<StageApi | null>(null);
   const strip = useRef<HTMLDivElement>(null);
@@ -304,7 +309,7 @@ export default function Configurator() {
       <div className="cfg">
         <div className="cfg-media">
           <div className="stage-wrap" id="stageWrap">
-          <section className={'stage scene-' + (night ? 'night' : scene)} id="stage" aria-label={c.preview}
+          <section className={'stage scene-' + (night ? 'night' : dark ? 'dstudio' : scene)} id="stage" aria-label={c.preview}
             onPointerDown={(e) => {
               if ((e.target as HTMLElement).closest('button')) return;
               if (api.current?.zoomed()) { drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId }; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); (e.currentTarget as HTMLElement).classList.add('grabbing'); return; }
@@ -335,14 +340,14 @@ export default function Configurator() {
           </div>
           <div className="views" id="views" role="group" aria-label={c.camera}>
             {c.views.map(([v, t]) => <button key={v} type="button" data-v={v} aria-pressed={view === v} onClick={() => { setView(v); api.current?.view(v); setAngle(api.current?.currentAngle() ?? angle); }}><span className={'vi vi-' + v} dangerouslySetInnerHTML={{ __html: viewIcon(cfg.model, v as 'full' | 'door' | 'window') }} />{t}</button>)}
-            {/* Studio/beach only in the light theme; the dark theme always shows the night city. */}
-            {!night && <>
+            {/* Light theme: studio or beach. Dark theme: night city (lights on) or dark grey studio (lights off). */}
+            <>
             <span className="views-sep" aria-hidden="true" />
-            <button type="button" className="scene-btn" id="btnScene" aria-pressed={scene === 'beach'} title={c.scenery} onClick={toggleScene}>
+            <button type="button" className="scene-btn" id="btnScene" aria-pressed={dark ? !darkStudio : scene === 'beach'} title={c.scenery} onClick={dark ? toggleDarkScene : toggleScene}>
               <span className="vi vi-scene" aria-hidden="true"><svg viewBox="0 0 64 40" focusable="false"><rect x="3" y="3" width="58" height="34" rx="3" fill="none" stroke="currentColor" strokeWidth="3" /><path d="M8 32 22 18l8 8 6-5 20 11z" fill="currentColor" /><circle cx="45" cy="13" r="4" fill="currentColor" /></svg></span>
-              {c.scenery}: {scene === 'beach' ? c.beach : c.studio}
+              {c.scenery}: {dark ? (darkStudio ? c.studio : c.night) : scene === 'beach' ? c.beach : c.studio}
             </button>
-            </>}
+            </>
           </div>
         </div>
 

@@ -236,8 +236,8 @@ const NIGHT: Record<string, { head?: number[][]; tail?: number[][]; pools?: numb
   'qs-front': { head: [[817, 563, 23, 23], [1185, 563, 23, 23]], pools: [[815, 905, 170, 30, 0], [1185, 905, 170, 30, 0]] },
   'qs-front34': { head: [[723, 535, 11, 24], [623, 518, 6, 20]], pools: [[560, 872, 210, 30, 0]], beams: [[575, 587, 160, 34, -19], [478, 568, 150, 26, -19]] },
   'browncolor-front34': { head: [[797, 541, 13, 31], [633, 521, 8, 21]], pools: [[590, 878, 220, 30, 0]], beams: [[647, 594, 165, 38, -19], [487, 571, 150, 26, -19]] },
-  'qs-side': { head: [[622, 548, 6, 20]], tail: [[1399, 553, 6, 22]], pools: [[470, 848, 190, 16, 0], [1450, 848, 80, 10, 1]], beams: [[452, 556, 175, 40, -3]] },
-  'qs-back': { tail: [[1029, 535, 19, 19], [1310, 535, 19, 19]], pools: [[1030, 862, 120, 18, 1], [1305, 862, 120, 18, 1]] },
+  'qs-side': { head: [[626, 526, 6, 15]], tail: [[1398, 524, 6, 17]], pools: [[470, 848, 190, 16, 0], [1450, 848, 80, 10, 1]], beams: [[452, 556, 175, 40, -3]] },
+  'qs-back': { tail: [[1025, 535, 19, 19], [1302, 532.5, 17, 19]], pools: [[1030, 862, 120, 18, 1], [1305, 862, 120, 18, 1]] },
   'pop-side': { head: [[626, 531, 14, 12]], tail: [[1393, 530, 5, 13]], pools: [[470, 852, 190, 16, 0], [1450, 852, 80, 10, 1]], beams: [[456, 540, 175, 36, -3]], floor: 826 },
 };
 const nightKey = (o: Partial<Cfg>, ang: Angle) => (MOD(o.model) === MODEL_DEFS.pop ? 'pop-side' : trimOf(o.model, o.trim) === 'browncolor' && ang === 'front34' ? 'browncolor-front34' : 'qs-' + ang);
@@ -294,7 +294,7 @@ const SHEET_MM = [746, 285];
 const INNER = 'M551 203.6 L544.4 203.7 L537.8 203.7 L531.2 203.7 L524.6 203.7 L518 203.7 L511.4 203.7 L504.8 203.6 L498.2 203.5 L491.6 203.4 L485 203.2 L478.4 203 L471.8 202.9 L465.2 202.7 L458.6 202.4 L452 201.9 L445.6 200.2 L439.7 197.3 L434.3 193.5 L429.6 188.9 L425.9 183.5 L422.9 177.6 L420.9 171.3 L419.8 164.8 L419.4 158.2 L419.4 151.6 L419.4 145 L419.5 138.4 L419.5 131.8 L419.5 125.2 L419.8 118.6 L420.4 112.1 L422.1 105.7 L424.8 99.7 L428.4 94.2 L432.9 89.3 L438.2 85.5 L444.1 82.5 L450.4 80.7 L456.9 79.6 L463.5 78.7 L470 78.2 L476.6 77.6 L483.2 77.2 L489.8 76.9 L496.4 76.5 L503 76.1 L509.6 75.9 L516.2 75.8 L522.8 75.7 L529.4 75.7 L536 75.7 L542.6 75.7 L549.2 75.8 L555.8 75.9 L562.4 76.1 L569 76.4 L575.5 76.6 L582.1 77 L588.7 77.4 L595.3 77.9 L601.9 78.7 L608.4 79.3 L615 80.3 L621.3 82.1 L627.4 84.6 L632.9 88.2 L637.7 92.8 L641.6 98 L644.6 103.9 L646.7 110.2 L647.8 116.7 L648.2 123.2 L648.3 129.8 L648.3 136.4 L648.3 143 L648.3 149.6 L648.2 156.2 L647.9 162.8 L646.7 169.3 L644.7 175.6 L642.1 181.6 L638.5 187.2 L634 192 L628.8 196.1 L623.1 199.3 L616.8 201.5 L610.3 202.4 L603.7 202.8 L597.1 202.9 L590.5 203.1 L583.9 203.3 L577.3 203.4 L570.7 203.4 L564.1 203.5 L557.5 203.6Z';
 const logoPlate = (a: string, u: string, kx: number, ky: number) => `<g transform="scale(${kx.toFixed(4)} ${ky.toFixed(4)})">
     <linearGradient id="${u}-pl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#141414"/></linearGradient>
-    <path d="${INNER}" fill="url(#${u}-pl)" stroke="#1D1D1D" stroke-width=".5" stroke-linejoin="round"/>
+    <path d="${INNER}" fill="url(#${u}-pl)" stroke="#1D1D1D" stroke-width="2.4" stroke-linejoin="round"/>
     <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="490" y="96" width="88" height="88"><image href="${LOGO}" x="494.8" y="100.7" width="78" height="78"/></mask>
     <rect class="plate-logo" x="490" y="96" width="88" height="88" fill="${a}" mask="url(#${u}-lg)"/></g>`;
 /* Draws a design's picture into the door panel (whole sheet) and the rear window (a section of the same art, left of the badge). */

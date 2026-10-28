@@ -12,13 +12,14 @@ def sample(im, poly, scale=1.0):
     k = lambda r: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*r+1, 2*r+1))
     ring = cv2.dilate(m, k(int(18*scale))) & ~cv2.dilate(m, k(int(7*scale)))  # band just outside the door
     px = im[ring > 0]; return px[px.sum(1) > 40]
-hexc = lambda px: '#%02x%02x%02x' % tuple(int(v) for v in np.median(px, 0))
+hexc = lambda px, k=1.0: '#%02x%02x%02x' % tuple(int(v * k) for v in np.median(px, 0))
+DARKER = {'yellow': 0.5, 'purple': 0.5}  # the Ami 2025 black/yellow and black/purple show a darker gap (as asked)
 out = {}
 for f in sorted(glob.glob(I + 'ami/*.webp')):
     n = os.path.basename(f)[:-5]; trim, ang = n.rsplit('-', 1)
     if ang == 'front': continue
     im = np.array(Image.open(f).convert('RGB'))
-    out[n] = hexc(sample(im, rect(876, 658, 271, 104) if ang == 'side' else np.array(DQ.get(n, DQ[ang]), np.float32)))
+    out[n] = hexc(sample(im, rect(876, 658, 271, 104) if ang == 'side' else np.array(DQ.get(n, DQ[ang]), np.float32)), DARKER.get(trim, 1.0))
 im = np.array(Image.open(I + 'ami-pop.webp').convert('RGB')); s = 1376.8 / 1721
 out['pop'] = hexc(sample(im, ((rect(878, 657, 267, 106) - [555.9, 294.8]) / s).astype(np.float32), 1 / s))
 json.dump(out, open('src/data/panel.json', 'w'), indent=1)

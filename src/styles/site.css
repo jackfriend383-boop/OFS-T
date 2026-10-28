@@ -997,14 +997,18 @@ body{margin:0;font-size:15.5px;letter-spacing:.005em}
    A night city street behind the car (its road sits under the wheels, like the beach); the car's lights are drawn by the renderer.
    Text and controls on the picture stay light so they read on the dark sky. */
 /* The dark theme always shows the night scene: matching the theme too (not only the class React sets) shows it from the first paint. */
-:is(.stage.scene-night,:root[data-ofst="dark"] .stage){background:#070A14;isolation:isolate}
-:is(.stage.scene-night,:root[data-ofst="dark"] .stage)::before{content:"";position:absolute;inset:0;z-index:-1;background:url(/assets/img/city-night.svg) center 78%/cover no-repeat;pointer-events:none}
-:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-tag{color:#F2F2F4}
-:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-tag .eyebrow,:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-tag span:last-child{color:#B9BCC8}
-:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-angle,:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-hint{color:#B9BCC8}
-:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-arrow{background:rgba(20,22,30,.72);color:#F2F2F4;box-shadow:0 2px 12px rgba(0,0,0,.4)}
-:is(.stage.scene-night,:root[data-ofst="dark"] .stage) .stage-arrow:hover{background:rgba(36,38,48,.9)}
-.stage-wrap:fullscreen :is(.stage.scene-night,:root[data-ofst="dark"] .stage){background:#070A14}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio)){background:#070A14;isolation:isolate}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio))::before{content:"";position:absolute;inset:0;z-index:-1;background:url(/assets/img/city-night.svg) center 78%/cover no-repeat;pointer-events:none}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio)) .stage-tag{color:#F2F2F4}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio)) .stage-tag .eyebrow,:is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio)) .stage-tag span:last-child{color:#B9BCC8}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio)) .stage-angle,:is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio)) .stage-hint{color:#B9BCC8}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio)) .stage-arrow{background:rgba(20,22,30,.72);color:#F2F2F4;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+:is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio)) .stage-arrow:hover{background:rgba(36,38,48,.9)}
+:root[data-ofst="dark"] .stage.scene-dstudio{background:#2A2C31}
+:root[data-ofst="dark"] .stage.scene-dstudio .stage-tag{color:#F2F2F4}
+:root[data-ofst="dark"] .stage.scene-dstudio .stage-tag .eyebrow,:root[data-ofst="dark"] .stage.scene-dstudio .stage-tag span:last-child,:root[data-ofst="dark"] .stage.scene-dstudio .stage-angle,:root[data-ofst="dark"] .stage.scene-dstudio .stage-hint{color:#B9BCC8}
+:root[data-ofst="dark"] .stage.scene-dstudio .stage-arrow{background:rgba(20,22,30,.72);color:#F2F2F4;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.stage-wrap:fullscreen :is(.stage.scene-night,:root[data-ofst="dark"] .stage:not(.scene-dstudio)){background:#070A14}
 
 /* ===== Home: "What's in the kit" flashcards (Home.tsx KitCard) =====
    Each card turns over (3D flip) on hover with a mouse, or on tap/click/Enter. Both faces share one grid cell so the
