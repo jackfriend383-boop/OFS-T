@@ -5,6 +5,24 @@ dist-ssr/
 dist-admin/
 *.log
 
+# Secrets and local data: never commit these (Worker secrets live in `wrangler secret put`, local test values in worker/.dev.vars)
+.env
+.env.*
+.dev.vars
+*.pem
+*.key
+*.p12
+.wrangler/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Backups and archives
+*.tar
+*.tar.gz
+*.zip
+backups/
+
 # OS / editor
 .DS_Store
 Thumbs.db

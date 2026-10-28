@@ -67,7 +67,8 @@ const text = (v: unknown, max: number, min = 0): string => {
 const colour = (v: unknown) => { if (typeof v !== 'string' || !Object.prototype.hasOwnProperty.call(COLORS, v)) throw new DesignError(400, 'invalid'); return v; };
 function checkMaster(v: unknown): string {
   if (typeof v !== 'string' || v.length < 500 || v.length > 1000000 || !/<svg[\s>]/.test(v) || !v.includes('id="Artwork"') || !v.includes('id="CutContour"')) throw new DesignError(400, 'invalid');
-  if (/<script|<foreignObject|<image|<use[\s>]|javascript:|\son[a-z]+\s*=|<!ENTITY|<iframe/i.test(v)) throw new DesignError(400, 'invalid'); // pure vector shapes only
+  if (/<script|<foreignObject|<image|<use[\s>]|javascript:|vbscript:|data:|\son[a-z]+\s*=|<!ENTITY|<iframe|<embed[\s>]|<object[\s>]|<a[\s>]|<animate[\s>]|<animateTransform[\s>]|<animateMotion[\s>]|<set[\s>]|<handler[\s>]|<link[\s>]|<meta[\s>]|<base[\s>]|@import|&#/i.test(v)) throw new DesignError(400, 'invalid'); // pure vector shapes only
+  if (/href\s*=(?!\s*["']?\s*#)/i.test(v)) throw new DesignError(400, 'invalid'); // gradients may reference "#id"; nothing may point outside the file
   return v;
 }
 const checkArt = (v: unknown): string => { if (typeof v !== 'string' || v.length < 100 || v.length > 400000 || !B64.test(v) || !v.startsWith('iVBORw0KGgo')) throw new DesignError(400, 'invalid'); return v; };

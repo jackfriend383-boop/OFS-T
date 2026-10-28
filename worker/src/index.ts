@@ -27,6 +27,8 @@ import { sendMail, signInEmail, paidEmail, invoiceEmail, shippedEmail, newOrderE
 export interface Env {
   DB: D1Database;
   ofst_orders?: D1Database;
+  RL?: RateLimit;                 // Cloudflare rate-limit bindings (wrangler.jsonc "ratelimits"); optional so a missing binding never breaks the API
+  RL_STRICT?: RateLimit;
   ALLOWED_ORIGINS: string;
   SITE_URL: string;               // public site origin used for Stripe's return links, e.g. https://ofstdesigns.com
   STRIPE_SECRET_KEY: string;      // secret: wrangler secret put STRIPE_SECRET_KEY  (sk_test_... then sk_live_...)
@@ -108,6 +110,9 @@ function respond(data: unknown, status: number, req: Request, env: Env, extra: R
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
+    'X-Frame-Options': 'DENY',
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
     ...extra,
   };
   const origin = allowedOrigin(req, env);
@@ -170,11 +175,20 @@ function validateOrder(b: any, designs: Parameters<typeof priceItem>[2]) {
 }
 
 
-/* The visitor's IP address as Cloudflare sees it (used only as a short-lived rate-limit key, never stored with orders). */
-const clientIp = (req: Request) => (req.headers.get('CF-Connecting-IP') || req.headers.get('X-Forwarded-For') || 'unknown').split(',')[0].trim().slice(0, 64);
-/* Counts one hit for `key` and says whether it is still within `max` per `minutes`. Old rows are cleaned up as we go. */
+/* The visitor's IP address as Cloudflare sees it (used only as a short-lived rate-limit key, never stored with orders).
+   Only CF-Connecting-IP is trusted: X-Forwarded-For is set by the client and would let a script dodge every limit. */
+const clientIp = (req: Request) => (req.headers.get('CF-Connecting-IP') || 'unknown').trim().slice(0, 64);
+/* Per-visitor throttle for every API call, using Cloudflare's in-memory rate-limit binding (no D1 reads or writes, so a flood of
+   requests cannot use up the database quota). Skipped when the binding is not configured. */
+async function throttle(req: Request, limiter: RateLimit | undefined) {
+  if (!limiter) return;
+  const { success } = await limiter.limit({ key: clientIp(req) });
+  if (!success) throw new HttpError(429, 'rate_limited');
+}
+/* Counts one hit for `key` and says whether it is still within `max` per `minutes`. Old rows are cleaned up now and then
+   (about 1 call in 20) instead of on every request, so a flood of calls does not turn into a flood of database writes. */
 async function allowHit(env: Env, key: string, minutes: number, max: number, record = true): Promise<boolean> {
-  await env.DB.prepare(`DELETE FROM rate_hits WHERE at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')`).run();
+  if (Math.random() < 0.05) await env.DB.prepare(`DELETE FROM rate_hits WHERE at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')`).run();
   const { n } = (await env.DB.prepare(`SELECT count(*) AS n FROM rate_hits WHERE key = ?1 AND at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?2)`)
     .bind(key, `-${minutes} minutes`).first<{ n: number }>())!;
   if (n >= max) return false;
@@ -307,6 +321,7 @@ async function resendPaidEmails(env: Env) {
    Paid: the draft is copied into `orders` (once: Stripe retries are ignored) and deleted. Expired / failed: the draft is deleted.
    Orders created by the previous version of this Worker (stored in `orders` as 'unpaid') are still updated in place. */
 async function stripeWebhook(req: Request, env: Env) {
+  if (Number(req.headers.get('Content-Length') || 0) > 200000) throw new HttpError(413, 'too_large'); // refuse before reading the body
   const body = await req.text();
   if (body.length > 200000 || !(await verifyWebhook(body, req.headers.get('Stripe-Signature'), env.STRIPE_WEBHOOK_SECRET))) throw new HttpError(400, 'invalid');
   let ev: any;
@@ -714,6 +729,9 @@ export default {
 
       // Browsers always send Origin on cross-site requests; refuse any that is not one of our sites.
       if (req.headers.get('Origin') && !allowedOrigin(req, env)) throw new HttpError(403, 'denied');
+
+      // Per-visitor request limit before any database work. Sign-in, account and checkout calls get the stricter bucket.
+      await throttle(req, path.startsWith('/api/auth/') || path === '/api/admin/login' || path.startsWith('/api/checkout') ? env.RL_STRICT : env.RL);
 
       if (path === '/api/auth/request' && req.method === 'POST') return respond(await requestLink(req, env), 200, req, env);
       if (path === '/api/auth/verify' && req.method === 'POST') return respond(await verifyLink(req, env), 200, req, env);

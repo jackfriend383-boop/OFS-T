@@ -4,7 +4,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { apiOrigin, htmlVars } from './vite.shared';
 
 function adminHosting(): Plugin {
@@ -12,7 +12,7 @@ function adminHosting(): Plugin {
   return {
     name: 'ofst-admin-hosting',
     apply: 'build',
-    configResolved(c) { out = join(c.root, c.build.outDir); },
+    configResolved(c) { out = resolve(c.root, c.build.outDir); },
     async closeBundle() {
       const api = apiOrigin();
       await writeFile(join(out, 'robots.txt'), 'User-agent: *\nDisallow: /\n');

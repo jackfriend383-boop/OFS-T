@@ -1,10 +1,13 @@
 # Security
 
-OFS/T is a pre-rendered static site (built by Vite from `src/` (prerendered into `dist/`), served by GitHub Pages).
-The only backend is an **optional Cloudflare Worker + D1 database** for orders (see `guides/CLOUDFLARE-SETUP.md`,
-`worker/src/index.ts`, `worker/schema.sql`, `src/lib/backend.ts`). When `apiUrl` in `src/data/site.json` is empty (the default) nothing is
-sent anywhere: the checkout tells the visitor to order by email. There are no customer accounts, uploads, payments,
-analytics, embeds or reviews. One owner account signs in at `/admin/` (noindex, unlinked) to read orders.
+OFS/T is a React/Vite site, prerendered to static HTML (`src/`, `scripts/prerender.mjs`) and served as static files.
+Behind it sit two things you operate yourself:
+
+- **`worker/`** - a Cloudflare Worker (`worker/src/index.ts`) with a D1 database (`worker/schema.sql`). It is the only code that touches the database.
+  It handles passwordless customer accounts (emailed one-time links), Stripe Checkout, the Stripe webhook, transactional email (Resend) and the owner API.
+- **The owner dashboard** - a separate build (`admin-app/`, `npm run build:admin`) deployed to its own host, `admin.ofstdesigns.com` (noindex, unlinked, strict `_headers`).
+
+Card data never reaches us: payment happens on Stripe's hosted page. The browser calls the Worker only (`apiUrl` in `src/data/site.json`); it cannot reach D1.
 
 ## Reporting a vulnerability
 
@@ -12,24 +15,25 @@ Please email **[security contact email]** with a description, the affected URL a
 Do not open a public issue for security problems. We aim to acknowledge reports within [N] working days.
 Please do not access other people's data, run denial-of-service tests or use automated scanners that generate heavy traffic.
 
-## Threat model (current static site)
+## Threat model
 
 | Asset / risk | Exposure | Mitigation |
 |---|---|---|
-| Visitors' privacy (tracking, third-party requests) | Any external script, font, image or embed leaks IP/referrer to a third party | No third-party requests at all: fonts self-hosted (`assets/fonts/`), no analytics, no CDNs. CSP `default-src 'self'` enforces it. `Referrer-Policy: strict-origin-when-cross-origin` via meta. |
-| XSS via URL parameters (`/configurator/?design=…&number=…`) | Query string is attacker-controlled | `sanitizeCfg()` in `assets/js/core.js` validates every field against allowlists (design id must exist, colours must be known keys, finish/kit/model enumerated); badge text passes through `cleanNumber()` (uppercase `A-Z 0-9 space . # & ! -`, max 8 chars). Dynamic text inserted with `innerHTML` is passed through `esc()` (escapes `& < > "`). |
-| XSS / tampering via `localStorage` (`amig-cart`) | Another script on the origin, or a user, can edit it | Cart is re-validated with `sanitizeCfg()` on every load; quantities clamped to 1–99. Prices are always recomputed from `designs.json`, never read from storage. It is the visitor's own data on their own device. |
-| Script injection in general | — | CSP `script-src 'self'`: no inline scripts, no `eval`, no inline event handlers (`tools/check.py` fails the build if any appear). JSON-LD blocks are data (`type="application/ld+json"`), which CSP does not execute. |
-| Clickjacking | Site framed by another origin | Needs `frame-ancestors 'none'` / `X-Frame-Options: DENY` as an HTTP header (cannot be set via meta; GitHub Pages cannot set headers, see below). Low impact today: no state-changing actions. |
-| Secrets in the repo | — | None exist. No API keys, tokens or credentials are needed to build or run the site. Keep it that way (see checklist). |
-| Supply chain | — | Build uses npm packages (React, React Router, Vite, TypeScript); commit package-lock.json and run `npm audit` regularly. Fonts were downloaded once from Google Fonts and committed. |
-| Fake / tampered orders (backend on) | Anyone can call the public insert API directly, with any payload | RLS insert policy + table constraints (allowed customer keys only, size limits, email shape, total 1–1 000 000 cents, terms consent required); status/created_at forced by trigger and not even granted as insertable columns; global flood cap (30 orders / 10 min). **The total is computed in the browser from `designs.json` and can be forged:** the admin dashboard recomputes it from the price list and warns on mismatch, and the owner must verify totals before asking for payment. |
-| Stored XSS in the admin dashboard | Order rows are attacker-controlled | `admin.js` re-validates every kit with `sanitizeCfg()`, escapes all text with `esc()`, allowlists status values and uuids; nothing from a row is used as HTML or as a URL. |
-| Order data / admin session theft | — | Only an admin (row in `admins`, matched by `auth.uid()` from the JWT) can select/update orders, and only the `status` column is updatable; no delete grant. Session tokens live in `sessionStorage` (per tab), refreshed when expired; sign-out calls `/auth/v1/logout?scope=global` (revokes refresh tokens server-side). |
+| Visitors' privacy | Any third-party script, font or embed leaks IP/referrer | No third-party requests from the site: fonts self-hosted, no analytics, no CDNs. CSP `default-src 'self'` enforces it; the only extra origin is the Worker (`connect-src`). |
+| XSS via URL parameters (`/configurator/?design=…&number=…`) | Query string is attacker-controlled | `sanitizeCfg()` / `cleanNumber()` in `src/lib/kit.ts` validate every field against allowlists (badge text: `A-Z 0-9 space . # & !-`, max 8). The Worker re-validates the same fields (`worker/src/pricing.ts`). |
+| Tampering with `localStorage` (cart, customer session) | A user or another script on the origin can edit it | The cart is re-validated on load and never carries prices; prices are always computed by the Worker. The customer session is an opaque random token (only its SHA-256 hash is stored server-side). |
+| Script injection | - | CSP `script-src 'self'`: no inline scripts, no `eval`. `dangerouslySetInnerHTML` is used only for first-party content (`src/content/*.html`, generated SVG), never for request/order data. |
+| Clickjacking / transport | Site framed by another origin | `frame-ancestors`, HSTS etc. need HTTP headers: `npm run build` writes `dist/_headers` (Cloudflare Pages / Netlify); **GitHub Pages ignores it**, so host on Cloudflare Pages to get them. The Worker sends them on every API response. |
+| Secrets in the repo | - | None. `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` are Worker secrets (`wrangler secret put`); local test values live in the git-ignored `worker/.dev.vars`. `.gitignore` also blocks `.env*`, keys, local D1 files and backups. |
+| Supply chain | - | `package-lock.json` committed (site and worker), `npm audit` clean, Dependabot opens weekly update PRs (`.github/dependabot.yml`). |
+| Forged prices / fake orders | Anyone can call the public API directly | Prices are computed in the Worker from the server-side price list (the browser total is ignored). An order exists only after Stripe's **signed webhook** confirms the exact amount (`amountOk`); retried webhooks are idempotent. Checkout requires a signed-in customer. |
+| API abuse / flooding | Scripts hammering endpoints to burn the D1 quota or spam email | Per-IP limits on every call via Cloudflare rate-limit bindings (`RL` 120/min, `RL_STRICT` 15/min for sign-in, account and checkout; `wrangler.jsonc`), plus D1-backed limits on sign-in links, failed admin logins and checkouts, and global caps. Only `CF-Connecting-IP` is trusted for the visitor's address. |
+| Admin session theft / brute force | The owner API exposes every order | Random 256-bit bearer token, only its hash stored, 8 h expiry, server-side logout revokes all sessions, constant-time password compare, 8 failed logins per IP per 15 min. Strict CORS allow-list (`ALLOWED_ORIGINS`), no cookies. |
+| Stored XSS via admin uploads | Design masters (SVG) are rendered in the dashboard | `checkMaster()` accepts vector shapes only: no scripts, event handlers, `foreignObject`, animation, external `href`, entities or `data:` URIs. |
 
 ### Content Security Policy
 
-Set in `src/templates/base.html` as a `<meta http-equiv="Content-Security-Policy">`:
+Set in `index.html` and `admin-app/index.html` as a `<meta http-equiv="Content-Security-Policy">` (and as a header in `dist/_headers`):
 
 ```
 default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
@@ -41,7 +45,7 @@ When the order backend is configured, `vite.config.ts` appends the Worker origin
 (plain http only for localhost), a URL with a path, or anything that is not a bare origin. No key or password ever goes in `site.json`.
 
 - `style-src 'unsafe-inline'` is needed because markup and JS templates use `style="…"` attributes
-  (e.g. colour swatches `style="--c:#…"`, some layout tweaks in templates and in `core.js`). It allows inline CSS only, never script.
+  (e.g. colour swatches `style="--c:#…"`, some layout tweaks in React components). It allows inline CSS only, never script.
   To remove it, move those attributes into classes / CSS custom properties set through `element.style` (CSSOM is not blocked by CSP).
 - `img-src data: blob:` covers inline SVG data URIs and any canvas/blob previews.
 - `frame-ancestors`, `report-uri`/`report-to` and `sandbox` are ignored in a meta tag; set them as headers.
@@ -99,8 +103,9 @@ Implemented:
 Still to do:
 - [x] Payments (hosted checkout) with **verified webhooks** and server-side prices; promotion-code discounts are checked against Stripe's subtotal; refunds and disputes are recorded from the webhook.
 - [ ] Order confirmation emails (needs an email provider called from the Worker; durable-medium requirement, see `LEGAL-TODO.md`).
-- [ ] Stronger abuse protection for order inserts: per-IP rate limiting (Cloudflare Rate Limiting rules) and a CAPTCHA
-      (Cloudflare Turnstile verified inside the Worker). Today there are only the global caps above.
+- [x] Per-IP rate limiting on every API call (Cloudflare rate-limit bindings).
+- [ ] CAPTCHA on sign-in-link requests and admin login
+      (Cloudflare Turnstile verified inside the Worker), and Cloudflare Access in front of dmin.ofstdesigns.com.
 - [ ] Policy version/date stored with the consent flags; 2FA on the Cloudflare account; regular encrypted exports (`wrangler d1 export`; D1 also has 30-day Time Travel restore).
 - [ ] HTTP headers (`frame-ancestors`, HSTS) via a host that supports them.
 

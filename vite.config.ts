@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { htmlVars } from './vite.shared';
+import { htmlVars, securityHeaders } from './vite.shared';
 
 export default defineConfig({
   // GitHub project pages live under /<repo>/: the deploy workflow sets VITE_BASE=/<repo>/.
   base: process.env.VITE_BASE || '/',
-  plugins: [react(), htmlVars()],
+  plugins: [react(), htmlVars(), securityHeaders()],
   build: {
     target: 'es2022',
     cssMinify: true,
