@@ -32,7 +32,7 @@ jobs:
           # Custom domain served from the root (public/CNAME). Settings -> Pages -> Custom domain must be ofstdesigns.com.
           VITE_BASE: /
           VITE_SITE_URL: https://ofstdesigns.com
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
