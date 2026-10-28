@@ -75,10 +75,15 @@ async function sha256(s: string): Promise<ArrayBuffer> {
   return crypto.subtle.digest('SHA-256', enc.encode(s));
 }
 const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
-/* Constant-time string comparison (hash both so the lengths always match). */
+/* Constant-time string comparison (hash both so the lengths always match).
+   Web Crypto in Cloudflare Workers does not expose Node's timingSafeEqual. */
 async function safeEqual(a: string, b: string): Promise<boolean> {
   const [x, y] = await Promise.all([sha256(a), sha256(b)]);
-  return (crypto.subtle as any).timingSafeEqual(x, y);
+  const xb = new Uint8Array(x);
+  const yb = new Uint8Array(y);
+  let difference = 0;
+  for (let i = 0; i < xb.length; i++) difference |= xb[i] ^ yb[i];
+  return difference === 0;
 }
 function newToken(): string {
   const raw = crypto.getRandomValues(new Uint8Array(32));
