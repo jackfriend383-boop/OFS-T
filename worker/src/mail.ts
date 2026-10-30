@@ -46,9 +46,9 @@ export async function sendMail(env: MailEnv, to: string, subject: string, html: 
 
 const COPY = {
   pt: {
-    linkSubject: 'O seu link de acesso OFS/T', linkTitle: 'Entrar na sua conta', linkBody: 'Clique no botão para entrar. O link é válido durante 15 minutos e só pode ser usado uma vez.',
-    linkButton: 'Entrar', linkIgnore: 'Se não pediu este email, pode ignorá-lo: ninguém entra na sua conta sem este link.',
-    paidSubject: 'Recebemos o seu pagamento', paidTitle: 'Obrigado pela sua encomenda', paidBody: 'Recebemos o pagamento da encomenda {ref}. Enviaremos um email quando o kit seguir.', total: 'Total',
+    linkSubject: 'O teu link de acesso OFS/T', linkTitle: 'Entrar na tua conta', linkBody: 'Clica no botão para entrar. O link é válido durante 15 minutos e só pode ser usado uma vez.',
+    linkButton: 'Entrar', linkIgnore: 'Se não pediste este email, podes ignorá-lo: ninguém entra na tua conta sem este link.',
+    paidSubject: 'Recebemos o teu pagamento', paidTitle: 'Obrigado pela tua encomenda', paidBody: 'Recebemos o pagamento da encomenda {ref}. Enviaremos um email quando o kit seguir.', total: 'Total',
   },
   en: {
     linkSubject: 'Your OFS/T sign-in link', linkTitle: 'Sign in to your account', linkBody: 'Click the button to sign in. The link works for 15 minutes and can be used once.',
@@ -69,7 +69,7 @@ export const VAT_NOTE = { pt: 'IVA não aplicável – regime de isenção (art.
 
 const LEGAL = {
   pt: (pers: boolean) => [
-    ['Direito de livre resolução', `Pode resolver o contrato no prazo de 14 dias a contar da receção do kit, sem indicar motivo, enviando-nos uma declaração inequívoca (por exemplo para ${CONTACT}) ou o modelo de formulário em ${SITE_URL}/refunds/#form.${pers ? ' Exceção: os artigos com texto escolhido por si no emblema foram feitos segundo as suas especificações e não têm direito de livre resolução (DL 24/2014, art. 17.º, n.º 1, al. c)), conforme aceitou na finalização da compra.' : ''}`],
+    ['Direito de livre resolução', `Podes resolver o contrato no prazo de 14 dias a contar da receção do kit, sem indicar motivo, enviando-nos uma declaração inequívoca (por exemplo para ${CONTACT}) ou o modelo de formulário em ${SITE_URL}/refunds/#form.${pers ? ' Exceção: os artigos com texto escolhido por ti no emblema foram feitos segundo as tuas especificações e não têm direito de livre resolução (DL 24/2014, art. 17.º, n.º 1, al. c)), conforme aceitaste na finalização da compra.' : ''}`],
     ['Garantia legal', '3 anos a contar da entrega (Decreto-Lei n.º 84/2021).'],
     ['Condições de venda', `Em vigor à data da encomenda: ${SITE_URL}/terms/ · Reembolsos e devoluções: ${SITE_URL}/refunds/`],
     ['Reclamações', 'Livro de Reclamações Eletrónico: www.livroreclamacoes.pt · Resolução alternativa de litígios: CIMARA (Açores), www.ocimara.pt · CNIACC, www.cniacc.pt'],
@@ -112,7 +112,7 @@ export function paidEmail(lang: 'pt' | 'en', o: PaidOrder) {
 /* Sent when the shop marks an order as shipped in the admin. */
 export function shippedEmail(lang: 'pt' | 'en', ref: string) {
   const c = lang === 'pt'
-    ? { subject: `A sua encomenda seguiu (${ref})`, title: 'O seu kit está a caminho', body: `A encomenda ${ref} foi expedida. Quando a receber, siga o guia de aplicação incluído. Alguma dúvida? Responda a este email.` }
+    ? { subject: `A tua encomenda seguiu (${ref})`, title: 'O teu kit está a caminho', body: `A encomenda ${ref} foi expedida. Quando a receberes, segue o guia de aplicação incluído. Alguma dúvida? Responde a este email.` }
     : { subject: `Your order has shipped (${ref})`, title: 'Your kit is on its way', body: `Order ${ref} has been shipped. When it arrives, follow the fitting guide in the box. Any questions? Just reply to this email.` };
   return { subject: c.subject, html: shell(c.title, `<p style="margin:0;line-height:1.5">${esc(c.body)}</p>`), text: c.body };
 }
@@ -129,7 +129,7 @@ export function newOrderEmail(o: PaidOrder & { adminUrl: string }) {
 
 export function invoiceEmail(lang: 'pt' | 'en', ref: string, totalCents: number, lines: { name: string; desc: string; qty: number }[]) {
   const c = lang === 'pt'
-    ? { subject: `A sua fatura OFS/T (${ref})`, title: 'A sua fatura', body: `Segue em anexo a fatura da encomenda ${ref}.`, total: 'Total', footer: `Em caso de dúvida, responda a este email ou escreva para ${CONTACT}.` }
+    ? { subject: `A tua fatura OFS/T (${ref})`, title: 'A tua fatura', body: `Segue em anexo a fatura da encomenda ${ref}.`, total: 'Total', footer: `Em caso de dúvida, responde a este email ou escreve para ${CONTACT}.` }
     : { subject: `Your OFS/T invoice (${ref})`, title: 'Your invoice', body: `Attached is the invoice for order ${ref}.`, total: 'Total', footer: `Any questions? Reply to this email or write to ${CONTACT}.` };
   const money = new Intl.NumberFormat(lang === 'pt' ? 'pt-PT' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(totalCents / 100);
   const rows = lines.map((l) => `<li style="margin:0 0 8px"><strong>${esc(l.name)}</strong> × ${l.qty}<br><span style="color:#555;font-size:13px">${esc(l.desc)}</span></li>`).join('');

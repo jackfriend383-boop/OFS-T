@@ -1,4 +1,4 @@
-/* Home: beach hero with the live car that cycles through designs, the Ami version picker (opens the configurator with that
+/* Home: beach hero with the live car that cycles through the colour presets, the Ami version picker (opens the configurator with that
    version chosen), featured designs, how it works.
    Auto-cycling (WCAG 2.2.2): off with prefers-reduced-motion, paused while hovered, focused, off-screen or in a hidden tab,
    and stopped for good once the visitor picks a design with the dots. */
@@ -6,9 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useApp } from '../state';
 import { COPY } from '../content';
-import { FEATURED, HERO_CYCLE } from '../lib/kit';
+import type { Preset } from '../lib/kit';
 import { CarStage, Thumb } from '../components/Car';
-import { DesignCard } from '../components/DesignCard';
+import { DesignCard, presetLabel } from '../components/DesignCard';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -30,9 +30,29 @@ const PIECE_SHAPES: Record<string, { vb: string; d: string }> = {
 /* One flashcard. Front: the cut shape, name and quantity. Back: size and a short line.
    Hover flips it on devices with a mouse; a tap, click, Enter or Space flips it everywhere (aria-pressed).
    Both faces stay in the page for screen readers; with reduced motion it fades instead of turning. */
-function KitCard({ code, name, qty, tag, size, text, sizeLabel, qtyLabel }: { code: string; name: string; qty: string; tag: string; size: string; text: string; sizeLabel: string; qtyLabel: string }) {
+function KitCard({ code, name, qty, tag, size, text, sizeLabel, qtyLabel, soon }: { code: string; name: string; qty: string; tag: string; size: string; text: string; sizeLabel: string; qtyLabel: string; soon?: string }) {
   const [open, setOpen] = useState(false);
   const shape = PIECE_SHAPES[code];
+  if (soon) {
+    // Not available yet: a plain, muted card that does not flip.
+    return (
+      <li>
+        <button type="button" className={'kc kc-' + code} aria-disabled="true" tabIndex={-1}>
+          <span className="kc-in">
+            <span className="kc-face kc-front">
+              <span className="kc-soon">{soon}</span>
+              <span className="kc-plate" aria-hidden="true">
+                <svg viewBox={shape.vb} focusable="false"><path d={shape.d} fillRule="evenodd" /></svg>
+              </span>
+              <span className="kc-tag">{tag}</span>
+              <span className="kc-name">{name}</span>
+              <span className="kc-qty">{qty}</span>
+            </span>
+          </span>
+        </button>
+      </li>
+    );
+  }
   return (
     <li>
       <button type="button" className={'kc kc-' + code} aria-pressed={open} onClick={() => setOpen((o) => !o)}>
@@ -64,11 +84,16 @@ export default function Home() {
   const c = COPY[lang].home;
   const navigate = useNavigate();
   const { hash } = useLocation();
-  const cycle = [...HERO_CYCLE.filter((id) => kit.D(id)), ...kit.DESIGNS.map((x) => x.id).filter((id) => !HERO_CYCLE.includes(id))].slice(0, 6); // the chosen ones, then designs added later
+  const PRESETS = kit.presets; // premade colour pairs, names in the page language
+  const presetCfg = (designId: string, presetId: string) => kit.presetCfg(designId, presetId) ?? kit.defaultCfg(kit.D(designId)!);
+  const cycle = PRESETS; // the hero car cycles through the premade colour presets of the first design
   const [i, setI] = useState(0);
   const stopped = useRef(false), paused = useRef(false), visible = useRef(true);
   const hostWrap = useRef<HTMLDivElement>(null);
-  const hero = kit.D(cycle[i])!;
+  const hero = kit.DESIGNS[0];
+  const heroPreset = cycle[i];
+  const pick = (c1: string) => PRESETS.find((p) => p.c1 === c1) ?? PRESETS[0];
+  const versionPreset: Record<string, Preset> = { qs: pick('graphite'), pop: pick('racing') };
   const [swap, setSwap] = useState(false);
 
   useEffect(() => {
@@ -82,8 +107,9 @@ export default function Home() {
   useEffect(() => { if (hash === '#versions') requestAnimationFrame(() => document.getElementById('versions')?.scrollIntoView({ block: 'start' })); }, [hash]);
   useEffect(() => { if (i === 0) return; setSwap(false); const r = requestAnimationFrame(() => setSwap(true)); return () => cancelAnimationFrame(r); }, [i]);
 
-  const cfg = kit.defaultCfg(hero);
+  const cfg = presetCfg(hero.id, heroPreset.id);
   const fromPrice = Math.min(...kit.DESIGNS.map((x) => x.price));
+  const presetQuery = (p: { c1: string; c2: string }) => 'design=' + encodeURIComponent(hero.id) + '&c1=' + p.c1 + '&c2=' + p.c2;
   const goVersions = () => {
     const el = document.getElementById('versions'); if (!el) return;
     const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -108,16 +134,17 @@ export default function Home() {
             <span className="ln" style={{ '--i': 1 } as any}><em>{c.h1[1]}</em> {c.h1[2]}</span>
           </h1>
           <div className="hero-cta">
-            <a className="btn btn-primary" href="#versions" onClick={(e) => { e.preventDefault(); goVersions(); }}>{c.open} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14m-5-5 5 5 5-5" /></svg></a>
+            <a className="btn btn-primary btn-fx" href="#versions" onClick={(e) => { e.preventDefault(); goVersions(); }}>{c.open} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14m-5-5 5 5 5-5" /></svg></a>
           </div>
         </div>
         <div className="hero-stage" ref={hostWrap}
           onMouseEnter={() => (paused.current = true)} onMouseLeave={() => (paused.current = false)} onFocus={() => (paused.current = true)} onBlur={() => (paused.current = false)}>
-          <CarStage id="heroCar" cfg={cfg} style={{ cursor: 'pointer' }} onClick={() => navigate(to('configurator', 'design=' + hero.id))} />
+          {/* Day mode always: no night prop, so no car lights or night effect in the dark theme. */}
+          <CarStage id="heroCar" cfg={cfg} rollIn style={{ cursor: 'pointer' }} onClick={() => navigate(to('configurator', presetQuery(heroPreset)))} />
           <div className="hero-caption">
-            <div className={'hero-name' + (swap ? ' swap' : '')}><span className="eyebrow" id="heroCat">{hero.catName}</span><strong id="heroName">{hero.name}</strong></div>
+            <div className={'hero-name' + (swap ? ' swap' : '')}><span className="eyebrow" id="heroCat">{presetLabel(kit, heroPreset)}</span><strong id="heroName">{hero.name}</strong></div>
             <div className="dots" id="heroDots" role="group" aria-label={c.showDesign}>
-              {cycle.map((id, n) => <button key={id} type="button" aria-label={kit.D(id)!.name} aria-pressed={n === i} data-i={n} onClick={() => { stopped.current = true; setI(n); }} />)}
+              {cycle.map((p, n) => <button key={p.id} type="button" aria-label={presetLabel(kit, p)} aria-pressed={n === i} data-i={n} onClick={() => { stopped.current = true; setI(n); }} />)}
             </div>
           </div>
         </div>
@@ -129,7 +156,7 @@ export default function Home() {
         <div className="vgrid">
           {c.versions.map(([m, name, text]) => (
             <Link key={m} className="vcard" to={to('configurator', 'model=' + m)}>
-              <span className="vcard-car"><Thumb cfg={{ ...kit.defaultCfg(kit.DESIGNS[0]), model: m as any }} /></span>
+              <span className="vcard-car"><Thumb cfg={{ ...presetCfg(hero.id, versionPreset[m].id), model: m as any, trim: m === 'qs' ? 'split' : 'base' }} /></span>
               <span className="vcard-body">
                 <span className="vcard-name">{name}</span>
                 <span className="vcard-text">{text}</span>
@@ -140,11 +167,9 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="specs-strip">{c.specs.map(([k, v]) => <div key={k}><span className="eyebrow">{k}</span><b>{v}</b></div>)}</div>
-
       <div className="section">
-        <div className="sec-head"><h2 className="display">{c.popular}</h2><Link className="btn btn-ghost" to={to('shop')}>{c.all(kit.DESIGNS.length)}</Link></div>
-        <div className="grid-cards" id="featured">{[...FEATURED.filter((id) => kit.D(id)), ...kit.DESIGNS.map((x) => x.id).filter((id) => !FEATURED.includes(id))].slice(0, 4).map((id) => <DesignCard key={id} d={kit.D(id)!} />)}</div>
+        <div className="sec-head"><h2 className="display">{c.popular}</h2><Link className="btn btn-ghost" to={to('shop')}>{c.all(PRESETS.length)}</Link></div>
+        <div className="grid-cards" id="featured">{PRESETS.map((p) => <DesignCard key={p.id} d={hero} preset={p} />)}</div>
       </div>
 
       <div className="section" style={{ paddingTop: 0 }}>
@@ -157,7 +182,7 @@ export default function Home() {
         <div className="sec-head"><div><span className="eyebrow">{c.kitEyebrow}</span><h2 className="display" id="kitCardsTitle">{c.kitTitle}</h2></div></div>
         <p className="muted kc-lead">{c.kitLead} <span className="kc-hint">{c.kitHint}</span></p>
         <ul className="kc-grid">
-          {c.kitCards.map(([code, name, qty, tag, size, text]) => <KitCard key={code} code={code} name={name} qty={qty} tag={tag} size={size} text={text} sizeLabel={c.kitSize} qtyLabel={c.kitQty} />)}
+          {c.kitCards.map(([code, name, qty, tag, size, text]) => <KitCard key={code} code={code} name={name} qty={qty} tag={tag} size={size} text={text} sizeLabel={c.kitSize} qtyLabel={c.kitQty} soon={code === 'rims' ? c.soon : undefined} />)}
         </ul>
       </section>
 
@@ -168,7 +193,6 @@ export default function Home() {
             <h2 className="display" style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)' }}>{c.fitTitle}</h2>
             <p className="muted" style={{ margin: 0, maxWidth: '44ch' }}>{c.fitText}</p>
           </div>
-          <ul className="mono" style={{ fontSize: '13.5px' }}>{c.fitList.map(([a, b]) => <li key={a}><span>{a}</span><span className="muted">{b}</span></li>)}</ul>
         </div>
       </div>
 

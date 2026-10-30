@@ -3,9 +3,8 @@
    thumbnails, and by the server render of the live car); the Stage updates the live copy imperatively and is wrapped by the
    <CarStage> React component. Every change on the live car is instant (no animation). The Stage never runs on the server. */
 import DATA from '../data/designs.json';
-import BADGES from '../data/badges.json';
 import PANEL from '../data/panel.json';
-import { TRIMS, includedPieces, normPieces, type Cfg, type Kit } from './kit';
+import { TRIMS, SPLIT_TRIM, includedPieces, normPieces, normWinShape, type Cfg, type Kit, type WinShape } from './kit';
 
 const NS = 'http://www.w3.org/2000/svg';
 const COLORS = DATA.colors as Record<string, { hex: string }>;
@@ -19,27 +18,35 @@ let UID = 0;
 
 /* ---------- Helpers ---------- */
 
-/* Signature artwork = the print master of each design, drawn as a picture (made from the masters by scripts/make-art.mjs, or by the
-   admin "Designs" tab for designs added there), so the preview on the car is exactly what is printed.
-   size = picture size in source px, pill = the sticker sheet inside it. 'mask' art is split into black, white (blue), first colour
-   (red) and second colour (green) so the two colours can be recoloured (a colour-matrix filter, see toneMatrix); 'rgb' art keeps
-   its own colours. Built-in designs are static files at two widths: 1000 px for phones and low-memory devices, 1600 px otherwise.
-   Designs added in the admin come from the shop's server (src(w) = their picture URL) and are registered at run time (registerArt). */
-interface ArtSrc { mode: 'mask' | 'rgb'; size: number[]; pill: number[]; src: (w: number) => string }
-const ART_SIZE = [2000, 764], ART_PILL = [0, 0, 2000, 764];
+/* Design artwork = the final sticker sheet, drawn as a picture (made by scripts/make-art.py from src/data/masters/flame-final-door.jpg,
+   or by the admin "Designs" tab for designs added there). size = picture size in source px, pill = the sticker sheet inside it.
+   'mask' art is split into black, white (blue), first colour (red) and second colour (green) so the two colours can be recoloured
+   (a colour-matrix filter, see toneMatrix); 'rgb' art keeps its own colours. The built-in design is a static file at two widths:
+   1000 px for phones and low-memory devices, 1600 px otherwise (cropped to the sticker, so the whole picture is the sheet).
+   Designs added in the admin come from the shop's server (src(w) = their picture URL) and are registered at run time (registerArt).
+   door = where the sheet sits on the side-view car [x, y, w, h]; win = the part of the sheet shown on the rear window, as fractions
+   [x, y, w, h] of the sheet; gaps = the sheet has the thin cut gaps between the panel and the two lower strips ([y, x] as fractions
+   of the sheet): the car's panel crease is drawn in them. */
+interface ArtSrc { mode: 'mask' | 'rgb'; size: number[]; pill: number[]; src: (w: number) => string; door: number[]; win: number[]; gaps?: { y: number; x: number } }
+/* Door sticker zone (side view): the sheet's bounding box maps onto the door rect, grown by 0.75 so the sheet edge sits under the outline. */
+const DOOR_BOX = [875.25, 657.25, 272.5, 105.5];
+const ART_SIZE = [1946, 708], ART_PILL = [0, 0, 1946, 708];
+/* Cut gaps of the final design (centre of the horizontal gap and of the vertical gap between the two strips, as fractions of the sheet). */
+const ART_GAPS = { y: 0.8185, x: 0.5013 };
+/* Rear window: the right-hand part of the sheet, with the O frame. */
+const WIN_CROP = [1000 / 1946, 0, 683 / 1946, 1];
+/* Pictures of designs added in the admin keep the old sheet proportions (2000 x 764). */
+const REMOTE_SIZE = [2000, 764], REMOTE_PILL = [0, 0, 2000, 764];
 const staticSrc = (name: string, ext: string) => (w: number) => IMG_DIR + `art-${name}-${w}.${ext}`;
 const ART_SRC: Record<string, ArtSrc> = {
-  flame: { mode: 'mask', size: ART_SIZE, pill: ART_PILL, src: staticSrc('flame', 'png') },
-  stealth: { mode: 'rgb', size: ART_SIZE, pill: ART_PILL, src: staticSrc('stealth', 'webp') },
+  flame: { mode: 'mask', size: ART_SIZE, pill: ART_PILL, src: staticSrc('flame', 'png'), door: DOOR_BOX, win: WIN_CROP, gaps: ART_GAPS },
 };
 const NO_ART = { door: (..._a: any[]) => '', win: (..._a: any[]) => '' };
 
 /* ---------- Car photo + sticker zones (coordinates in the 2000×1125 photo) ---------- */
 const IMG = IMG_DIR + 'ami-side.webp';
-const LOGO = IMG_DIR + 'OFST-icon-white.svg';
 const DOOR_RECT = 'x="876" y="658" width="271" height="104" rx="42"';
 const WIN = 'M1161 345 L1226 355 L1300 489 L1199 489 Z';
-const WHEELS = [[698.5, 747], [1325.5, 747]];
 const VIEWS: Record<string, number[]> = { full: [530, 250, 1080, 646], door: [826, 598, 372, 222], window: [1078, 327, 306, 183], thumb: [556, 272, 1032, 594] };
 /* Ami versions. The Ami 2025 is the default everywhere; the Pop is offered in the configurator. The Pop photo is scaled and
    placed so its door lines up with the Ami 2025 door; its rear-window zone is the small orange half ring, so the window
@@ -48,15 +55,17 @@ const POP_IMG = IMG_DIR + 'ami-pop.webp', POP_LIGHTS = IMG_DIR + 'ami-pop-lights
 const MODEL_DEFS: Record<string, any> = {
   qs: {
     name: 'Ami 2025', img: `href="${IMG}" width="2000" height="1125"`,
-    door: DOOR_RECT, win: WIN, winT: '', winStroke: 'stroke="#0A0B0C" stroke-width="3"', rimR: 71, wheels: WHEELS,
+    door: DOOR_RECT, win: WIN, winT: '', winStroke: 'stroke="#0A0B0C" stroke-width="3"',
     badge: 'x="1016" y="677" width="113" height="56" rx="20"', plate: [1027, 687, 95, 38, 11], dx: 0,
   },
   pop: {
     name: 'Ami Pop', img: `href="${POP_IMG}" x="555.9" y="294.8" width="1376.8" height="656"`,
-    door: 'x="878" y="657" width="267" height="106" rx="40"', win: 'M1284.7 448.3 L1282.1 449.2 L1279.4 450.0 L1276.7 450.6 L1274.0 451.0 L1271.2 451.2 L1268.5 451.3 L1265.7 451.1 L1263.0 450.7 L1260.2 450.2 L1257.6 449.4 L1255.0 448.5 L1252.4 447.4 L1250.0 446.1 L1247.6 444.7 L1245.3 443.1 L1243.2 441.3 L1241.2 439.4 L1239.3 437.4 L1237.6 435.2 L1236.0 432.9 L1234.6 430.5 L1233.4 428.1 L1232.3 425.5 L1231.5 422.9 L1230.8 420.2 L1230.3 417.5 L1229.9 414.7 L1229.8 411.9 L1229.9 409.2 L1230.2 406.4 L1230.6 403.7 L1231.3 401.0 L1232.1 398.4 L1233.1 395.8 L1234.3 393.3 L1235.7 390.9 L1237.2 388.6 L1238.9 386.4 L1240.7 384.3 L1242.7 382.3 L1244.8 380.5 L1247.0 378.9 L1247.9 378.3 L1258.9 399.2 L1257.9 400.2 L1256.9 401.2 L1256.1 402.4 L1255.3 403.6 L1254.6 404.8 L1254.1 406.2 L1253.7 407.5 L1253.4 408.9 L1253.2 410.3 L1253.2 411.7 L1253.3 413.2 L1253.5 414.6 L1253.8 416.0 L1254.2 417.3 L1254.8 418.6 L1255.4 419.9 L1256.2 421.1 L1257.1 422.2 L1258.1 423.2 L1259.1 424.2 L1260.3 425.0 L1261.5 425.8 L1262.7 426.5 L1264.1 427.0 L1265.4 427.4 L1266.8 427.7 L1268.2 427.9 L1269.6 427.9 L1271.1 427.8 L1272.5 427.6 L1273.9 427.3 L1273.9 427.3Z', winT: 'translate(1269.5 411.6) scale(0.5575) translate(-1230.5 -417)', winStroke: 'stroke="#0A0B0C" stroke-opacity=".55" stroke-width="1.2"', rimR: 78, wheels: [[694.7, 744.4], [1332.7, 743.6]],
+    door: 'x="878" y="657" width="267" height="106" rx="40"', win: 'M1284.7 448.3 L1282.1 449.2 L1279.4 450.0 L1276.7 450.6 L1274.0 451.0 L1271.2 451.2 L1268.5 451.3 L1265.7 451.1 L1263.0 450.7 L1260.2 450.2 L1257.6 449.4 L1255.0 448.5 L1252.4 447.4 L1250.0 446.1 L1247.6 444.7 L1245.3 443.1 L1243.2 441.3 L1241.2 439.4 L1239.3 437.4 L1237.6 435.2 L1236.0 432.9 L1234.6 430.5 L1233.4 428.1 L1232.3 425.5 L1231.5 422.9 L1230.8 420.2 L1230.3 417.5 L1229.9 414.7 L1229.8 411.9 L1229.9 409.2 L1230.2 406.4 L1230.6 403.7 L1231.3 401.0 L1232.1 398.4 L1233.1 395.8 L1234.3 393.3 L1235.7 390.9 L1237.2 388.6 L1238.9 386.4 L1240.7 384.3 L1242.7 382.3 L1244.8 380.5 L1247.0 378.9 L1247.9 378.3 L1258.9 399.2 L1257.9 400.2 L1256.9 401.2 L1256.1 402.4 L1255.3 403.6 L1254.6 404.8 L1254.1 406.2 L1253.7 407.5 L1253.4 408.9 L1253.2 410.3 L1253.2 411.7 L1253.3 413.2 L1253.5 414.6 L1253.8 416.0 L1254.2 417.3 L1254.8 418.6 L1255.4 419.9 L1256.2 421.1 L1257.1 422.2 L1258.1 423.2 L1259.1 424.2 L1260.3 425.0 L1261.5 425.8 L1262.7 426.5 L1264.1 427.0 L1265.4 427.4 L1266.8 427.7 L1268.2 427.9 L1269.6 427.9 L1271.1 427.8 L1272.5 427.6 L1273.9 427.3 L1273.9 427.3Z', winT: 'translate(1269.5 411.6) scale(0.5575) translate(-1230.5 -417)', winStroke: 'stroke="#0A0B0C" stroke-opacity=".55" stroke-width="1.2"',
     lights: { x: 600.7, y: 522.0, w: 20.8, h: 22.4, mask: POP_LIGHTS },
     badge: 'x="1023.5" y="677.5" width="113" height="55.5" rx="22"', plate: [1033, 685, 85, 42, 13], dx: 1,
-    views: { full: [466, 250, 1080, 646], door: [826, 598, 372, 222], window: [1154, 342, 230, 138], thumb: [490, 272, 1032, 594] },
+    /* full / thumb are offset so the Pop's body is centred exactly where the Ami 2025's is (measured on the photos: body boxes
+       573-1448 x 292-847 for the Ami 2025 and 559.9-1453.5 x 297.2-849.2 for the Pop), so switching version never moves the car. */
+    views: { full: [526.2, 253.7, 1080, 646], door: [826, 598, 372, 222], window: [1154, 342, 230, 138], thumb: [552.2, 275.7, 1032, 594] },
   },
 };
 const MOD = (m: unknown) => (typeof m === 'string' && Object.prototype.hasOwnProperty.call(MODEL_DEFS, m) ? MODEL_DEFS[m] : MODEL_DEFS.qs);
@@ -173,10 +182,26 @@ function warp(id: string, H: number[], [x, y, w, h]: number[], content: string, 
   return { defs, body };
 }
 /* Car colour of a version (an unknown one falls back to that version's first) and the photo for it and an angle. */
-const trimOf = (m: unknown, t: unknown) => { const L = TRIMS[MOD(m) === MODEL_DEFS.pop ? 'pop' : 'qs']; return typeof t === 'string' && L.includes(t) ? t : L[0]; };
+const trimOf = (m: unknown, t: unknown) => { const pop = MOD(m) === MODEL_DEFS.pop, L = TRIMS[pop ? 'pop' : 'qs']; return typeof t === 'string' && (L.includes(t) || (!pop && t === SPLIT_TRIM)) ? t : L[0]; };
 const angleOf = (m: unknown, a: unknown): Angle => (anglesOf(m).includes(a as Angle) ? (a as Angle) : 'side');
-const photoURL = (trim: string, ang: Angle) => `${IMG_DIR}ami/${trim}-${ang}.webp`;
+/* The split car (home page model box): front half black (this trim), back half brown, cut along the door's rear shut line (the door
+   sticker ends at x 1147, the shut line runs from the window frame at x 1161 down to x 1207), so the door sticker is whole on the black
+   half and the factory graphics of the black car's rear window (behind the line) never show. Every other angle shows the black car. */
+const SPLIT_FRONT = 'yellow', SPLIT_BACK = 'brown';
+const SPLIT_CUT = '0,0 1160,0 1161,345 1200,495 1207,640 1203,745 1203,1125 0,1125';
+const isSplit = (m: unknown, t: unknown) => MOD(m) === MODEL_DEFS.qs && t === SPLIT_TRIM;
+const photoTrim = (t: string) => (t === SPLIT_TRIM ? SPLIT_FRONT : t); // the real photo set behind a trim code
+const photoURL = (trim: string, ang: Angle) => `${IMG_DIR}ami/${photoTrim(trim)}-${ang}.webp`;
 const imgOf = (m: unknown, t: unknown, ang: Angle) => (MOD(m) === MODEL_DEFS.qs ? `href="${photoURL(trimOf(m, t), ang)}" width="2000" height="1125"` : MOD(m).img);
+/* The car photo as markup, with extra attributes (a night filter) on every <image>. The split car stacks two photos: the brown one
+   whole, the black one clipped by SPLIT_CUT (the clip path has a fixed id: every copy is identical, so duplicates are harmless). */
+const photoTag = (m: unknown, t: unknown, ang: Angle, attrs = '') => {
+  if (ang === 'side' && isSplit(m, trimOf(m, t))) {
+    const w = 'width="2000" height="1125"';
+    return `<clipPath id="ofst-split"><polygon points="${SPLIT_CUT}"/></clipPath><image href="${photoURL(SPLIT_BACK, 'side')}" ${w} ${attrs}/><g clip-path="url(#ofst-split)"><image href="${photoURL(SPLIT_FRONT, 'side')}" ${w} ${attrs}/></g>`;
+  }
+  return `<image ${imgOf(m, t, ang)} ${attrs}/>`;
+};
 const viewsAt = (m: unknown, ang: Angle): Record<string, number[]> => (ang === 'side' ? viewsOf(m) : QS_ZONES[ang].views);
 
 /* ---------- Kit pieces on the car ----------
@@ -184,49 +209,13 @@ const viewsAt = (m: unknown, ang: Angle): Record<string, number[]> => (ang === '
    Missing pieces (older carts, the hero) = the full kit. */
 const zonesOf = (o: Partial<Cfg>) => {
   const m = MOD(o.model) === MODEL_DEFS.pop ? 'pop' : 'qs', inc = includedPieces({ model: m, pieces: normPieces(o.pieces, m) });
-  return { door: inc.includes('door'), win: inc.includes('window'), accent: inc.includes('accent'), rims: inc.includes('rims') };
+  return { door: inc.includes('door'), win: inc.includes('window'), accent: inc.includes('accent') };
 };
-const zonesKey = (o: Partial<Cfg>) => Object.values(zonesOf(o)).join();
+const winShapeOf = (o: Partial<Cfg>): WinShape => normWinShape(o.winShape, MOD(o.model) === MODEL_DEFS.pop ? 'pop' : 'qs');
+const zonesKey = (o: Partial<Cfg>) => Object.values(zonesOf(o)).join() + '|' + winShapeOf(o);
 
-/* ---------- Coloured Citroën badges (Ami 2025 only) ----------
-   The logo on the front and rear of the car can be ordered in colour 1 or colour 2 of the design. For every car colour and view
-   (front, front ¾, rear) scripts/make-badges.py cut the factory logo out of the photo: a "bg" patch (the photo without the logo)
-   and an "a" picture (the logo's shape and shading). The preview draws the patch, then the shape tinted with the chosen colour
-   (a colour-matrix filter, like the stickers). badges.json says where each patch sits in the 2000×1125 photo. */
 /* Colour of the bare door panel (what shows in the gap of the sticker): sampled from the photo around the door, per car colour and angle (scripts/make-panel.py). */
-const panelOf = (m: unknown, t: unknown, ang: Angle): string => { const P = PANEL as Record<string, string>; return (MOD(m) === MODEL_DEFS.qs ? P[trimOf(m, t) + '-' + ang] : P.pop) || '#18191A'; };
-const badgeBox = (trim: string, ang: Angle): number[] | undefined => (BADGES as Record<string, number[]>)[trim + '-' + ang];
-const badgeOn = (o: Partial<Cfg>) => !!o.bcOn && MOD(o.model) === MODEL_DEFS.qs;
-const badgeURLs = (o: Partial<Cfg>, ang: Angle): string[] => {
-  const k = trimOf(o.model, o.trim) + '-' + ang;
-  return badgeOn(o) && badgeBox(trimOf(o.model, o.trim), ang) ? [`${IMG_DIR}badge/badge-${k}-bg.png`, `${IMG_DIR}badge/badge-${k}-a.png`] : [];
-};
-const badgeHex = (o: Partial<Cfg>) => hex(o.bcPick === 2 ? o.c2 as string : o.c1 as string);
-/* Logo shape: grey = shading (204 = 1.0), so each channel is multiplied by colour / 0.8. */
-const badgeMatrix = (h: string) => [1, 3, 5].map((i) => ((parseInt(h.slice(i, i + 2), 16) / 255) * 1.25).toFixed(4)).map((v) => `${v} 0 0 0 0`).join(' ') + ' 0 0 0 1 0';
-function badgeLayer(u: string, o: Partial<Cfg>, ang: Angle) {
-  const [bg, a] = badgeURLs(o, ang), B = badgeBox(trimOf(o.model, o.trim), ang);
-  if (!bg || !B) return { defs: '', body: '' };
-  const at = `x="${B[0]}" y="${B[1]}" width="${B[2]}" height="${B[3]}"`;
-  return {
-    defs: `<filter id="${u}-bc" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feColorMatrix class="bc-fm" type="matrix" values="${badgeMatrix(badgeHex(o))}"/></filter>`,
-    body: `<image href="${bg}" ${at}/><image href="${a}" ${at} filter="url(#${u}-bc)"/>`,
-  };
-}
-/* Rims of each photo: [cx, cy, rx, ry] of the outer rim edge. Side views come from MODEL_DEFS; the ¾ view sees them as ellipses;
-   the front and rear views show no rim face. */
-const RIMS34: Record<string, number[][]> = {
-  front34: [[838.4, 749.5, 72, 75], [1378.7, 706.2, 52, 65]],
-  'browncolor-front34': [[926, 756, 80, 86], [1399, 710, 53, 76]],
-};
-/* Rim sticker: a ring along the outer lip in the first colour with a thin line inside it in the second, with two short gaps.
-   Drawn around (0, 0); gloss/matte uses the same shine as the other stickers. */
-const rimRing = (u: string, rx: number, ry: number, a: string, b: string, shine: string) => {
-  const ring = (k: number) => `cx="0" cy="0" rx="${(rx * k).toFixed(1)}" ry="${(ry * k).toFixed(1)}"`, w = (Math.min(rx, ry) * .11).toFixed(1);
-  return `<g class="rim-sticker"><ellipse class="rs-a" ${ring(.89)} fill="none" stroke="${a}" stroke-width="${w}" pathLength="100" stroke-dasharray="47 3" stroke-dashoffset="1.5"/>`
-    + `<ellipse class="rs-b" ${ring(.79)} fill="none" stroke="${b}" stroke-width="${(Math.min(rx, ry) * .025).toFixed(2)}"/>`
-    + `<ellipse class="shine" ${ring(.89)} fill="none" stroke="url(#${u}-sh)" stroke-width="${w}" ${shine}/></g>`;
-};
+const panelOf = (m: unknown, t: unknown, ang: Angle): string => { const P = PANEL as Record<string, string>; return (MOD(m) === MODEL_DEFS.qs ? P[photoTrim(trimOf(m, t)) + '-' + ang] : P.pop) || '#18191A'; };
 
 /* ---------- Night (configurator in the dark theme) ----------
    Lamp lenses traced on each photo as [cx, cy, rx, ry]: head = headlights (warm white), tail = rear lights (red).
@@ -244,7 +233,7 @@ const nightKey = (o: Partial<Cfg>, ang: Angle) => (MOD(o.model) === MODEL_DEFS.p
 /* Night layers of one photo: 'under' (light on the road, drawn below the car) and 'over' (the car slightly darker and bluer,
    then the glowing lamps). Only built when the night scene is on (the live stage rebuilds its picture when it switches), so the
    day picture carries no hidden extra copy of the photo. */
-function nightLayers(u: string, o: CarOpts, ang: Angle, img: string) {
+function nightLayers(u: string, o: CarOpts, ang: Angle, photo: (attrs: string) => string) {
   if (!o.night) return { defs: '', under: '', over: '' };
   const N = NIGHT[nightKey(o, ang)] || {}, e = (c: number[], f: string) => `<ellipse cx="${c[0]}" cy="${c[1]}" rx="${c[2]}" ry="${c[3]}" fill="${f}"/>`;
   const defs = `<filter id="${u}-nd" color-interpolation-filters="sRGB"><feFlood flood-color="#0A1328" flood-opacity=".42"/><feComposite in2="SourceAlpha" operator="in"/></filter>
@@ -263,19 +252,21 @@ function nightLayers(u: string, o: CarOpts, ang: Angle, img: string) {
   const under = N.floor ? '' : `<g class="night">${pools}</g>`;
   const beams = (N.beams || []).map((B) => `<ellipse cx="${B[0]}" cy="${B[1]}" rx="${B[2]}" ry="${B[3]}" transform="rotate(${B[4]} ${B[0]} ${B[1]})" fill="url(#${u}-nb)"/>`).join('');
   const halo = (L: number[], id: string, k: number) => { const r = Math.max(L[2], L[3]) * k; return e([L[0], L[1], r, r], `url(#${u}-${id})`); };
-  const over = `<g class="night"><image ${img} filter="url(#${u}-nd)"/>${N.floor ? `<image ${img} filter="url(#${u}-nf)" mask="url(#${u}-nc)"/>${pools}` : ''}${beams}`
+  const over = `<g class="night">${photo(`filter="url(#${u}-nd)"`)}${N.floor ? `${photo(`filter="url(#${u}-nf)" mask="url(#${u}-nc)"`)}${pools}` : ''}${beams}`
     + (N.head || []).map((L) => halo(L, 'nh', 3.4) + e(L, `url(#${u}-nl)`)).join('')
     + (N.tail || []).map((L) => halo(L, 'nr', 2.6) + e(L, `url(#${u}-nt)`)).join('') + '</g>';
   return { defs, under, over };
 }
 
-/* Each design draws into the door panel and the rear window; everything is clipped to those two shapes. */
-export const ART: Record<string, { door: (a: string, b: string, u: string, logo?: boolean) => string; win: (a: string, b: string, u: string) => string }> = {};
+/* Each design draws into the door panel and the rear window; everything is clipped to those two shapes.
+   door(a, b, u) = the whole sheet on the door; win(a, b, u, shape) = a part of the sheet on the rear window ('square' = a rounded square
+   in the middle of the glass, the rest of the glass stays bare; any other shape = the whole glass / half ring).
+   gapAt = side-view position of the sheet's cut gaps (the horizontal one and the one between the two strips), when the sheet has them. */
+export const ART: Record<string, { door: (a: string, b: string, u: string) => string; win: (a: string, b: string, u: string, shape?: WinShape) => string; gapAt?: { y: number; x: number } }> = {};
 
-/* Signature artwork: the whole door shape maps onto the door panel; a section of the same art (left of the badge) fills the rear window.
-   The picture size follows the device: 1000 px files on small screens / low memory, 1600 px otherwise (the server render uses the
+/* The artwork picture size follows the device: 1000 px files on small screens / low memory, 1600 px otherwise (the server render uses the
    small one). The SVG works in source px, so the file size never changes the layout. The file only downloads when a car with
-   a signature design is actually drawn (thumbnails are drawn when they come near the screen). */
+   a design is actually drawn (thumbnails are drawn when they come near the screen). */
 const ART_W = (() => {
   if (typeof window === 'undefined') return 1000;
   const small = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
@@ -287,41 +278,34 @@ const toneMatrix = (a: string, b: string) => {
   const L = p(a), Dk = p(b);
   return [0, 1, 2].map((ch) => `${L[ch]} ${Dk[ch]} 1 0 0`).join(' ') + ' 0 0 0 1 0';
 };
-/* "Logo only" middle part: a plain dark plate with the OFS/T logo, exactly the shape and size of the middle piece of the door sticker
-   (INNER, in millimetres on the sticker sheet, the same for every design), drawn over the design inside the picture so it follows the
-   door in every view. */
-const SHEET_MM = [746, 285];
-const INNER = 'M551 203.6 L544.4 203.7 L537.8 203.7 L531.2 203.7 L524.6 203.7 L518 203.7 L511.4 203.7 L504.8 203.6 L498.2 203.5 L491.6 203.4 L485 203.2 L478.4 203 L471.8 202.9 L465.2 202.7 L458.6 202.4 L452 201.9 L445.6 200.2 L439.7 197.3 L434.3 193.5 L429.6 188.9 L425.9 183.5 L422.9 177.6 L420.9 171.3 L419.8 164.8 L419.4 158.2 L419.4 151.6 L419.4 145 L419.5 138.4 L419.5 131.8 L419.5 125.2 L419.8 118.6 L420.4 112.1 L422.1 105.7 L424.8 99.7 L428.4 94.2 L432.9 89.3 L438.2 85.5 L444.1 82.5 L450.4 80.7 L456.9 79.6 L463.5 78.7 L470 78.2 L476.6 77.6 L483.2 77.2 L489.8 76.9 L496.4 76.5 L503 76.1 L509.6 75.9 L516.2 75.8 L522.8 75.7 L529.4 75.7 L536 75.7 L542.6 75.7 L549.2 75.8 L555.8 75.9 L562.4 76.1 L569 76.4 L575.5 76.6 L582.1 77 L588.7 77.4 L595.3 77.9 L601.9 78.7 L608.4 79.3 L615 80.3 L621.3 82.1 L627.4 84.6 L632.9 88.2 L637.7 92.8 L641.6 98 L644.6 103.9 L646.7 110.2 L647.8 116.7 L648.2 123.2 L648.3 129.8 L648.3 136.4 L648.3 143 L648.3 149.6 L648.2 156.2 L647.9 162.8 L646.7 169.3 L644.7 175.6 L642.1 181.6 L638.5 187.2 L634 192 L628.8 196.1 L623.1 199.3 L616.8 201.5 L610.3 202.4 L603.7 202.8 L597.1 202.9 L590.5 203.1 L583.9 203.3 L577.3 203.4 L570.7 203.4 L564.1 203.5 L557.5 203.6Z';
-const logoPlate = (a: string, u: string, kx: number, ky: number) => `<g transform="scale(${kx.toFixed(4)} ${ky.toFixed(4)})">
-    <linearGradient id="${u}-pl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#141414"/></linearGradient>
-    <path d="${INNER}" fill="url(#${u}-pl)" stroke="#1D1D1D" stroke-width="2.4" stroke-linejoin="round"/>
-    <mask id="${u}-lg" maskUnits="userSpaceOnUse" x="490" y="96" width="88" height="88"><image href="${LOGO}" x="494.8" y="100.7" width="78" height="78"/></mask>
-    <rect class="plate-logo" x="490" y="96" width="88" height="88" fill="${a}" mask="url(#${u}-lg)"/></g>`;
-/* Draws a design's picture into the door panel (whole sheet) and the rear window (a section of the same art, left of the badge). */
+/* Rear window of the side view (bounding box of the glass) and the square sticker on it: [x, y, w, h, corner radius]. */
+const WIN_BOX = [1161, 345, 139, 144];
+const WIN_SQ = [1190, 396, 56, 56, 9];
+/* Draws a design's picture into the door panel (whole sheet) and the rear window (a part of the same sheet). */
 export function registerArt(id: string, S: ArtSrc) {
-  const [l, t, r, b] = S.pill, i = 0;
-  const art = (x: number, y: number, w: number, h: number, vb: number[], a: string, bb: string, u: string, logo = false) => {
+  const [l, t, r, b] = S.pill, sw = r - l, sh = b - t;
+  const art = (box: number[], vb: number[], a: string, bb: string, u: string) => {
     const filt = S.mode === 'mask' ? `<filter id="${u}-tone" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${toneMatrix(a, bb)}"/></filter>` : '';
-    return `${filt}<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${vb.join(' ')}" preserveAspectRatio="none" overflow="hidden">
-      <image href="${S.src(ART_W)}" width="${S.size[0]}" height="${S.size[1]}"${filt ? ` filter="url(#${u}-tone)"` : ''}/>${logo ? logoPlate(a, u, (r - l) / SHEET_MM[0], (b - t) / SHEET_MM[1]) : ''}</svg>`;
+    return `${filt}<svg x="${box[0]}" y="${box[1]}" width="${box[2]}" height="${box[3]}" viewBox="${vb.join(' ')}" preserveAspectRatio="none" overflow="hidden">
+      <image href="${S.src(ART_W)}" width="${S.size[0]}" height="${S.size[1]}"${filt ? ` filter="url(#${u}-tone)"` : ''}/></svg>`;
   };
+  const winVB = [l + S.win[0] * sw, t + S.win[1] * sh, S.win[2] * sw, S.win[3] * sh];
   ART[id] = {
-    door: (a, bb, u, logo) => art(872, 654, 279, 112, [l + i, t + i, r - l - 2 * i, b - t - 2 * i], a, bb, u + 'd', !!logo),
-    win: (a, bb, u) => art(1161, 345, 139, 144, [l + 370, t + 8, 650, b - t - 16], a, bb, u + 'w'),
+    door: (a, bb, u) => art(S.door, [l, t, sw, sh], a, bb, u + 'd'),
+    win: (a, bb, u, shape) => shape === 'square'
+      ? `<clipPath id="${u}wc"><rect x="${WIN_SQ[0]}" y="${WIN_SQ[1]}" width="${WIN_SQ[2]}" height="${WIN_SQ[3]}" rx="${WIN_SQ[4]}"/></clipPath><g clip-path="url(#${u}wc)">${art(WIN_SQ, winVB, a, bb, u + 'w')}</g>`
+      : art(WIN_BOX, winVB, a, bb, u + 'w'),
+    gapAt: S.gaps ? { y: S.door[1] + S.gaps.y * S.door[3], x: S.door[0] + S.gaps.x * S.door[2] } : undefined,
   };
 }
 /* Built-in designs (designs.json "art" names one of ART_SRC). */
 (DATA.designs as any[]).forEach((d) => { if (d.art && ART_SRC[d.art]) registerArt(d.id, ART_SRC[d.art]); });
 /* A design added in the admin: its preview pictures live on the shop's server and are passed in as ready-to-use blob: addresses
-   (the page's security policy only lets images load from itself, data: and blob:). */
+   (the page's security policy only lets images load from itself, data: and blob:). They keep the old sheet proportions. */
 export function registerRemoteArt(id: string, mode: 'mask' | 'rgb', urls: { 1000: string; 1600: string }) {
-  registerArt(id, { mode, size: ART_SIZE, pill: ART_PILL, src: (w) => (w >= 1600 ? urls[1600] : urls[1000]) });
+  registerArt(id, { mode, size: REMOTE_SIZE, pill: REMOTE_PILL, src: (w) => (w >= 1600 ? urls[1600] : urls[1000]), door: [872, 654, 279, 112], win: [370 / 2000, 8 / 764, 650 / 2000, 748 / 764] });
 }
 export { ART_W };
-
-const growPlate = (P: number[]) => [P[0] - 3, P[1] - 3, P[2] + 6, P[3] + 6, P[4] + 3];
-/* The door's middle part: the design runs through it (default) or it keeps the OFS/T logo plate. */
-const centreFull = (o: Partial<Cfg>) => o.centre !== 'logo';
 const plateText = (o: Partial<Cfg>) => (o.numberOn && o.number ? esc(o.number) : '');
 
 /* Accessible name of a car picture: design, colours (live stage only), Ami version and badge text. */
@@ -335,7 +319,6 @@ function carLabel(kit: Kit, o: Cfg, full: boolean, ang: Angle = 'side') {
   s += T('carOn', { model: MOD(o.model).name });
   if (full && ang !== 'side') s += T('carAngle_' + ang);
   if (full && o.numberOn && o.number) s += T('carBadge', { text: o.number });
-  if (full && badgeOn(o)) s += T('carBadgeColour', { colour: kit.COLORS[o.bcPick === 2 ? o.c2 : o.c1]?.name || '' });
   return s;
 }
 
@@ -344,27 +327,23 @@ export function carSVG(kit: Kit, o: CarOpts): string {
   const ang = angleOf(o.model, o.angle);
   if (ang !== 'side') return carSVGAt(kit, o, ang);
   const u = o.uid, a = hex(o.c1), b = hex(o.c2), A = ART[o.design] || NO_ART, M = MOD(o.model), V = viewsOf(o.model), v = V[o.view] || V.full, live = !!o.live;
-  const img = imgOf(o.model, o.trim, 'side'), Z = zonesOf(o), shine = `style="opacity:.25"`;
-  // Rim stickers (if ordered), one on each wheel.
-  const ring = Z.rims ? rimRing(u, M.rimR, M.rimR, a, b, shine) : '';
-  const rims = ring ? M.wheels.map(([x, y]: number[]) => `<g transform="translate(${x} ${y})">${ring}</g>`).join('') : '';
+  const photo = (attrs = '') => photoTag(o.model, o.trim, 'side', attrs), Z = zonesOf(o), shine = `style="opacity:.25"`, shape = winShapeOf(o);
   const lights = M.lights && Z.accent ? ((L: any) => `<mask id="${u}-lt" maskUnits="userSpaceOnUse" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}"><image href="${L.mask}" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" preserveAspectRatio="none"/></mask><rect class="lights" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" fill="${a}" mask="url(#${u}-lt)"/>`)(M.lights) : '';
-  // The brown-with-colour car has a bright green pill in the badge recess: a slightly larger plate keeps it hidden.
-  const P = M === MODEL_DEFS.qs && trimOf(o.model, o.trim) === 'browncolor' ? growPlate(M.plate) : M.plate;
   const a11y = o.decorative ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="${esc(carLabel(kit, o, live))}"`;
-  const N = nightLayers(u, o, 'side', img);
-  // Door sticker: panel artwork, its shading, the panel lines and the OFS/T badge plate over the factory badge.
+  const N = nightLayers(u, o, 'side', photo);
+  // Door sticker: the sheet on the panel (the cut gaps between its parts show the bare panel), its shading and the panel creases in the gaps.
+  const G = A.gapAt, gw = 1.7;
   const door = Z.door ? `<g clip-path="url(#${u}-door)">
       <rect x="860" y="645" width="300" height="130" fill="${panelOf(o.model, o.trim, 'side')}"/>
-      <g class="slot-door"><g>${A.door(a, b, u + 'x', !centreFull(o))}</g></g>
+      <g class="slot-door"><g>${A.door(a, b, u + 'x')}</g></g>
       <rect x="860" y="645" width="300" height="130" fill="url(#${u}-ds)"/>
       <rect class="shine" x="860" y="645" width="300" height="130" fill="url(#${u}-sh)" ${shine}/>
     </g>
-    <rect ${M.door} fill="none" stroke="#0E0F10" stroke-width="2.5"/>
-    <path d="M876 741.5 H1147" stroke="#060606" stroke-width="3"/><path d="M880 744.2 H1143" stroke="#fff" stroke-opacity=".07" stroke-width="1"/><path d="M1011.5 743 V762" stroke="#060606" stroke-width="2.5"/>` : '';
+    <rect ${M.door} fill="none" stroke="#0E0F10" stroke-width="2.5"/>${G ? `
+    <path d="M876 ${G.y.toFixed(1)} H1147" stroke="#060606" stroke-opacity=".8" stroke-width="${gw}"/><path d="M${G.x.toFixed(1)} ${(G.y + 1.5).toFixed(1)} V762" stroke="#060606" stroke-opacity=".8" stroke-width="1.4"/>` : ''}` : '';
   const win = Z.win ? `<g clip-path="url(#${u}-win)"><g${M.winT ? ` transform="${M.winT}"` : ''}>
       <rect x="1150" y="335" width="160" height="165" fill="#1C2022"/>
-      <g class="slot-win"><g>${A.win(a, b, u + 'x')}</g></g>
+      <g class="slot-win"><g>${A.win(a, b, u + 'x', shape)}</g></g>
       <rect x="1150" y="335" width="160" height="165" fill="url(#${u}-ws)"/>
       <rect class="shine" x="1150" y="335" width="145" height="165" fill="url(#${u}-sh)" ${shine}/>
     </g></g>
@@ -382,9 +361,8 @@ export function carSVG(kit: Kit, o: CarOpts): string {
   </defs>
   <g>
     ${N.under}
-    <image ${img}/>
+    ${photo()}
     ${lights}
-    ${rims}
     ${door}
     ${win}
     ${N.over}
@@ -395,27 +373,26 @@ export function carSVG(kit: Kit, o: CarOpts): string {
    coordinates) mapped onto the door and window seen in perspective, their shading, the badge recess and the OFS/T plate.
    The front view shows no sticker zone, so it is only the photo (plus the night lights). */
 function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
-  const u = o.uid, a = hex(o.c1), b = hex(o.c2), A = ART[o.design] || NO_ART, live = !!o.live, img = imgOf(o.model, o.trim, ang);
-  const trim = trimOf(o.model, o.trim), z = zoneOf(trim, ang), v = z.views[o.view] || z.views.full, Z = zonesOf(o);
+  const u = o.uid, a = hex(o.c1), b = hex(o.c2), A = ART[o.design] || NO_ART, live = !!o.live, photo = (attrs = '') => photoTag(o.model, o.trim, ang, attrs);
+  const trim = photoTrim(trimOf(o.model, o.trim)), z = zoneOf(trim, ang), v = z.views[o.view] || z.views.full, Z = zonesOf(o);
   const a11y = o.decorative ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="${esc(carLabel(kit, o, live, ang))}"`;
   const head = `<svg class="car-svg" viewBox="${v.join(' ')}" xmlns="${NS}" ${a11y}>`;
-  const N = nightLayers(u, o, ang, img), BC = badgeLayer(u, o, ang);
-  if (!z.Hd) return head + `<defs>${N.defs}${BC.defs}</defs><g>${N.under}<image ${img}/>${BC.body}${N.over}</g></svg>`;
-  // The plate is drawn a little larger than in the side view so the factory badge (and the green pill) never peeks out at its edge.
-  const shine = `style="opacity:.25"`, P = growPlate(MODEL_DEFS.qs.plate);
-  const D = Z.door ? warp(u + '-dw', z.Hd, [860, 645, 300, 130], `<g class="slot-door"><g>${A.door(a, b, u + 'x', !centreFull(o))}</g></g>`) : { defs: '', body: '' };
-  const W = Z.win ? warp(u + '-ww', z.Hw, [1150, 335, 160, 165], `<g class="slot-win"><g>${A.win(a, b, u + 'x')}</g></g>`) : { defs: '', body: '' };
-  // Door panel lines of the side view (lower crease and the short upright), mapped as straight lines.
+  const N = nightLayers(u, o, ang, photo);
+  if (!z.Hd) return head + `<defs>${N.defs}</defs><g>${N.under}${photo()}${N.over}</g></svg>`;
+  const shine = `style="opacity:.25"`;
+  const D = Z.door ? warp(u + '-dw', z.Hd, [860, 645, 300, 130], `<g class="slot-door"><g>${A.door(a, b, u + 'x')}</g></g>`) : { defs: '', body: '' };
+  const W = Z.win ? warp(u + '-ww', z.Hw, [1150, 335, 160, 165], `<g class="slot-win"><g>${A.win(a, b, u + 'x', winShapeOf(o))}</g></g>`) : { defs: '', body: '' };
+  // Door panel creases of the side view (in the cut gaps of the sheet), mapped as straight lines.
   const line = (x0: number, y0: number, x1: number, y1: number, st: string) => { const p = hp(z.Hd, x0, y0), q2 = hp(z.Hd, x1, y1); return `<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)} L${q2[0].toFixed(1)} ${q2[1].toFixed(1)}" ${st}/>`; };
   const sw = (n: number) => (n * z.ds).toFixed(2); // stroke widths scale with the door; the outlines keep a minimum so no factory graphic edge shows
-  const rims = Z.rims ? (RIMS34[trim + '-' + ang] || RIMS34[ang] || []).map(([x, y, rx, ry]) => `<g transform="translate(${x} ${y})">${rimRing(u, rx, ry, a, b, shine)}</g>`).join('') : '';
+  const G = A.gapAt;
   const door = Z.door ? `<g clip-path="url(#${u}-door)">
       <path d="${z.door}" fill="${panelOf(o.model, o.trim, ang)}"/>
       ${D.body}
       <g transform="${mat(z.dA)}"><rect x="860" y="645" width="300" height="130" fill="url(#${u}-ds)"/><rect class="shine" x="860" y="645" width="300" height="130" fill="url(#${u}-sh)" ${shine}/></g>
     </g>
     <path d="${z.door}" fill="none" stroke="#0E0F10" stroke-width="${Math.max(3.2 * z.ds, 2.8).toFixed(2)}" stroke-linejoin="round"/>
-    ${line(876, 741.5, 1147, 741.5, `stroke="#060606" stroke-width="${sw(3)}"`)}${line(880, 744.2, 1143, 744.2, `stroke="#fff" stroke-opacity=".07" stroke-width="${sw(1)}"`)}${line(1011.5, 743, 1011.5, 762, `stroke="#060606" stroke-width="${sw(2.5)}"`)}` : '';
+    ${G ? line(876, G.y, 1147, G.y, `stroke="#060606" stroke-opacity=".8" stroke-width="${sw(1.7)}"`) + line(G.x, G.y + 1.5, G.x, 762, `stroke="#060606" stroke-opacity=".8" stroke-width="${sw(1.4)}"`) : ''}` : '';
   const win = Z.win ? `<g clip-path="url(#${u}-win)">
       <path d="${z.win}" fill="#1C2022"/>
       ${W.body}
@@ -431,13 +408,11 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
     <linearGradient id="${u}-ws" x1="0" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>
     <linearGradient id="${u}-sh" x1="0" y1="0" x2="1" y2=".4"><stop offset=".25" stop-color="#fff" stop-opacity="0"/><stop offset=".4" stop-color="#fff" stop-opacity=".22"/><stop offset=".47" stop-color="#fff" stop-opacity=".04"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/><stop offset=".78" stop-color="#fff" stop-opacity=".12"/><stop offset=".84" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <linearGradient id="${u}-pl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#141414"/></linearGradient>
-    ${D.defs}${W.defs}${N.defs}${BC.defs}
+    ${D.defs}${W.defs}${N.defs}
   </defs>
   <g>
     ${N.under}
-    <image ${img}/>
-    ${BC.body}
-    ${rims}
+    ${photo()}
     ${door}
     ${win}
     ${N.over}
@@ -448,6 +423,8 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
    Every change is instant: no crossfade, camera tween, drive-in or wipe. When a change needs another photo (angle, car colour,
    Ami version), the old picture stays until the new photo is downloaded and decoded, then the new one replaces it in one step. */
 const photoHref = (m: unknown, t: unknown, ang: Angle) => (MOD(m) === MODEL_DEFS.qs ? photoURL(trimOf(m, t), ang) : POP_IMG);
+/* Every photo a picture needs (the split car stacks two). */
+const photoHrefs = (m: unknown, t: unknown, ang: Angle) => (ang === 'side' && isSplit(m, trimOf(m, t)) ? [photoURL(SPLIT_FRONT, 'side'), photoURL(SPLIT_BACK, 'side')] : [photoHref(m, t, ang)]);
 const READY = new Map<string, Promise<unknown>>();
 function photoReady(url: string) {
   let p = READY.get(url);
@@ -480,7 +457,7 @@ export class Stage {
   /* Rebuild once the photo for the current config and angle is ready, so there is never a blank frame. */
   swap() {
     const n = ++this.seq, go = () => { if (n === this.seq) this.build(); }, ang = angleOf(this.cfg.model, this.ang);
-    Promise.all([photoReady(photoHref(this.cfg.model, this.cfg.trim, ang)), ...badgeURLs(this.cfg, ang).map(photoReady)]).then(go, go);
+    Promise.all(photoHrefs(this.cfg.model, this.cfg.trim, ang).map(photoReady)).then(go, go);
   }
   /* The language changed: new accessible name, same picture. */
   setKit(kit: Kit) { this.kit = kit; if (this.svg) this.svg.setAttribute('aria-label', carLabel(kit, this.cfg, true, this.ang)); }
@@ -490,14 +467,9 @@ export class Stage {
     // Another Ami version or car colour needs another photo.
     if ((p.model || 'qs') !== (cfg.model || 'qs') || trimOf(p.model, p.trim) !== trimOf(cfg.model, cfg.trim)) { this.swap(); this.preload(); return; }
     if (zonesKey(p) !== zonesKey(cfg)) { this.build(); return; } // other kit pieces: same photo, new set of stickers
-    // The door's middle part or the coloured badges were switched: other layers, same photo (badge pictures load first).
-    if (centreFull(p) !== centreFull(cfg) || badgeOn(p) !== badgeOn(cfg)) { this.swap(); return; }
-    if (badgeOn(cfg)) qa('.bc-fm', this.svg).forEach((el) => el.setAttribute('values', badgeMatrix(badgeHex(cfg))));
     this.svg.setAttribute('aria-label', carLabel(this.kit, cfg, true, this.ang));
-    if (p.design !== cfg.design || p.c1 !== cfg.c1 || p.c2 !== cfg.c2) this.paint();
-    // Rim stickers take the new colours directly.
-    qa('.rs-a', this.svg).forEach((el) => el.setAttribute('stroke', hex(cfg.c1)));
-    qa('.rs-b', this.svg).forEach((el) => el.setAttribute('stroke', hex(cfg.c2)));
+    if (p.design !== cfg.design) { this.build(); return; } // another design may have other cut gaps (creases): rebuild
+    if (p.c1 !== cfg.c1 || p.c2 !== cfg.c2) this.paint();
     const t = plateText(cfg);
     if (t !== plateText(p) || p.c1 !== cfg.c1) {
       this.lights.forEach((l) => l.setAttribute('fill', hex(cfg.c1)));
@@ -527,16 +499,15 @@ export class Stage {
   preload(on?: boolean) {
     if (on) this.pre = true;
     if (!this.pre || MOD(this.cfg.model) !== MODEL_DEFS.qs) return;
-    anglesOf(this.cfg.model).forEach((a) => photoReady(photoHref(this.cfg.model, this.cfg.trim, a)));
+    anglesOf(this.cfg.model).forEach((a) => photoHrefs(this.cfg.model, this.cfg.trim, a).forEach(photoReady));
   }
-  /* New design or colours: swap the sticker artwork in place (only the zones in the kit: none in the front view, or when only
-     rims are ordered). */
+  /* New colours: swap the sticker artwork in place (only the zones in the kit: none in the front view). */
   paint() {
-    const C = this.cfg, lid = this.u + 'L' + (++this.lc), A = ART[C.design] || NO_ART;
-    const fns = [A.door, A.win];
+    const C = this.cfg, lid = this.u + 'L' + (++this.lc), A = ART[C.design] || NO_ART, shape = winShapeOf(C);
+    const fns = [A.door, (a: string, b: string, u: string) => A.win(a, b, u, shape)];
     [0, 1].forEach((n) => {
       const slot = this.slots[n]; if (!slot) return;
-      const g = document.createElementNS(NS, 'g'); g.innerHTML = fns[n](hex(C.c1), hex(C.c2), lid + n, n === 0 && !centreFull(C));
+      const g = document.createElementNS(NS, 'g'); g.innerHTML = fns[n](hex(C.c1), hex(C.c2), lid + n);
       slot.replaceChildren(g);
     });
   }

@@ -1,6 +1,6 @@
 /* Interface text for the dashboard tabs (pt-PT + English). Plain text only, rendered by React as text. */
 const en = {
-  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', invoices: 'Invoices', customers: 'Customers', designs: 'Designs', tools: 'Print tools' },
+  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', invoices: 'Invoices', customers: 'Customers', designs: 'Designs', edits: 'Edits', tools: 'Print tools' },
   tabsLabel: 'Dashboard sections',
   range: 'Period', ranges: { today: 'Today', '7': '7 days', '30': '30 days', '90': '90 days', all: 'All time' },
   vsPrev: 'vs previous period',
@@ -33,12 +33,12 @@ const en = {
   limitNote: 'Figures cover the newest 500 paid orders.',
 };
 const pt: typeof en = {
-  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', designs: 'Designs', tools: 'Ficheiros de impressão' },
+  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', designs: 'Designs', edits: 'Edições', tools: 'Ficheiros de impressão' },
   tabsLabel: 'Secções do painel',
   range: 'Período', ranges: { today: 'Hoje', '7': '7 dias', '30': '30 dias', '90': '90 dias', all: 'Sempre' },
   vsPrev: 'vs período anterior',
   k: { revenue: 'Receita', orders: 'Encomendas', aov: 'Valor médio', units: 'Autocolantes vendidos', toPrint: 'Por imprimir', issues: 'Problemas de pagamento', customers: 'Clientes' },
-  kHint: { revenue: 'Pago via Stripe', issues: 'Valor diferente da encomenda: verifique na Stripe', toPrint: 'Total, estado Nova' },
+  kHint: { revenue: 'Pago via Stripe', issues: 'Valor diferente da encomenda: verifica na Stripe', toPrint: 'Total, estado Nova' },
   trendTitle: 'Receita ao longo do tempo', trendOrders: 'Encomendas ao longo do tempo', metric: 'Mostrar', mRevenue: 'Receita', mOrders: 'Encomendas',
   noData: 'Ainda sem vendas neste período.', ordersN: (n: number) => (n === 1 ? '1 encomenda' : `${n} encomendas`),
   showTable: 'Ver como tabela', date: 'Data', recent: 'Últimas encomendas', seeAll: 'Ver todas',
@@ -65,5 +65,45 @@ const pt: typeof en = {
   csvHead: ['Encomenda', 'Data', 'Estado', 'Pagamento', 'Nome', 'Email', 'Morada', 'Código postal', 'Cidade', 'País', 'NIF', 'Artigos', 'Autocolantes', 'Total (EUR)'],
   limitNote: 'Os valores incluem as 500 encomendas pagas mais recentes.',
 };
+/* "Edits" tab: one card per editable part of the site. */
+const editsEn = {
+  intro: 'Change parts of the public site without touching code. Changes reach new visitors within about a minute.',
+  bgTitle: 'Background images',
+  bgNote: 'Pictures behind the home page and the configurator, one for each theme. Without a custom picture the site uses its default one.',
+  slots: { homeLight: 'Homepage, light theme', homeDark: 'Homepage, dark theme', confLight: 'Configurator scenery, light theme', confDark: 'Configurator scenery, dark theme' },
+  defaultPic: 'Default picture', custom: 'Custom picture', previewOf: (s: string) => `Preview of ${s}`,
+  upload: 'Upload / change', reset: 'Reset to default', save: 'Save', saving: 'Saving…',
+  fileHint: 'PNG, JPG or WebP, up to 4 MB. It is shrunk to 2400 px wide in your browser before upload.',
+  fit: 'Fit', fits: { cover: 'Cover', contain: 'Contain', stretch: 'Stretch' },
+  fitHelp: { cover: 'Fills the area, may crop the edges.', contain: 'Shows the whole picture, may leave empty space.', stretch: 'Stretches to the area and may distort.' },
+  zoom: 'Zoom', posX: 'Horizontal position', posY: 'Vertical position', zoomOnly: 'Zoom only applies to Cover.',
+  loading: 'Loading…', notReady: 'Could not read the current settings. Is the 0010 migration applied?',
+  badType: 'Choose a PNG, JPG or WebP picture.', tooBig: 'That file is over 4 MB.', unreadable: 'That file could not be read as a picture.', tooBigAfter: 'The picture is still too big after shrinking. Try a smaller one.',
+  uploading: 'Uploading…', uploaded: (s: string) => `${s}: picture uploaded. Adjust it and press Save if you want a different crop.`,
+  saved: (s: string) => `${s}: saved. New visitors see it now.`, resetDone: (s: string) => `${s}: back to the default picture.`,
+  confirmReset: (s: string) => `Remove the custom picture for "${s}" and go back to the default?`,
+  failed: 'That did not work. Check your connection and try again.', needImage: 'Upload a picture first.', unsaved: 'Not saved yet',
+  ready: 'Ready', savedState: 'Saved',
+};
+const editsPt: typeof editsEn = {
+  intro: 'Altera partes do site público sem mexer em código. As alterações chegam aos novos visitantes em cerca de um minuto.',
+  bgTitle: 'Imagens de fundo',
+  bgNote: 'Imagens por trás da página inicial e do configurador, uma para cada tema. Sem imagem própria, o site usa a imagem predefinida.',
+  slots: { homeLight: 'Página inicial, tema claro', homeDark: 'Página inicial, tema escuro', confLight: 'Cenário do configurador, tema claro', confDark: 'Cenário do configurador, tema escuro' },
+  defaultPic: 'Imagem predefinida', custom: 'Imagem própria', previewOf: (s: string) => `Pré-visualização de ${s}`,
+  upload: 'Carregar / mudar', reset: 'Repor predefinição', save: 'Guardar', saving: 'A guardar…',
+  fileHint: 'PNG, JPG ou WebP, até 4 MB. É reduzida para 2400 px de largura no teu navegador antes do envio.',
+  fit: 'Ajuste', fits: { cover: 'Preencher', contain: 'Conter', stretch: 'Esticar' },
+  fitHelp: { cover: 'Preenche a área e pode cortar as margens.', contain: 'Mostra a imagem inteira e pode deixar espaço vazio.', stretch: 'Estica até à área e pode deformar.' },
+  zoom: 'Zoom', posX: 'Posição horizontal', posY: 'Posição vertical', zoomOnly: 'O zoom só se aplica a Preencher.',
+  loading: 'A carregar…', notReady: 'Não foi possível ler as definições atuais. A migração 0010 está aplicada?',
+  badType: 'Escolhe uma imagem PNG, JPG ou WebP.', tooBig: 'Esse ficheiro tem mais de 4 MB.', unreadable: 'Não foi possível ler esse ficheiro como imagem.', tooBigAfter: 'A imagem continua demasiado grande depois de reduzida. Tenta uma mais pequena.',
+  uploading: 'A enviar…', uploaded: (s: string) => `${s}: imagem enviada. Ajusta e carrega em Guardar se quiseres outro enquadramento.`,
+  saved: (s: string) => `${s}: guardado. Os novos visitantes já a veem.`, resetDone: (s: string) => `${s}: de volta à imagem predefinida.`,
+  confirmReset: (s: string) => `Remover a imagem própria de "${s}" e voltar à predefinida?`,
+  failed: 'Não funcionou. Verifica a ligação e tenta de novo.', needImage: 'Carrega primeiro uma imagem.', unsaved: 'Por guardar',
+  ready: 'Pronto', savedState: 'Guardado',
+};
+export const EDITS = { en: editsEn, pt: editsPt };
 export const DASH = { en, pt };
 export type DashCopy = typeof en;

@@ -97,7 +97,7 @@
 
   "placeholders": {},
 
-  "cats": {"All": "All", "Signature": "Signature", "Street": "Street", "Racing": "Racing", "Retro": "Retro", "Minimal": "Minimal"},
+  "cats": {"All": "All", "Signature": "Launch Edition", "Launch Edition": "Launch Edition", "Street": "Street", "Racing": "Racing", "Retro": "Retro", "Minimal": "Minimal"},
   "colors": {},
   "tags": {},
 
@@ -132,16 +132,11 @@
     "oneSideLc": "one side",
     "bothSidesLc": "both sides",
     "badgeDesc": "Badge “{text}”",
-    "centreLogoDesc": "Logo centre",
-    "bcDesc": "Citroën badges in {colour}",
-    "carBadgeColour": ", Citroën badges in {colour}",
-    "bcLine": "Citroën badges in {colour}",
     "personalised": "Personalised",
     "pc_full": "Full kit",
     "pc_door": "Door stickers (pair)",
     "pc_window": "Window stickers (pair)",
     "pc_accent": "Front accents (pair)",
-    "pc_rims": "Rim stickers (set of 4)",
     "fName": "Full name",
     "fNameMsg": "Enter your full name.",
     "fEmail": "Email",
@@ -216,7 +211,11 @@
     "cfgSay": "{name}, {model}, {colours}, {sides}. Total {total}.",
     "cfgSayPers": " Personalised kit: no change-of-mind returns.",
     "numErr": "Enter badge text, or switch badge text off.",
-    "added": "Added ✓",
+    "added": "Added",
+    "winLine": "Window sticker: {shape}",
+    "winShape_full": "Full window",
+    "winShape_circle": "Circle",
+    "winShape_square": "Square",
     "addToCart": "Add to cart",
 
     "stNew": "New",

@@ -1,5 +1,6 @@
 import { priceItem, isPersonalised, type PricedItem } from './pricing';
 import { DesignError, adminDelete, adminList, adminMaster, adminSave, designArt, pricingDesigns, publicList } from './designs';
+import { SettingsError, deleteSlot, publicSettings, putImage, putSettings, slotImage } from './settings';
 import { createCheckoutSession, expireCheckoutSession, verifyWebhook } from './stripe';
 import { sendMail, signInEmail, paidEmail, invoiceEmail, shippedEmail, newOrderEmail, adminAlertEmail, type MailAttachment } from './mail';
 
@@ -736,6 +737,16 @@ export default {
         const origin = allowedOrigin(req, env); if (origin) { h['Access-Control-Allow-Origin'] = origin; h['Vary'] = 'Origin'; }
         return new Response(png, { status: 200, headers: h });
       }
+      // Site settings edited in the admin "Edits" tab: background pictures (public, cached; the picture URL carries ?v= so changes bust caches).
+      if (path === '/api/site-settings' && req.method === 'GET') return respond(await publicSettings(env, new URL(req.url).origin), 200, req, env, { 'Cache-Control': 'public, max-age=20, stale-while-revalidate=60' });
+      const sImg = /^\/api\/site-image\/([A-Za-z]{4,12})$/.exec(path);
+      if (sImg && req.method === 'GET') {
+        const img = await slotImage(env, sImg[1]);
+        if (!img) throw new HttpError(404, 'not_found');
+        const h: Record<string, string> = { 'Content-Type': img.mime, 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'cross-origin' };
+        const origin = allowedOrigin(req, env); if (origin) { h['Access-Control-Allow-Origin'] = origin; h['Vary'] = 'Origin'; }
+        return new Response(img.bytes, { status: 200, headers: h });
+      }
       if (path === '/api/checkout' && req.method === 'POST') return respond(await startCheckout(req, env), 201, req, env);
       const cancel = /^\/api\/checkout\/([^/]+)\/cancel$/.exec(path);
       if (cancel && req.method === 'POST') return respond(await cancelCheckout(req, env, cancel[1]), 200, req, env);
@@ -757,6 +768,11 @@ export default {
         if (dz && req.method === 'DELETE') return respond(await adminDelete(env, dz[1]), 200, req, env);
         const dzm = /^\/api\/admin\/designs\/([a-z0-9-]{2,40})\/master$/.exec(path);
         if (dzm && req.method === 'GET') return respond({ master: await adminMaster(env, dzm[1]) }, 200, req, env);
+        const ss = /^\/api\/admin\/site-settings\/([A-Za-z]{4,12})$/.exec(path);
+        if (ss && req.method === 'PUT') return respond(await putSettings(env, ss[1], await readJson(req, 2_000)), 200, req, env);
+        if (ss && req.method === 'DELETE') return respond(await deleteSlot(env, ss[1]), 200, req, env);
+        const ssi = /^\/api\/admin\/site-settings\/([A-Za-z]{4,12})\/image$/.exec(path);
+        if (ssi && req.method === 'PUT') return respond(await putImage(req, env, ssi[1]), 200, req, env);
         const m = /^\/api\/admin\/orders\/([^/]+)$/.exec(path);
         if (m && req.method === 'PATCH') return respond(await setStatus(req, env, m[1]), 200, req, env);
         const invoice = /^\/api\/admin\/orders\/([^/]+)\/invoice$/.exec(path);
@@ -764,7 +780,7 @@ export default {
       }
       throw new HttpError(404, 'not_found');
     } catch (e: any) {
-      if (e instanceof HttpError || e instanceof DesignError) return respond({ error: e.code }, e.status, req, env);
+      if (e instanceof HttpError || e instanceof DesignError || e instanceof SettingsError) return respond({ error: e.code }, e.status, req, env);
       console.error('unhandled', e && e.message);
       return respond({ error: 'server' }, 500, req, env);
     }

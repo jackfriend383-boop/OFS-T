@@ -33,7 +33,7 @@ Open PowerShell in the `OFS/T` folder:
 - Place a test order: Stripe's page shows the same no-VAT line under the Pay button and an "Add promotion code" link.
 - Pay: the customer gets the payment email (with the no-VAT line, returns info and links), and ADMIN_EMAIL gets "Nova encomenda".
 - Admin: the order shows "Para imprimir: 2 × Autocolantes de porta (par) · …".
-- In the admin, set that order to "Enviada": the customer gets "O seu kit está a caminho".
+- In the admin, set that order to "Enviada": the customer gets "O teu kit está a caminho".
 - Refund a test payment in Stripe: within a minute the admin order shows "Reembolsado na Stripe" and you get an email.
 - Reply to any customer email: it should arrive at geral@ofstdesigns.com (or the email in src/data/site.json).
 

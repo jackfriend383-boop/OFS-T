@@ -215,7 +215,7 @@ export function saveFile(name: string, blob: Blob) {
 }
 
 /* ---------- Preview pictures for the shop (used by the admin "Designs" tab for a design added there) ----------
-   Same recipe as scripts/make-art.mjs: a tone mask for recolourable designs, a full-colour picture for fixed ones. */
+   Same recipe as the old master-based art script (the built-in design is now made by scripts/make-art.py from a picture): a tone mask for recolourable designs, a full-colour picture for fixed ones. */
 export type ArtMode = 'mask' | 'rgb';
 export async function artPictures(master: string, mode: ArtMode): Promise<{ w1000: Blob; w1600: Blob }> {
   const info = inspectMaster(master), doc = parseXml(master), root = doc.documentElement;

@@ -8,8 +8,9 @@ export default function Shop() {
   const { kit, lang } = useApp();
   const c = COPY[lang].shop;
   const [cat, setCat] = useState('All');
-  const shown = kit.DESIGNS.filter((d) => cat === 'All' || d.cat === cat);
-  useFilterFeedback(cat, '#shopGrid .dcard', shown.length);
+  const PRESETS = kit.presets;
+  const shown =kit.DESIGNS.filter((d) => cat === 'All' || d.cat === cat);
+  useFilterFeedback(cat, '#shopGrid .dcard', shown.length * PRESETS.length);
   return (
     <section className="view" data-view="shop">
       <div className="page-head">
@@ -20,7 +21,7 @@ export default function Shop() {
       </div>
       <div className="section" style={{ paddingTop: 24 }}>
         <h2 className="sr">{c.designs}</h2>
-        <div className="grid-cards" id="shopGrid">{kit.DESIGNS.map((d) => <DesignCard key={d.id} d={d} hidden={cat !== 'All' && d.cat !== cat} />)}</div>
+        <div className="grid-cards" id="shopGrid">{kit.DESIGNS.flatMap((d) => PRESETS.map((p) => <DesignCard key={d.id + p.id} d={d} preset={p} hidden={cat !== 'All' && d.cat !== cat} />))}</div>
       </div>
     </section>
   );

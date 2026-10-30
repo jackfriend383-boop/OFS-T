@@ -30,9 +30,9 @@ export function rangeBounds(r: RangeKey, orders: AOrder[], now = new Date()) {
 export const inRange = <O extends AOrder>(orders: O[], from: Date, to: Date): O[] => orders.filter((o) => valid(o) && o.created >= from && o.created < to);
 
 /* A kit with both doors is two door stickers. */
-/* How many stickers of each piece to print for one order line: pairs (left + right) except rims, which come as a set of 4. */
+/* How many stickers of each piece to print for one order line: pairs (left + right). Rim stickers no longer exist: includedPieces drops a legacy 'rims' code from old orders, so they simply don't count. */
 export const printCounts = (it: { cfg: Cfg; qty: number }) =>
-  includedPieces(it.cfg).map((p) => [p, it.qty * (p === 'rims' ? 4 : 2)] as const);
+  includedPieces(it.cfg).map((p) => [p, it.qty * 2] as const);
 /* Door stickers to print (the main product), used by the KPIs and the CSV export. */
 export const sheetsOf = (it: { cfg: Cfg; qty: number }) => printCounts(it).reduce((s, [p, n]) => s + (p === 'door' ? n : 0), 0);
 /* Revenue counts what Stripe confirmed (paid). A 'mismatch' order is flagged separately and left out until it is checked. */

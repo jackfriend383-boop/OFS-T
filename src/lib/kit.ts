@@ -6,7 +6,9 @@ import EN from '../i18n/en.json';
 
 export type Lang = 'pt' | 'en';
 export interface Design { id: string; name: string; tag: string; cat: string; catName: string; price: number; c1: string; c2: string; art?: string; fixed?: boolean; master?: string; custom?: boolean; hidden?: boolean }
-export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; finish: 'matte' | 'gloss'; kit: 'one' | 'both'; numberOn: boolean; number: string; trim: string; pieces: Piece[]; centre: 'full' | 'logo'; bcOn: boolean; bcPick: 1 | 2 }
+/* Shape of the rear-window sticker: Ami 2025 = 'full' (the whole glass) or 'square'; Ami Pop = 'circle' (its half-ring glass) only. */
+export type WinShape = 'full' | 'circle' | 'square';
+export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; finish: 'matte' | 'gloss'; kit: 'one' | 'both'; numberOn: boolean; number: string; trim: string; pieces: Piece[]; winShape: WinShape }
 export interface CartItem { key: string; cfg: Cfg; qty: number }
 
 export const I18N: Record<Lang, any> = { pt: PT, en: EN };
@@ -45,7 +47,7 @@ function mergedDesigns(all = false): (Record<string, any>)[] {
   }
   for (const r of REMOTE) {
     if (!r.custom || (r.hidden && !all) || !r.name || !r.price || !r.c1 || !r.c2 || (DATA.designs as any[]).some((d) => d.id === r.id)) continue;
-    out.push({ id: r.id, name: r.name, tag: r.tag || '', tagEn: r.tag, tagPt: r.tagPt, cat: r.cat || 'Signature', price: r.price, c1: r.c1, c2: r.c2, fixed: !!r.fixed, custom: true, art: r.id, hidden: r.hidden || undefined });
+    out.push({ id: r.id, name: r.name, tag: r.tag || '', tagEn: r.tag, tagPt: r.tagPt, cat: r.cat || 'Launch Edition', price: r.price, c1: r.c1, c2: r.c2, fixed: !!r.fixed, custom: true, art: r.id, hidden: r.hidden || undefined });
   }
   return out;
 }
@@ -53,14 +55,36 @@ function mergedDesigns(all = false): (Record<string, any>)[] {
 export const MODELS = { qs: 'Ami 2025', pop: 'Ami Pop' } as const;
 /* Factory colour schemes of the car in each version (preview only: not part of the kit key, not saved with orders). First = default. */
 export const TRIMS: Record<'qs' | 'pop', string[]> = { qs: ['yellow', 'purple', 'brown', 'browncolor'], pop: ['base'] };
+/* Preview-only car "colour" of the Ami 2025 for the home page model box: the front half of the car photo is the black car, the back
+   half the brown one. Not selectable (not in TRIMS); `<Thumb cfg={{ ...cfg, trim: SPLIT_TRIM }} />` and CarStage draw it (side view). */
+export const SPLIT_TRIM = 'split';
+
+/* ---------- Rear-window sticker shape ---------- */
+export const WIN_SHAPES: Record<'qs' | 'pop', WinShape[]> = { qs: ['full', 'square'], pop: ['circle'] };
+export const DEFAULT_WIN_SHAPE: Record<'qs' | 'pop', WinShape> = { qs: 'full', pop: 'circle' };
+/* A shape the model offers, else that model's default (so switching model or an old cart never leaves an impossible shape). */
+export const normWinShape = (raw: unknown, model: string): WinShape => {
+  const m = model === 'pop' ? 'pop' : 'qs';
+  return (WIN_SHAPES[m] as unknown[]).includes(raw) ? (raw as WinShape) : DEFAULT_WIN_SHAPE[m];
+};
 
 /* ---------- Kit pieces ----------
-   'full' = the whole kit at the design's price. Individual pieces are always a left + right pair (rims: a set of 4) at a fixed
-   price (designs.json "pieces"). Front accents exist only on the Ami Pop. Rims are never part of the full kit.
-   worker/src/pricing.ts repeats exactly this logic, so the price charged always matches the price shown. */
-export type Piece = 'full' | 'door' | 'window' | 'accent' | 'rims';
-export const PIECES: Piece[] = ['full', 'door', 'window', 'accent', 'rims']; // display order
-export const PIECE_PRICE = DATA.pieces as Record<'door' | 'window' | 'accent' | 'rims', number>;
+   'full' = the whole kit at the design's price. Individual pieces are always a left + right pair at a fixed
+   price (designs.json "pieces"). Front accents exist only on the Ami Pop.
+   worker/src/pricing.ts repeats exactly this logic, so the price charged always matches the price shown.
+   (Rim stickers were removed: an old cart / order that still lists 'rims' just ignores it.) */
+export type Piece = 'full' | 'door' | 'window' | 'accent';
+export const PIECES: Piece[] = ['full', 'door', 'window', 'accent']; // display order
+export const PIECE_PRICE = DATA.pieces as Record<'door' | 'window' | 'accent', number>;
+
+/* ---------- Colour presets (designs.json "presets") ----------
+   Ready-made colour pairs offered next to the colour pickers. PRESETS has the English colour names; kit.presets (same order) has the
+   names in the page language, and kit.presetCfg(designId, presetId) gives a full Cfg for a design in that preset. */
+export interface Preset { id: string; c1: string; c2: string; name1: string; name2: string; label: string }
+const PRESET_COLOURS = DATA.colors as Record<string, { name: string }>;
+const presetsFor = (names: (k: string) => string): Preset[] =>
+  (DATA.presets as { id: string; c1: string; c2: string }[]).map((p) => ({ ...p, name1: names(p.c1), name2: names(p.c2), label: `${names(p.c1)} / ${names(p.c2)}` }));
+export const PRESETS: Preset[] = presetsFor((k) => PRESET_COLOURS[k]?.name || k);
 /* What the full kit contains for each version. */
 export const fullPieces = (model: string): Piece[] => (model === 'pop' ? ['door', 'window', 'accent'] : ['door', 'window']);
 /* Clean a list of piece codes (array or "door,rims"): unknown codes and Pop-only accents on the Ami 2025 are dropped,
@@ -78,7 +102,7 @@ export function normPieces(raw: unknown, model: string, designPrice = 0): Piece[
 }
 /* Price of the pieces alone (no extras). */
 export const piecesPrice = (pieces: Piece[], designPrice: number) =>
-  (pieces.includes('full') ? designPrice : pieces.reduce((s, p) => s + (p === 'full' || p === 'rims' ? 0 : PIECE_PRICE[p]), 0)) + (pieces.includes('rims') ? PIECE_PRICE.rims : 0);
+  pieces.includes('full') ? designPrice : pieces.reduce((s, p) => s + (p === 'full' ? 0 : PIECE_PRICE[p]), 0);
 /* Pieces actually in the box: full expanded to its parts (display order). */
 export const includedPieces = (c: Pick<Cfg, 'model' | 'pieces'>): Exclude<Piece, 'full'>[] => {
   const ps = c.pieces || ['full'], full = ps.includes('full') ? fullPieces(c.model) : [];
@@ -127,10 +151,11 @@ function build(lang: Lang) {
   const ALL_D: Design[] = mergedDesigns(true).map(mapD); // includes hidden designs (old orders still need them)
   const DESIGNS: Design[] = mergedDesigns().map((d) => ({ ...d, tag: (lang === 'pt' ? d.tagPt : d.tagEn) || (has(L.tags, d.id) ? L.tags[d.id] : d.tag), catName: T.cat(d.cat) })) as Design[];
   const CATS: string[] = ['All', ...Array.from(new Set(DESIGNS.map((d) => d.cat)))];
-  const EXTRA = DATA.extras as { secondSide: number; badge: number; badgeColour: number };
+  const EXTRA = DATA.extras as { secondSide: number; badge: number };
+  const presets = presetsFor((k) => (has(L.colors, k) ? L.colors[k] : PRESET_COLOURS[k]?.name || k));
   const D = (id: unknown): Design | undefined => ALL_D.find((d) => d.id === id);
   const modelName = (m: unknown) => (has(MODELS, m) ? MODELS[m as keyof typeof MODELS] : MODELS.qs);
-  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'OFST', trim: TRIMS.qs[0], pieces: ['full'], centre: 'full', bcOn: false, bcPick: 1 }); // every kit covers both sides
+  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'OFST', trim: TRIMS.qs[0], pieces: ['full'], winShape: DEFAULT_WIN_SHAPE.qs }); // every kit covers both sides
   const cleanNumber = (v: unknown) => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9 .#&!-]/g, '').slice(0, 8);
 
   /* Validate a config from an untrusted source (query string, localStorage, order rows). Returns a full config or null. */
@@ -140,7 +165,7 @@ function build(lang: Lang) {
     const out = defaultCfg(d);
     if (has(MODELS, c.model)) out.model = c.model;
     // Car colour must belong to the chosen version; otherwise (e.g. after switching version) use that version's first.
-    out.trim = TRIMS[out.model].includes(c.trim) ? c.trim : TRIMS[out.model][0];
+    out.trim = TRIMS[out.model].includes(c.trim) || (out.model === 'qs' && c.trim === SPLIT_TRIM) ? c.trim : TRIMS[out.model][0];
     if (has(COLORS, c.c1)) out.c1 = c.c1;
     if (has(COLORS, c.c2)) out.c2 = c.c2;
     if (c.finish === 'matte' || c.finish === 'gloss') out.finish = c.finish;
@@ -148,11 +173,8 @@ function build(lang: Lang) {
     if (typeof c.number === 'string') out.number = cleanNumber(c.number);
     // The custom badge is only offered on the Ami 2025 (the Pop door has no badge plate).
     out.numberOn = !!c.numberOn && !!out.number && out.model !== 'pop';
-    // Door centre: the design runs through it by default; 'logo' keeps the OFS/T logo plate.
-    out.centre = c.centre === 'logo' ? 'logo' : 'full';
-    // Coloured Citroën badges (front and rear): only on the Ami 2025; colour 1 or colour 2 of the design.
-    out.bcOn = !!c.bcOn && out.model !== 'pop';
-    out.bcPick = c.bcPick === 2 || c.bcPick === '2' ? 2 : 1;
+    // Rear-window sticker shape: Ami 2025 full / square, Ami Pop circle. (Older carts also carry centre / bcOn / bcPick / rim pieces: ignored.)
+    out.winShape = normWinShape(c.winShape, out.model);
     // Missing pieces (older carts, saved orders) = the full kit.
     out.pieces = normPieces(c.pieces, out.model, d.price);
     if (!out.numberOn && !out.number) out.number = 'OFST';
@@ -165,20 +187,21 @@ function build(lang: Lang) {
     return !!(c!.numberOn && c!.number);
   }
   const piecesOf = (c: Cfg) => normPieces(c.pieces, c.model, D(c.design)?.price ?? 0);
-  const priceOf = (c: Cfg) => piecesPrice(piecesOf(c), D(c.design)!.price) + (c.kit === 'both' ? EXTRA.secondSide : 0) + (c.numberOn && c.number ? EXTRA.badge : 0) + (c.bcOn ? EXTRA.badgeColour : 0);
-  const keyOf = (c: Cfg) => [c.design, c.c1, c.c2, c.kit, c.numberOn ? c.number : '', c.model || 'qs', piecesOf(c).join(','), c.centre === 'logo' ? 'logo' : 'full', c.bcOn ? c.bcPick : 0].join('|');
+  const priceOf = (c: Cfg) => piecesPrice(piecesOf(c), D(c.design)!.price) + (c.kit === 'both' ? EXTRA.secondSide : 0) + (c.numberOn && c.number ? EXTRA.badge : 0);
+  const keyOf = (c: Cfg) => [c.design, c.c1, c.c2, c.kit, c.numberOn ? c.number : '', c.model || 'qs', piecesOf(c).join(','), normWinShape(c.winShape, c.model)].join('|');
   /* "Full kit · Rims" / "Door stickers (pair) · Window stickers (pair)", in display order. */
   const piecesLabel = (c: Cfg) => { const ps = piecesOf(c); return PIECES.filter((p) => ps.includes(p)).map((p) => T('pc_' + p)).join(' · '); };
   const colourLabel = (c: Cfg) => (D(c.design)!.fixed ? T('originalColours') : `${COLORS[c.c1].name} / ${COLORS[c.c2].name}`);
+  /* Window shape name, only when the kit has window stickers ("Full window" / "Square" / "Circle"; keys winShape_full|circle|square). */
+  const winShapeLabel = (c: Cfg) => (includedPieces({ model: c.model, pieces: piecesOf(c) }).includes('window') ? T('winShape_' + normWinShape(c.winShape, c.model)) : '');
   const descOf = (c: Cfg) =>
     `${modelName(c.model)} · ${colourLabel(c)} · ${piecesLabel(c)}` +
-    `${c.centre === 'logo' ? ' · ' + T('centreLogoDesc') : ''}${c.bcOn ? ' · ' + T('bcDesc', { colour: COLORS[c.bcPick === 2 ? c.c2 : c.c1].name }) : ''}` +
+    `${winShapeLabel(c) ? ' · ' + winShapeLabel(c) : ''}` +
     `${c.numberOn && c.number ? ' · ' + T('badgeDesc', { text: c.number }) : ''}${isPersonalised(c) ? ' · ' + T('personalised') : ''}`;
   const cfgQuery = (c: Cfg) => {
     const p = new URLSearchParams({ design: c.design, c1: c.c1, c2: c.c2, kit: c.kit });
-    if (c.centre === 'logo') p.set('centre', 'logo');
-    if (c.bcOn) p.set('bc', String(c.bcPick));
     if (c.numberOn && c.number) p.set('number', c.number);
+    if (normWinShape(c.winShape, c.model) !== DEFAULT_WIN_SHAPE[c.model || 'qs']) p.set('win', normWinShape(c.winShape, c.model));
     if (c.model && c.model !== 'qs') p.set('model', c.model);
     if (c.trim && c.trim !== TRIMS[c.model || 'qs'][0]) p.set('trim', c.trim);
     const ps = piecesOf(c); if (ps.join() !== 'full') p.set('pieces', ps.join(','));
@@ -191,9 +214,14 @@ function build(lang: Lang) {
     // same for a link with only ?trim= (car colour).
     const d = D(q.get('design')) || (q.get('model') || q.get('trim') ? DESIGNS[0] : null); if (!d) return null;
     const num = q.has('number') ? cleanNumber(q.get('number')) : '';
-    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, kit: q.get('kit'), number: num || 'OFST', numberOn: !!num, centre: q.get('centre'), bcOn: q.has('bc'), bcPick: Number(q.get('bc')), trim: q.get('trim'), pieces: q.get('pieces') });
+    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, kit: q.get('kit'), number: num || 'OFST', numberOn: !!num, winShape: q.get('win'), trim: q.get('trim'), pieces: q.get('pieces') });
   }
-  return { lang, L, T, COLORS, DESIGNS, CATS, EXTRA, D, has, modelName, defaultCfg, cleanNumber, sanitizeCfg, isPersonalised, priceOf, keyOf, piecesOf, piecesLabel, colourLabel, descOf, cfgQuery, cfgFromQuery, money: T.price };
+  /* A full config for a design in a colour preset (kit.presets / designs.json "presets"); null for an unknown design or preset. */
+  const presetCfg = (designId: string, presetId: string): Cfg | null => {
+    const d = D(designId), p = presets.find((x) => x.id === presetId);
+    return d && p ? { ...defaultCfg(d), c1: p.c1, c2: p.c2 } : null;
+  };
+  return { lang, L, T, presets, presetCfg, winShapeLabel, COLORS, DESIGNS, CATS, EXTRA, D, has, modelName, defaultCfg, cleanNumber, sanitizeCfg, isPersonalised, priceOf, keyOf, piecesOf, piecesLabel, colourLabel, descOf, cfgQuery, cfgFromQuery, money: T.price };
 }
 
 const cache: Partial<Record<Lang, Kit>> = {};

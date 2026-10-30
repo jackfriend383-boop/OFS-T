@@ -1,0 +1,33 @@
+/* Admin "Edits" tab (src/pages/admin/Edits.tsx): feature cards, each with a grid of slot editors. */
+.edits{display:grid;gap:18px;min-width:0}
+.edits > div{min-width:0}
+.edits-intro{margin:0;max-width:70ch}
+.edit-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
+.edit-slot{display:grid;gap:10px;align-content:start;min-width:0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.edit-slot-head{display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.edit-slot h4{margin:0;font-size:14px}
+.edit-state{font-size:12px;color:var(--muted)}
+.edit-state.is-dirty{color:var(--fg);font-weight:600}
+.edit-state.is-saved{color:#1f8f55}
+:root[data-ofst="dark"] .edit-state.is-saved{color:#3FB97A}
+.edit-preview{position:relative;aspect-ratio:16/9;border:1px solid var(--line);border-radius:10px;background-color:var(--raise);background-repeat:no-repeat;overflow:hidden}
+.edit-badge{position:absolute;left:8px;top:8px;padding:2px 8px;border-radius:99px;font-size:11px;background:rgba(14,15,18,.72);color:#fff;pointer-events:none}
+.edit-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.edit-note{font-size:13px;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.edit-hint{margin:0}
+.edit-fit{display:grid;gap:10px;margin:0;padding:0;border:0;min-width:0}
+.edit-fit legend{padding:0;margin-bottom:6px;font-size:13px;font-weight:600}
+.edit-fit:disabled{opacity:.55}
+.edit-fit .adm-note{margin:0}
+.edit-seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line-2);border-radius:10px;overflow:hidden;width:max-content;max-width:100%}
+.edit-seg label{position:relative;cursor:pointer}
+.edit-seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.edit-seg span{display:block;padding:7px 14px;font-size:13px;border-right:1px solid var(--line)}
+.edit-seg label:last-child span{border-right:0}
+.edit-seg label.is-on span{background:var(--accent);color:var(--accent-ink)}
+.edit-seg label:focus-within{outline:2px solid var(--accent-text);outline-offset:-2px}
+.edit-range{display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:2px 10px;align-items:center}
+.edit-range label{grid-column:1/-1;font-size:13px}
+.edit-range input[type=range]{width:100%;min-width:0;accent-color:var(--accent-text)}
+.edit-range output{font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+@media (max-width:520px){.edit-slot{padding:12px}}

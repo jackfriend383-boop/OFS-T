@@ -9,6 +9,7 @@ import { I18N } from '../src/lib/kit';
 import '../src/styles/site.css';
 import '../src/styles/app.css';
 import '../src/styles/admin.css';
+import '../src/styles/admin-edits.css';
 
 function Shell() {
   const { lang } = useApp();

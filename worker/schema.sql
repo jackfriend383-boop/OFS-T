@@ -139,3 +139,16 @@ CREATE TABLE IF NOT EXISTS designs (
   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+-- Round 6: background pictures edited in the admin "Edits" tab (see migrations/0010_site_settings.sql)
+CREATE TABLE IF NOT EXISTS site_settings (
+  slot        TEXT PRIMARY KEY CHECK (slot IN ('homeLight', 'homeDark', 'confLight', 'confDark')),
+  mime        TEXT NOT NULL CHECK (mime IN ('image/webp', 'image/jpeg', 'image/png')),
+  data        TEXT NOT NULL CHECK (length(data) <= 2200000),
+  fit         TEXT NOT NULL DEFAULT 'cover' CHECK (fit IN ('cover', 'contain', 'stretch')),
+  zoom        INTEGER NOT NULL DEFAULT 100 CHECK (zoom BETWEEN 100 AND 250),
+  pos_x       INTEGER NOT NULL DEFAULT 50 CHECK (pos_x BETWEEN 0 AND 100),
+  pos_y       INTEGER NOT NULL DEFAULT 50 CHECK (pos_y BETWEEN 0 AND 100),
+  ver         INTEGER NOT NULL DEFAULT 1,
+  updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);

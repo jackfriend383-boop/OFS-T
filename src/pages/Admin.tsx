@@ -14,10 +14,11 @@ import { DASH } from './admin/copy';
 import { RANGES, customers as groupCustomers, dayKey, delta, inRange, kpis, rangeBounds, printCounts, reports, series, sheetsOf, toCSV, type CustomerRow, type Point, type RangeKey } from './admin/stats';
 import { BarList, Columns, TrendChart } from './admin/Charts';
 import Designs from './admin/Designs';
+import Edits from './admin/Edits';
 
 type Panel = 'boot' | 'setup' | 'login' | 'locked' | 'main';
-type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'designs' | 'tools';
-const TABS: Tab[] = ['overview', 'reports', 'orders', 'invoices', 'customers', 'designs', 'tools'];
+type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'designs' | 'edits' | 'tools';
+const TABS: Tab[] = ['overview', 'reports', 'orders', 'invoices', 'customers', 'designs', 'edits', 'tools'];
 const TAB_KEY = 'ofst-admin-tab', RANGE_KEY = 'ofst-admin-range';
 const remember = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* private mode */ } };
 const recall = (k: string) => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } };
@@ -536,6 +537,7 @@ export default function Admin() {
               </>)}
 
               {tab === 'designs' && <Designs />}
+              {tab === 'edits' && <Edits onExpired={() => handleError({ code: 'session_expired', message: T('beSession') })} />}
               {tab === 'tools' && toolSection}
             </div>
           </div>

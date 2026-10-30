@@ -8,12 +8,16 @@ const MODELS: Record<string, string> = { qs: 'Ami 2025', pop: 'Ami Pop' };
 const COLORS = DATA.colors as Record<string, { name: string; hex: string }>;
 type PricedDesign = { id: string; name: string; price: number; c1: string; c2: string; fixed?: boolean };
 const DESIGNS = DATA.designs as PricedDesign[];
-const EXTRA = DATA.extras as { secondSide: number; badge: number; badgeColour: number };
-const PIECE_PRICE = DATA.pieces as Record<'door' | 'window' | 'accent' | 'rims', number>;
+const EXTRA = DATA.extras as { secondSide: number; badge: number };
+const PIECE_PRICE = DATA.pieces as Record<'door' | 'window' | 'accent', number>;
 /* Kit pieces: same rules as normPieces / piecesPrice in src/lib/kit.ts (keep the two in step).
-   Full kit = design price; individual pieces are left + right pairs (rims a set of 4) at fixed prices; accents only on the Pop. */
-const PIECES = ['full', 'door', 'window', 'accent', 'rims'];
-const PIECE_NAMES: Record<string, string> = { full: 'Full kit', door: 'Door stickers (pair)', window: 'Window stickers (pair)', accent: 'Front accents (pair)', rims: 'Rim stickers (set of 4)' };
+   Full kit = design price; individual pieces are left + right pairs at fixed prices; accents only on the Pop.
+   (Rim stickers, the logo centre and the coloured Citroën badges were removed: old carts that still send them are priced without.) */
+const PIECES = ['full', 'door', 'window', 'accent'];
+const PIECE_NAMES: Record<string, string> = { full: 'Full kit', door: 'Door stickers (pair)', window: 'Window stickers (pair)', accent: 'Front accents (pair)' };
+/* Rear-window sticker shape per model (same as WIN_SHAPES in src/lib/kit.ts). */
+const WIN_SHAPES: Record<string, string[]> = { qs: ['full', 'square'], pop: ['circle'] };
+const WIN_NAMES: Record<string, string> = { full: 'Full window', circle: 'Circle', square: 'Square' };
 const fullPieces = (model: string) => (model === 'pop' ? ['door', 'window', 'accent'] : ['door', 'window']);
 function normPieces(raw: unknown, model: string, designPrice = 0): string[] {
   const list: unknown[] = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : [];
@@ -27,12 +31,12 @@ function normPieces(raw: unknown, model: string, designPrice = 0): string[] {
   return [...set].sort();
 }
 const piecesPrice = (pieces: string[], designPrice: number) =>
-  (pieces.includes('full') ? designPrice : pieces.reduce((s, p) => s + (p === 'full' || p === 'rims' ? 0 : PIECE_PRICE[p as 'door']), 0)) + (pieces.includes('rims') ? PIECE_PRICE.rims : 0);
+  pieces.includes('full') ? designPrice : pieces.reduce((s, p) => s + (p === 'full' ? 0 : PIECE_PRICE[p as 'door']), 0);
 const has = (o: object, k: unknown): boolean => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
 const cleanNumber = (v: unknown) => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9 .#&!-]/g, '').slice(0, 8);
 
 export interface PricedItem {
-  cfg: { model: string; design: string; c1: string; c2: string; finish: string; kit: string; numberOn: boolean; number: string; pieces: string[]; centre: string; bcOn: boolean; bcPick: number };
+  cfg: { model: string; design: string; c1: string; c2: string; finish: string; kit: string; numberOn: boolean; number: string; pieces: string[]; winShape: string };
   qty: number;
   unit_cents: number;
   name: string;
@@ -55,21 +59,20 @@ export function priceItem(raw: any, lang: 'pt' | 'en' = 'en', designs: PricedDes
   const number = typeof c.number === 'string' ? cleanNumber(c.number) : '';
   const numberOn = !!c.numberOn && !!number && model !== 'pop'; // the custom badge is only offered on the Ami 2025
   const pieces = normPieces(c.pieces, model, d.price);
-  const centre = c.centre === 'logo' ? 'logo' : 'full';
-  const bcOn = !!c.bcOn && model !== 'pop'; // coloured Citroën badges: Ami 2025 only
-  const bcPick = c.bcPick === 2 ? 2 : 1;
-  const unit = piecesPrice(pieces, d.price) + EXTRA.secondSide + (numberOn ? EXTRA.badge : 0) + (bcOn ? EXTRA.badgeColour : 0); // secondSide is 0: both sides included
+  const winShape = WIN_SHAPES[model].includes(c.winShape) ? c.winShape : WIN_SHAPES[model][0]; // Ami 2025: full / square; Ami Pop: circle
+  const unit = piecesPrice(pieces, d.price) + EXTRA.secondSide + (numberOn ? EXTRA.badge : 0); // secondSide is 0: both sides included
   // The line text is stored with the order and shown in emails, on Stripe and in the order history: in the order's language.
   const W = lang === 'pt' ? PT : null;
   const cname = (k: string) => (W && has(W.colors, k) ? W.colors[k] : COLORS[k].name);
   const colours = d.fixed ? (W ? W.js.originalColours : 'Original colours') : `${cname(c1)} / ${cname(c2)}`;
   const pieceName = (p: string) => (W ? W.js['pc_' + p] : PIECE_NAMES[p]);
   const badge = W ? ` · ${W.js.badgeDesc.replace('{text}', number)}` : ` · Badge "${number}"`;
-  const bcColour = cname(bcPick === 2 ? c2 : c1);
-  const extras = (centre === 'logo' ? ` · ${W ? W.js.centreLogoDesc : 'Logo centre'}` : '') + (bcOn ? ` · ${W ? W.js.bcDesc.replace('{colour}', bcColour) : `Citroën badges in ${bcColour}`}` : '');
-  const desc = `${MODELS[model]} · ${colours} · ${PIECES.filter((p) => pieces.includes(p)).map(pieceName).join(' · ')}${extras}${numberOn ? badge : ''}`;
+  // Window shape is named only when the kit has window stickers (same as winShapeLabel in kit.ts).
+  const hasWindow = pieces.includes('full') || pieces.includes('window');
+  const shapeName = hasWindow ? ` · ${W && W.js['winShape_' + winShape] ? W.js['winShape_' + winShape] : WIN_NAMES[winShape]}` : '';
+  const desc = `${MODELS[model]} · ${colours} · ${PIECES.filter((p) => pieces.includes(p)).map(pieceName).join(' · ')}${shapeName}${numberOn ? badge : ''}`;
   return {
-    cfg: { model, design: d.id, c1, c2, finish, kit, numberOn, number: numberOn ? number : '', pieces, centre, bcOn, bcPick },
+    cfg: { model, design: d.id, c1, c2, finish, kit, numberOn, number: numberOn ? number : '', pieces, winShape },
     qty: Math.min(99, qty),
     unit_cents: Math.round(unit * 100),
     name: d.name,

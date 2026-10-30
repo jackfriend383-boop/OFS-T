@@ -1,5 +1,5 @@
 /* Admin "Designs" tab: add a design (upload its print master SVG), change price / name / colours, hide or show it in the shop,
-   delete one you added. The two built-in designs can be changed and hidden but not deleted (they live in the site's files).
+   delete one you added. The built-in design (Launch Edition) can be changed and hidden but not deleted (it lives in the site's files).
    Everything typed or uploaded here is checked again by the shop's server (worker/src/designs.ts). */
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useApp } from '../../state';
@@ -8,7 +8,7 @@ import { artPictures, dropMasterCache, inspectMaster, moldSVG, setRemoteMaster }
 
 const COLORS = DATA.colors as Record<string, { name: string; hex: string }>;
 const BUILTIN = DATA.designs as { id: string; name: string; tag: string; cat: string; price: number; c1: string; c2: string; fixed?: boolean }[];
-const CATS = ['Signature'];
+const CATS = ['Launch Edition'];
 
 const TXT = {
   en: {
@@ -23,14 +23,14 @@ const TXT = {
     preview: 'Preview', none: 'No designs yet.',
   },
   pt: {
-    title: 'Designs', note: 'Adicione um design carregando o respetivo ficheiro de impressão (SVG). Aparece na loja e no configurador de imediato e o preço é calculado pelo servidor.',
-    add: 'Adicionar design', builtin: 'Incluído', custom: 'Adicionado por si', visible: 'Visível', hidden: 'Oculto', hide: 'Ocultar', show: 'Mostrar', edit: 'Editar', del: 'Eliminar', reset: 'Repor original',
+    title: 'Designs', note: 'Adiciona um design carregando o respetivo ficheiro de impressão (SVG). Aparece na loja e no configurador de imediato e o preço é calculado pelo servidor.',
+    add: 'Adicionar design', builtin: 'Incluído', custom: 'Adicionado por ti', visible: 'Visível', hidden: 'Oculto', hide: 'Ocultar', show: 'Mostrar', edit: 'Editar', del: 'Eliminar', reset: 'Repor original',
     confirmDel: (n: string) => `Eliminar "${n}" definitivamente? Deixa de aparecer na loja. As encomendas passadas mantêm os ficheiros.`, confirmReset: (n: string) => `Repor "${n}" para as definições originais?`,
     name: 'Nome', tagEn: 'Frase (inglês)', tagPt: 'Frase (português)', cat: 'Categoria', price: 'Preço por lado (€)', c1: 'Cor predefinida 1', c2: 'Cor predefinida 2',
-    fixed: 'Cores fixas (imprime tal como desenhado, o cliente não pode mudar as cores)', file: 'Ficheiro de impressão (SVG, 746 × 285 mm + sangria)', fileKeep: 'Só escolha um ficheiro se quiser substituir o desenho.',
+    fixed: 'Cores fixas (imprime tal como desenhado, o cliente não pode mudar as cores)', file: 'Ficheiro de impressão (SVG, 746 × 285 mm + sangria)', fileKeep: 'Só escolhe um ficheiro se quiseres substituir o desenho.',
     checking: 'A verificar o ficheiro…', okFile: (r: boolean) => (r ? 'Ficheiro OK. Os clientes podem mudar as cores.' : 'Ficheiro OK. Não tem partes recoloríveis, por isso fica com cores fixas.'),
-    save: 'Guardar', cancel: 'Cancelar', saving: 'A guardar…', saved: 'Guardado. A recarregar…', deleted: 'Feito. A recarregar…', failed: 'Não funcionou. Verifique os campos e tente de novo.',
-    needFile: 'Escolha primeiro o ficheiro SVG.', needName: 'Dê um nome ao design.', bigPic: 'A imagem de pré-visualização é demasiado grande. Simplifique o desenho e tente de novo.', loading: 'A carregar designs…', notReady: 'O servidor da loja ainda não tem a tabela de designs (execute a migração 0009).',
+    save: 'Guardar', cancel: 'Cancelar', saving: 'A guardar…', saved: 'Guardado. A recarregar…', deleted: 'Feito. A recarregar…', failed: 'Não funcionou. Verifica os campos e tenta de novo.',
+    needFile: 'Escolhe primeiro o ficheiro SVG.', needName: 'Dá um nome ao design.', bigPic: 'A imagem de pré-visualização é demasiado grande. Simplifica o desenho e tenta de novo.', loading: 'A carregar designs…', notReady: 'O servidor da loja ainda não tem a tabela de designs (executa a migração 0009).',
     preview: 'Pré-visualização', none: 'Ainda não há designs.',
   },
 };

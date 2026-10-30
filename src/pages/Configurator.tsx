@@ -1,11 +1,11 @@
 /* Configurator: live stage (the arrows turn the car between camera angles; day or night scene following the site theme), design picker strip,
    Ami version/car colour/vinyl colour/pieces/finish/extras options, summary and the mobile bar.
    Reads an optional starting config from the query string (?design=&c1=&c2=&finish=&kit=&number=&model=&trim=&pieces=), validated against the data. */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useApp } from '../state';
 import { COPY } from '../content';
-import { TRIMS, PIECES, PIECE_PRICE, includedPieces, piecesPrice, type Cfg, type Piece } from '../lib/kit';
+import { TRIMS, PIECES, PIECE_PRICE, WIN_SHAPES, includedPieces, piecesPrice, type Cfg, type Piece } from '../lib/kit';
 import { CarStage, Thumb, type StageApi } from '../components/Car';
 import { viewIcon, anglesOf, type Angle } from '../lib/car';
 import { FilterTabs } from '../components/DesignCard';
@@ -94,10 +94,47 @@ const PIECE_ICON: Record<string, string> = {
   window: 'M12 5h24a5 5 0 0 1 5 5v4a5 5 0 0 1-5 5H12a5 5 0 0 1-5-5v-4a5 5 0 0 1 5-5z',
   windowPop: 'M7 20a17 17 0 0 1 34 0h-7a10 10 0 0 0-20 0z',
   accent: 'M3 10h33l8 5v4h-5v-2l-4-3H3z',
-  rims: 'M24 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10z',
   full: 'M3 20h22l3-4h5v4M8 6h14a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3zM33 6h12M33 11h12',
 };
 const pieceIcon = (k: string) => <svg viewBox="0 0 48 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true" focusable="false"><path d={PIECE_ICON[k]} /></svg>;
+
+/* Window sticker shapes (full window, circle, square), drawn small for the option buttons. */
+const WIN_ICON: Record<string, ReactNode> = {
+  full: <path d="M6 20V9a3 3 0 0 1 3-3h30a3 3 0 0 1 3 3v11z" />,
+  circle: <circle cx="24" cy="13" r="8" />,
+  square: <rect x="14" y="5" width="20" height="16" rx="2" />,
+};
+
+/* Add-to-cart button: press squish + ripple, then a check and "Added" for a moment (and a dot that flies to the cart icon). */
+function AddBtn({ id, added, onClick, label, doneLabel, className = '' }: { id: string; added: boolean; onClick: () => void; label: string; doneLabel: string; className?: string }) {
+  const [rip, setRip] = useState<{ k: number; x: number; y: number } | null>(null);
+  return (
+    <button type="button" className={'btn btn-primary addbtn ' + className + (added ? ' done' : '')} id={id}
+      onPointerDown={(e) => { const r = e.currentTarget.getBoundingClientRect(); setRip({ k: Date.now(), x: e.clientX - r.left, y: e.clientY - r.top }); }}
+      onClick={onClick}>
+      {rip && !reduced() && <span key={rip.k} className="addbtn-rip" aria-hidden="true" style={{ left: rip.x, top: rip.y }} />}
+      <span className="addbtn-t">
+        {added && <svg className="addbtn-ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>}
+        {added ? doneLabel : label}
+      </span>
+    </button>
+  );
+}
+
+/* A small dot that flies from the pressed button to the header cart icon, then the icon pulses. */
+function flyToCart(from: HTMLElement | null) {
+  const to = document.getElementById('openCart');
+  if (!from || !to || reduced() || typeof to.animate !== 'function') return;
+  const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
+  const dot = document.createElement('i');
+  dot.className = 'fly-dot';
+  dot.style.left = a.left + a.width / 2 - 7 + 'px'; dot.style.top = a.top + a.height / 2 - 7 + 'px';
+  document.body.appendChild(dot);
+  const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
+  const anim = dot.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${dx * 0.5}px,${dy * 0.5 - 40}px) scale(1.1)`, opacity: 1, offset: 0.5 }, { transform: `translate(${dx}px,${dy}px) scale(.3)`, opacity: .4 }], { duration: 650, easing: 'cubic-bezier(.4,.1,.3,1)' });
+  anim.onfinish = () => { dot.remove(); to.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.22)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' }); };
+  anim.oncancel = () => dot.remove();
+}
 
 /* Site theme: dark (header toggle sets <html data-ofst="dark">) shows the night city scene with the car lights on. */
 const isDarkSite = () => typeof document !== 'undefined' && document.documentElement.dataset.ofst === 'dark';
@@ -228,29 +265,27 @@ export default function Configurator() {
   const tones = d.art === 'flame';
   const pop = cfg.model === 'pop';
   const ps = cfg.pieces, isFull = ps.includes('full');
-  /* Price lines: the full kit, or each chosen pair; rims and the badge are added on top. */
+  /* Price lines: the full kit, or each chosen pair. */
   const lines: [string, string][] = [];
   if (isFull) lines.push([c.kitFull(d.name), money(d.price)]);
   else (['door', 'window', 'accent'] as const).forEach((p) => { if (ps.includes(p)) lines.push([T('pc_' + p), money(PIECE_PRICE[p])]); });
-  if (ps.includes('rims')) lines.push([T('pc_rims'), (lines.length ? '+' : '') + money(PIECE_PRICE.rims)]);
-  if (cfg.bcOn) lines.push([T('bcLine', { colour: kit.COLORS[cfg.bcPick === 2 ? cfg.c2 : cfg.c1].name }), '+' + money(kit.EXTRA.badgeColour)]);
+  const hasWindow = isFull || ps.includes('window');
+  const winAllowed: string[] = WIN_SHAPES[cfg.model] as string[];
+  const winShape = cfg.winShape as string;
+  if (hasWindow) lines.push([T('winLine', { shape: c.win[winShape] }), '']);
   /* "What's included": every piece in the box with its quantity, plus the badge and the fitting guide. */
-  const included: string[] = includedPieces(cfg).map((p) => `${p === 'rims' ? 4 : 2} × ${c.inc[p]}`);
-  if (cfg.bcOn) included.push(`1 × ${c.inc.bc}`);
+  const included: string[] = includedPieces(cfg).map((p) => `2 × ${c.inc[p]}`);
   included.push(`1 × ${c.inc.guide}`);
-  /* Pieces: full kit is exclusive with door/window/accent; rims combine with anything. sanitizeCfg then applies the shared rules
+  /* Pieces: full kit is exclusive with door/window/accent. sanitizeCfg then applies the shared rules
      (e.g. choosing every piece of the full kit becomes the full kit). */
   const togglePiece = (p: Piece) => {
-    const cur = cfgRef.current.pieces, rims: Piece[] = cur.includes('rims') ? ['rims'] : [];
+    const cur = cfgRef.current.pieces;
     let next: Piece[];
-    if (p === 'rims') next = rims.length ? cur.filter((x) => x !== 'rims') : [...cur, 'rims'];
-    else if (p === 'full') next = ['full', ...rims];
-    else if (cur.includes('full')) next = [p, ...rims];
+    if (p === 'full') next = ['full'];
+    else if (cur.includes('full')) next = [p];
     else next = cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p];
     update({ pieces: next });
   };
-  /* Turning a coloured badge on (or changing its colour) turns the car to the front ¾ view, where the badge can be seen. */
-  const showFrontBadge = () => { api.current?.angle('front34'); setAngle('front34'); setView('full'); };
   const pieceItems = PIECES.filter((p) => p !== 'accent' || pop);
   const pers = kit.isPersonalised(cfg), total = kit.priceOf(cfg);
 
@@ -266,11 +301,13 @@ export default function Configurator() {
 
   const addCurrent = () => {
     if (cfg.numberOn && !cfg.number) { setNumErr(T('numErr')); numInput.current?.focus(); return; }
-    addToCart(cfg);
+    if (!addToCart(cfg)) return; // not signed in: the visitor is sent to the sign-in page and brought back here
     setAdded(true); clearTimeout((addCurrent as any).t);
-    (addCurrent as any).t = setTimeout(() => setAdded(false), 1600);
+    (addCurrent as any).t = setTimeout(() => setAdded(false), 1200);
+    const btns = ['barAdd', 'addCart', 'mAdd'].map((i) => document.getElementById(i)).filter((b) => b && b.offsetParent !== null);
+    flyToCart(btns[0] || null);
   };
-  const addLabel = added ? T('added') : T('addToCart');
+  const addBtn = (id: string, className?: string) => <AddBtn id={id} added={added} onClick={addCurrent} label={T('addToCart')} doneLabel={T('added')} className={className} />;
   const colourName = (k: string) => kit.COLORS[k].name;
 
   const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
@@ -281,9 +318,8 @@ export default function Configurator() {
     [c.version, kit.modelName(cfg.model), '', 'optModelCard'],
     ...(trims.length > 1 ? [[c.carColour, c.trims[cfg.trim] || cfg.trim, '', 'optModelCard'] as [string, string, string, string]] : []),
     [c.colours, colourText, '', 'optColourCard'],
-    [c.centreTitle, cfg.centre === 'logo' ? c.centreLogo : c.centreFull, '', 'optCentreCard'],
     [c.pieces, kit.piecesLabel(cfg), money(piecesPrice(ps, d.price)), 'optPiecesCard'],
-    [c.extras, cfg.bcOn ? `${c.bcName} (${colourName(cfg.bcPick === 2 ? cfg.c2 : cfg.c1)})` : c.none, cfg.bcOn ? '+' + money(kit.EXTRA.badgeColour) : '', 'optExtrasCard'],
+    ...(hasWindow ? [[c.winTitle, c.win[winShape], '', 'optWinCard'] as [string, string, string, string]] : []),
   ];
   const toggleFull = () => {
     const el = document.getElementById('stageWrap') as any; if (!el) return;
@@ -302,7 +338,7 @@ export default function Configurator() {
         <div className="cbar-r">
           <div className="cbar-price"><Price id="barTotal" value={total} /><small>{c.total}</small></div>
           <button type="button" className="btn btn-2" onClick={() => jump('summary')}>{c.summaryBtn}</button>
-          <button type="button" className={'btn btn-primary' + (added ? ' done' : '')} id="barAdd" onClick={addCurrent}>{addLabel}</button>
+          {addBtn('barAdd')}
         </div>
       </div>
 
@@ -321,9 +357,8 @@ export default function Configurator() {
               if (drag.current) { drag.current = null; (e.currentTarget as HTMLElement).classList.remove('grabbing'); return; }
               const s = swipe.current; if (!s) return; swipe.current = null; const dx = e.clientX - s.x, dy = e.clientY - s.y; if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) rotate(dx < 0 ? 1 : -1);
             }}>
-            <div className="stage-tag" id="stageTag"><span className="eyebrow" id="stCat">{d.catName || d.cat}</span><strong id="stName">{d.name}</strong><span id="stTag">{d.tag}</span></div>
             {/* The server render already holds the car photo; a starting config from the address is applied once the page runs. */}
-            <CarStage id="cfgCar" cfg={cfg} apiRef={api} />
+            <CarStage id="cfgCar" cfg={cfg} apiRef={api} rollIn />
             {angles.length > 1 && <>
               <button type="button" className="stage-arrow prev" id="prevD" aria-label={c.prev} aria-controls="cfgCar" onClick={() => rotate(-1)}>{icon('m15 6-6 6 6 6')}</button>
               <button type="button" className="stage-arrow next" id="nextD" aria-label={c.next} aria-controls="cfgCar" onClick={() => rotate(1)}>{icon('m9 6 6 6-6 6')}</button>
@@ -404,12 +439,12 @@ export default function Configurator() {
             <div className="pcs" role="group" aria-labelledby="optPiecesLbl">
               {pieceItems.map((p) => {
                 const on = ps.includes(p);
-                const note = p === 'full' ? c.fullNote(pop) : p === 'rims' ? c.set4 : c.pair;
+                const note = p === 'full' ? c.fullNote(pop) : c.pair;
                 const price = p === 'full' ? d.price : PIECE_PRICE[p];
-                return <button key={p} type="button" className={'pc' + (p === 'rims' ? ' pc-add' : '')} data-p={p} role="checkbox" aria-checked={on} onClick={() => togglePiece(p)}>
+                return <button key={p} type="button" className="pc" data-p={p} role="checkbox" aria-checked={on} onClick={() => togglePiece(p)}>
                   <span className="pc-ic">{pieceIcon(p === 'window' && pop ? 'windowPop' : p)}</span>
                   <span className="pc-t"><b>{c.pc[p]}</b><small>{note}</small></span>
-                  <span className="pc-p">{p === 'rims' ? '+' : ''}{money(price)}</span>
+                  <span className="pc-p">{money(price)}</span>
                   <span className="pc-ck" aria-hidden="true" />
                 </button>;
               })}
@@ -417,30 +452,27 @@ export default function Configurator() {
             <p className="opt-val pcs-note">{c.piecesNote} {c.piecesAuto}</p>
           </section>
 
-          {/* The middle part of the door: the design runs through it (default) or it keeps the OFS/T logo plate. */}
-          <section className="ocard" id="optCentreCard" aria-labelledby="optCentreLbl">
-            <div className="ocard-head"><h2 id="optCentreLbl">{c.centreTitle}</h2></div>
-            <Seg id="segCentre" label={c.centreTitle} value={cfg.centre} items={[['full', c.centreFull], ['logo', c.centreLogo]]} onPick={(v) => update({ centre: v as Cfg['centre'] })} />
-            <p className="opt-val">{c.centreHint}</p>
-          </section>
-
-          {/* Extras: coloured Citroën badges on the front and rear of the car (Ami 2025 only). */}
-          <section className="ocard" id="optExtrasCard" aria-labelledby="optExtrasLbl">
-            <div className="ocard-head"><h2 id="optExtrasLbl">{c.extras}</h2></div>
-            <div className={'xtra' + (pop ? ' off' : '')} id="optBadgeCard">
-              <div className="opt-title"><span className="xtra-n" id="bcLbl">{c.bcName}</span>
-                <span className="xtra-r"><span className="pc-p">+{money(kit.EXTRA.badgeColour)}</span>
-                <button type="button" className="toggle" id="bcToggle" role="switch" aria-checked={cfg.bcOn} aria-labelledby="bcLbl" disabled={pop} aria-describedby={pop ? 'bcPop' : 'bcHint'}
-                  onClick={() => { const on = !cfg.bcOn; update({ bcOn: on }); if (on) showFrontBadge(); }} /></span></div>
-              {pop
-                ? <p className="opt-val" id="bcPop">{c.popOnly}</p>
-                : <>
-                  <p className="opt-val" id="bcHint">{c.bcHint}</p>
-                  <Seg id="segBc" label={c.bcPick} value={String(cfg.bcPick)} items={[['1', `${c.bcC1} · ${colourName(cfg.c1)}`], ['2', `${c.bcC2} · ${colourName(cfg.c2)}`]]} onPick={(v) => { update({ bcPick: v === '2' ? 2 : 1, bcOn: true }); }} />
-                </>}
+          {/* Window sticker shape: the Ami 2025 offers square or full window, the Ami Pop only the circle. */}
+          <section className="ocard" id="optWinCard" aria-labelledby="optWinLbl">
+            <div className="ocard-head"><h2 id="optWinLbl">{c.winTitle}</h2><span className="ocard-val">{c.win[winShape]}</span></div>
+            <div className="wins" id="winRow" role="radiogroup" aria-labelledby="optWinLbl" onKeyDown={(e) => {
+              const step = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 } as Record<string, number>)[e.key]; if (step === undefined) return;
+              const bs = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('.win:not(:disabled)')], i = bs.indexOf(document.activeElement as HTMLButtonElement);
+              if (i < 0 || bs.length < 2) return;
+              e.preventDefault(); e.stopPropagation();
+              const nb = bs[(i + step + bs.length) % bs.length]; update({ winShape: nb.dataset.k as Cfg['winShape'] }); nb.focus();
+            }}>
+              {(['full', 'circle', 'square'] as const).map((k) => {
+                const ok = winAllowed.includes(k), sel = winShape === k;
+                return <button key={k} type="button" className="win" data-k={k} role="radio" aria-checked={sel} disabled={!ok} tabIndex={sel ? 0 : -1} onClick={() => update({ winShape: k })}>
+                  <svg viewBox="0 0 48 26" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden="true" focusable="false">{WIN_ICON[k]}</svg>
+                  <b>{c.win[k]}</b>
+                  {!ok && <small>{c.winOnly(pop ? 'Ami 2025' : 'Ami Pop')}</small>}
+                </button>;
+              })}
             </div>
-          </section>
-        </div>
+            <p className="opt-val">{c.winHint}</p>
+          </section>        </div>
       </div>
 
       <section className="csum" id="summary" aria-labelledby="sumTitle">
@@ -461,11 +493,11 @@ export default function Configurator() {
         </div>
         <section className="summary" aria-labelledby="sumTitle">
           <h2 id="sumTitle">{c.summaryTitle}</h2>
-          <div><h3 id="sumName">{d.name}</h3><span className="muted" id="sumSub">{`${kit.modelName(cfg.model)} · ${kit.colourLabel(cfg)} · ${cfg.centre === 'logo' ? c.centreLogo : c.centreFull}`}</span></div>
+          <div><h3 id="sumName">{d.name}</h3><span className="muted" id="sumSub">{`${kit.modelName(cfg.model)} · ${kit.colourLabel(cfg)}${hasWindow ? ' · ' + c.win[winShape] : ''}`}</span></div>
           <div className="total"><span className="muted">{c.total}</span><Price id="sumTotal" value={total} /></div>
           <ul className="lines" id="sumLines">{lines.map(([a, b]) => <li key={a + b}><span>{a}</span><span>{b}</span></li>)}</ul>
           <div className="incl"><h4 id="inclTitle">{c.included}</h4><ul aria-labelledby="inclTitle">{included.map((x) => <li key={x}>{x}</li>)}</ul></div>
-          <button type="button" className={'btn btn-primary' + (added ? ' done' : '')} id="addCart" onClick={addCurrent}>{addLabel}</button>
+          {addBtn('addCart')}
           <button type="button" className="btn btn-2" onClick={() => jump('optDesignCard')}>{c.change}</button>
           <p className="pers-note" id="persNote" hidden={!pers}>{c.persBefore}<Link to={to('refunds') + '#personalised'}>{c.persLink}</Link>{c.persAfter}</p>
           <div className="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7" /><circle cx="6" cy="17.5" r="1.7" /><circle cx="17" cy="17.5" r="1.7" /></svg><span>{c.ship[0]}<br />{c.ship[1]}</span></div>
@@ -486,7 +518,7 @@ export default function Configurator() {
         </div>
       </section>
 
-      <div className="mbar"><div><span className="eyebrow" id="mName">{d.name}</span><br /><Price id="mTotal" value={total} /></div><button type="button" className={'btn btn-primary' + (added ? ' done' : '')} id="mAdd" onClick={addCurrent}>{addLabel}</button></div>
+      <div className="mbar"><div><span className="eyebrow" id="mName">{d.name}</span><br /><Price id="mTotal" value={total} /></div>{addBtn('mAdd')}</div>
     </section>
   );
 }

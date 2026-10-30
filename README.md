@@ -29,7 +29,7 @@ scripts/prerender.mjs          renders every route, writes sitemap.xml, fixes th
 
 ## Editing
 
-- Designs, prices, colours: `src/data/designs.json`; Portuguese tags and colour names in `src/i18n/pt.json`; print masters in `src/data/masters/*.svg`; the car-preview pictures are made from them with `node scripts/make-art.mjs` (output in `public/assets/img/art-*`). Designs can also be added, hidden or re-priced in the admin "Designs" tab (stored in the `designs` table, see `worker/migrations/0009_designs.sql`).
+- Designs, prices, colours: `src/data/designs.json`; Portuguese tags and colour names in `src/i18n/pt.json`; the final design artwork in `src/data/masters/flame-final-door.jpg`; the car-preview pictures are made from it with `python scripts/make-art.py` (needs pillow, numpy, scipy) (output in `public/assets/img/art-*`). Designs can also be added, hidden or re-priced in the admin "Designs" tab (stored in the `designs` table, see `worker/migrations/0009_designs.sql`).
 - Business details and the optional order backend address (`apiUrl`): `src/data/site.json`.
 - Prose pages: edit the HTML in `src/content/pt/` and `src/content/en/` (keep both in step; `{{root}}` is the language root).
 - Interactive page text: `src/content.ts`; interface strings: `src/i18n/*.json`.

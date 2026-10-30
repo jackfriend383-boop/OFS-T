@@ -126,7 +126,7 @@ function Header() {
         </div>
       </header>
       <nav className={'mnav' + (menu ? ' on' : '')} id="mnav" ref={mnav} aria-label={ui.t_nav_mobile}>
-        {links.map((l) => <Link key={l.k} to={l.href} data-r={l.k} aria-current={l.cur ? 'page' : undefined}>{l.label}</Link>)}
+        {links.map((l) => <Link key={l.k} to={l.href} data-r={l.k} className={l.k === 'configurator' ? 'btn-fx' : undefined} aria-current={l.cur ? 'page' : undefined}>{l.label}</Link>)}
         {backend.configured && <Link to={to('account')} data-r="account" aria-current={page === 'account' ? 'page' : undefined}>{account.user ? T('acctMyAccount') : T('acctSignIn')}</Link>}
         <LangSwitch cls="mlang" />
       </nav>

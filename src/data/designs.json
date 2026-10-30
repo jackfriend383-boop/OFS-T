@@ -1,8 +1,8 @@
 {
   "currency": "EUR",
-  "extras": {"secondSide": 0, "badge": 9, "badgeColour": 9},
-  "pieces": {"door": 39, "window": 19, "accent": 12, "rims": 25},
-  "cats": ["All", "Signature"],
+  "extras": {"secondSide": 0, "badge": 9},
+  "pieces": {"door": 39, "window": 19, "accent": 12},
+  "cats": ["All", "Launch Edition"],
   "colors": {
     "volt": {"name": "Volt", "hex": "#D4F23A"},
     "ice": {"name": "Ice", "hex": "#6FDCEB"},
@@ -34,9 +34,15 @@
     "pearl": {"name": "Pearl White", "hex": "#EFEADF", "metal": true}
   },
   "designs": [
-    {"id": "flame-red", "name": "Flame Camo", "tag": "Two-tone flames, black cuts", "cat": "Signature", "price": 69, "c1": "flame", "c2": "crimson", "art": "flame", "master": "flame-camo"},
-    {"id": "flame-stealth", "name": "Flame Camo Stealth", "tag": "Graphite with gold pinlines", "cat": "Signature", "price": 69, "c1": "gold", "c2": "graphite", "art": "stealth", "master": "flame-stealth", "fixed": true}
+    {"id": "flame-red", "name": "Flame Camo", "tag": "Two-tone flames, black cuts", "cat": "Launch Edition", "price": 69, "c1": "flame", "c2": "crimson", "art": "flame", "master": "flame-camo"}
   ],
-  "featured": ["flame-red", "flame-stealth"],
-  "heroCycle": ["flame-red", "flame-stealth"]
+  "presets": [
+    {"id": "graphite-mint", "c1": "graphite", "c2": "mint"},
+    {"id": "pink-white", "c1": "rose", "c2": "snow"},
+    {"id": "racing-lime", "c1": "racing", "c2": "volt"},
+    {"id": "blue-white", "c1": "azure", "c2": "snow"}
+  ],
+  "featured": ["flame-red"],
+  "heroCycle": ["flame-red"]
 }
+

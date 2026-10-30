@@ -48,6 +48,7 @@ export function htmlVars(): Plugin {
     name: 'ofst-html-vars',
     transformIndexHtml: (html) => html
       .replace('__CSP_CONNECT__', connect ? ` ${connect}` : '')
+      .replace('img-src \'self\' data: blob:', `img-src 'self' data: blob:${connect ? ` ${connect}` : ''}`)
       .replace(/__THEME_DARK__/g, site.themeColorDark)
       .replace(/__THEME_LIGHT__/g, site.themeColorLight),
   };

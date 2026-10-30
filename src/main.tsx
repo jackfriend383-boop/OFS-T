@@ -4,9 +4,11 @@ import { BrowserRouter } from 'react-router';
 import App from './App';
 import { loadProse } from './pages/Prose';
 import { langOfPath, pageOfPath } from './lib/kit';
+import { initSiteSettings } from './lib/siteSettings';
 import './styles/site.css';
 import './styles/app.css';
 
+initSiteSettings(); // background pictures chosen in the admin "Edits" tab (CSS variables on <html>; client only)
 const root = document.getElementById('root')!;
 const app = (
   <StrictMode>

@@ -28,7 +28,31 @@ export const Thumb = memo(function Thumb({ cfg, decorative = true, eager = false
 /* The live car (hero + configurator). The Stage draws its own SVG; React only owns the host element.
    setNight(on): night scene (car lights on), used by the configurator in the dark theme. */
 export interface StageApi { view: (name: string) => void; zoom: (f: number) => void; pan: (dx: number, dy: number) => void; zoomed: () => boolean; angle: (name: Angle) => void; currentAngle: () => Angle; setNight: (on: boolean) => void }
-export function CarStage({ cfg, id, apiRef, onClick, style }: { cfg: Cfg; id?: string; apiRef?: React.MutableRefObject<StageApi | null>; onClick?: () => void; style?: React.CSSProperties }) {
+/* Drive-in on the first mount (desktop with a mouse, motion allowed): the car slides in from the left with a decelerating curve, a
+   small bob on the way and a forward pitch + settle at the end. The wheels are part of the photo, so they cannot spin. Plays once
+   per page visit (marked done when it finishes, so a React dev double mount still plays it). Client only (runs in an effect). */
+let ROLLED = false;
+const ROLL_MS = 1400;
+function rollInCar(el: HTMLElement): (() => void) | null {
+  if (ROLLED || typeof matchMedia !== 'function' || typeof el.animate !== 'function') return null;
+  if (!matchMedia('(hover: hover) and (pointer: fine) and (min-width: 900px)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+  const T = (x: string, y: number, r: number) => `translate3d(${x}, ${y}px, 0) rotate(${r}deg)`;
+  const ease = 'cubic-bezier(.12,.72,.28,1)';
+  const anim = el.animate([
+    { transform: T('-60vw', 0, 0), offset: 0, easing: ease },
+    { transform: T('-18vw', -1.5, 0), offset: 0.3, easing: ease },
+    { transform: T('0vw', 1, 0), offset: 0.72, easing: 'ease-in-out' },
+    { transform: T('0vw', 1.5, -0.9), offset: 0.82, easing: 'ease-in-out' }, // nose dips as it stops (front is on the left)
+    { transform: T('0vw', -0.5, 0.35), offset: 0.92, easing: 'ease-in-out' },
+    { transform: T('0vw', 0, 0), offset: 1 },
+  ], { duration: ROLL_MS, fill: 'backwards' });
+  el.style.transformOrigin = '50% 90%';
+  const clean = () => { el.style.transformOrigin = ''; };
+  anim.onfinish = () => { ROLLED = true; clean(); };
+  anim.oncancel = clean;
+  return () => { anim.cancel(); clean(); };
+}
+export function CarStage({ cfg, id, apiRef, onClick, style, rollIn = false }: { cfg: Cfg; id?: string; apiRef?: React.MutableRefObject<StageApi | null>; onClick?: () => void; style?: React.CSSProperties; rollIn?: boolean }) {
   const { kit } = useApp();
   const host = useRef<HTMLDivElement>(null);
   const stage = useRef<Stage | null>(null);
@@ -43,6 +67,7 @@ export function CarStage({ cfg, id, apiRef, onClick, style }: { cfg: Cfg; id?: s
     const t = !apiRef ? 0 : ric ? ric(() => s.preload(true), { timeout: 1500 }) : setTimeout(() => s.preload(true), 300);
     return () => { if (t) (ric ? (window as any).cancelIdleCallback(t) : clearTimeout(t)); s.destroy(); stage.current = null; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (rollIn && host.current) return rollInCar(host.current) || undefined; }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { stage.current?.setKit(kit); }, [kit]);
   useEffect(() => { stage.current?.set(cfg); }, [cfg]);
   // Server + first paint: the real car picture (same photo, size and stickers as the Stage's first picture), so the photo

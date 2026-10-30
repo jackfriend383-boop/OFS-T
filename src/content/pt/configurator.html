@@ -2,8 +2,8 @@
   <div class="cfg">
     <aside class="side" aria-label="Opções">
       <a href="{{root}}shop/" class="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M19 12H5m5-5-5 5 5 5"/></svg>Voltar aos designs</a>
-      <h1 class="display">Personalize<br>o seu Ami</h1>
-      <p>Escolha um design, ajuste as cores e veja o seu Ami mudar em tempo real.</p>
+      <h1 class="display">Personaliza<br>o teu Ami</h1>
+      <p>Escolhe um design, ajusta as cores e vê o teu Ami mudar em tempo real.</p>
 
       <div class="opt"><span class="num" aria-hidden="true">1</span><div class="opt-body">
         <div class="opt-title"><span class="label" id="optModelLbl">Versão do Ami</span></div>
@@ -34,7 +34,7 @@
 
       <div class="opt"><span class="num" aria-hidden="true">5</span><div class="opt-body">
         <div class="opt-title"><span class="label" id="numLbl">Texto do emblema</span><button type="button" class="toggle" id="numToggle" role="switch" aria-checked="false" aria-labelledby="numLbl"></button></div>
-        <label class="opt-val" for="numInput" id="numHint">O seu texto no emblema da porta, +{{x_badge_fmt}}</label>
+        <label class="opt-val" for="numInput" id="numHint">O teu texto no emblema da porta, +{{x_badge_fmt}}</label>
         <input class="field" id="numInput" maxlength="8" placeholder="Até 8 caracteres" value="AMI" disabled autocomplete="off" spellcheck="false" autocapitalize="characters" aria-labelledby="numLbl numHint">
         <p class="err" id="numErr" role="alert" hidden></p>
       </div></div>
@@ -60,13 +60,13 @@
       <p class="display kicker">Carro pequeno.<br>Grande personalidade.</p>
       <span class="rule"></span>
       <p class="muted" style="margin:-6px 0 0">O mesmo Ami. Outra atitude.</p>
-      <h2 class="sr" id="sumTitle">O seu kit</h2>
+      <h2 class="sr" id="sumTitle">O teu kit</h2>
       <div class="card">
         <div><h3 id="sumName">{{d_name}}</h3><span class="muted" style="font-size:12.5px" id="sumSub">{{sum_sub}}</span></div>
         <ul class="lines" id="sumLines">{{sum_lines}}</ul>
         <div class="total"><span class="muted">Total</span><strong id="sumTotal" data-v="{{d_price}}">{{d_price_fmt}}</strong></div>
         <button type="button" class="btn btn-primary" id="addCart">Adicionar ao carrinho</button>
-        <p class="pers-note" id="persNote" hidden>Kit personalizado: é feito de acordo com as suas escolhas, por isso não pode ser <a href="{{root}}refunds/#personalised">devolvido</a> por mudança de opinião. Os kits com defeito estão sempre cobertos.</p>
+        <p class="pers-note" id="persNote" hidden>Kit personalizado: é feito de acordo com as tuas escolhas, por isso não pode ser <a href="{{root}}refunds/#personalised">devolvido</a> por mudança de opinião. Os kits com defeito estão sempre cobertos.</p>
         <div class="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7"/><circle cx="6" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/></svg><span>Feito por encomenda<br>Portes e prazos de entrega indicados ao finalizar a compra</span></div>
       </div>
       <p class="sr" id="sumLive" role="status" aria-live="polite"></p>
@@ -78,7 +78,7 @@
     </aside>
 
     <section class="picker" id="picker" aria-labelledby="pickerTitle">
-      <div class="picker-head"><h2 id="pickerTitle">Escolha um design</h2><div class="tabs" role="group" id="cfgTabs" aria-label="Filtrar por categoria">{{cfg_tabs}}</div></div>
+      <div class="picker-head"><h2 id="pickerTitle">Escolhe um design</h2><div class="tabs" role="group" id="cfgTabs" aria-label="Filtrar por categoria">{{cfg_tabs}}</div></div>
       <div class="strip" id="strip" role="group" aria-label="Designs">
 {{strip_cards}}
       </div>

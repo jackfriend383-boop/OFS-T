@@ -2,21 +2,21 @@
   <div class="page-head">
     <span class="eyebrow">Administração</span>
     <h1 class="display">Encomendas</h1>
-    <p class="muted adm-lead">Cada kit de porta é colocado no molde de impressão com as cores escolhidas pelo cliente. Descarregue um PNG (transparente, 6000&nbsp;px de largura) ou um SVG com uma camada CutContour a magenta.</p>
+    <p class="muted adm-lead">Cada kit de porta é colocado no molde de impressão com as cores escolhidas pelo cliente. Descarrega um PNG (transparente, 6000&nbsp;px de largura) ou um SVG com uma camada CutContour a magenta.</p>
   </div>
   <div class="section adm-body">
     <p class="adm-empty" id="admBoot">A carregar…</p>
 
     <div class="adm-panel" id="admSetup" hidden>
       <h2 tabindex="-1">As encomendas online ainda não estão ativas</h2>
-      <p>As encomendas ficam guardadas numa base de dados gratuita Cloudflare D1 que só o proprietário pode ler. Para a ativar:</p>
+      <p>As encomendas ficam guardadas numa base de dados gratuita Cloudflare D1 que só tu podes ler. Para a ativar:</p>
       <ol class="adm-steps">
-        <li>Em <code>worker/</code>, inicie sessão com <code>npx wrangler login</code> e crie a base de dados: <code>npx wrangler d1 create ofst-orders</code>. Cole o <code>database_id</code> em <code>worker/wrangler.jsonc</code>.</li>
-        <li>Crie as tabelas: <code>npm run db:remote</code> (dentro de <code>worker/</code>).</li>
-        <li>Defina o seu acesso de administrador: <code>npx wrangler secret put ADMIN_EMAIL</code> e <code>npx wrangler secret put ADMIN_PASSWORD</code> (12+ caracteres).</li>
-        <li>Coloque o endereço do seu site em <code>ALLOWED_ORIGINS</code> em <code>worker/wrangler.jsonc</code> e publique a API com <code>npm run deploy</code>.</li>
-        <li>Copie o endereço do Worker que aparece (https://ofst-api….workers.dev) para <code>src/data/site.json</code> como <code>apiUrl</code>. Nunca coloque uma palavra-passe nesse ficheiro.</li>
-        <li>Execute <code>npm run build</code> e depois faça commit e push.</li>
+        <li>Em <code>worker/</code>, inicia sessão com <code>npx wrangler login</code> e cria a base de dados: <code>npx wrangler d1 create ofst-orders</code>. Cola o <code>database_id</code> em <code>worker/wrangler.jsonc</code>.</li>
+        <li>Cria as tabelas: <code>npm run db:remote</code> (dentro de <code>worker/</code>).</li>
+        <li>Define o teu acesso de administrador: <code>npx wrangler secret put ADMIN_EMAIL</code> e <code>npx wrangler secret put ADMIN_PASSWORD</code> (12+ caracteres).</li>
+        <li>Coloca o endereço do teu site em <code>ALLOWED_ORIGINS</code> em <code>worker/wrangler.jsonc</code> e publica a API com <code>npm run deploy</code>.</li>
+        <li>Copia o endereço do Worker que aparece (https://ofst-api….workers.dev) para <code>src/data/site.json</code> como <code>apiUrl</code>. Nunca coloques uma palavra-passe nesse ficheiro.</li>
+        <li>Executa <code>npm run build</code> e depois faz commit e push.</li>
       </ol>
       <p class="adm-note">O guia completo está em <code>guides/CLOUDFLARE-SETUP.md</code>. A ferramenta de ficheiros de impressão abaixo funciona sem base de dados.</p>
     </div>
@@ -31,7 +31,7 @@
 
     <div class="adm-panel" id="admLocked" hidden>
       <h2 tabindex="-1">Esta conta não é de administrador</h2>
-      <p class="muted">Tem sessão iniciada, mas esta conta não consta da tabela <code>admins</code>, por isso não são apresentadas encomendas.</p>
+      <p class="muted">Tens sessão iniciada, mas esta conta não consta da tabela <code>admins</code>, por isso não são apresentadas encomendas.</p>
       <button class="btn btn-ghost" type="button" data-signout>Terminar sessão</button>
     </div>
 
