@@ -28,29 +28,43 @@ export const Thumb = memo(function Thumb({ cfg, decorative = true, eager = false
 /* The live car (hero + configurator). The Stage draws its own SVG; React only owns the host element.
    setNight(on): night scene (car lights on), used by the configurator in the dark theme. */
 export interface StageApi { view: (name: string) => void; zoom: (f: number) => void; pan: (dx: number, dy: number) => void; zoomed: () => boolean; angle: (name: Angle) => void; currentAngle: () => Angle; setNight: (on: boolean) => void }
-/* Drive-in on the first mount (desktop with a mouse, motion allowed): the car slides in from the left with a decelerating curve, a
-   small bob on the way and a forward pitch + settle at the end. The wheels are part of the photo, so they cannot spin. Plays once
-   per page visit (marked done when it finishes, so a React dev double mount still plays it). Client only (runs in an effect). */
+/* Drive-in on the first mount (desktop with a mouse, motion allowed): the car drives in from the right (its front faces left) and
+   slows to a gentle stop with one decelerating curve, no bounce. The wheels are part of the photo, so a copy of each rim is drawn
+   over it (Stage.wheelSpin) and turned with the distance travelled: it spins fast at the start and stops with the car, after a whole
+   number of turns, so the last frame is the plain photo (the overlay is then removed). Plays once per page visit (marked done when
+   it finishes, so a React dev double mount still plays it). Client only (runs in an effect). */
 let ROLLED = false;
-const ROLL_MS = 1400;
-function rollInCar(el: HTMLElement): (() => void) | null {
+const ROLL_MS = 2000;
+function rollInCar(el: HTMLElement, st: () => Stage | null): (() => void) | null {
   if (ROLLED || typeof matchMedia !== 'function' || typeof el.animate !== 'function') return null;
   if (!matchMedia('(hover: hover) and (pointer: fine) and (min-width: 900px)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
-  const T = (x: string, y: number, r: number) => `translate3d(${x}, ${y}px, 0) rotate(${r}deg)`;
-  const ease = 'cubic-bezier(.12,.72,.28,1)';
-  const anim = el.animate([
-    { transform: T('-60vw', 0, 0), offset: 0, easing: ease },
-    { transform: T('-18vw', -1.5, 0), offset: 0.3, easing: ease },
-    { transform: T('0vw', 1, 0), offset: 0.72, easing: 'ease-in-out' },
-    { transform: T('0vw', 1.5, -0.9), offset: 0.82, easing: 'ease-in-out' }, // nose dips as it stops (front is on the left)
-    { transform: T('0vw', -0.5, 0.35), offset: 0.92, easing: 'ease-in-out' },
-    { transform: T('0vw', 0, 0), offset: 1 },
-  ], { duration: ROLL_MS, fill: 'backwards' });
-  el.style.transformOrigin = '50% 90%';
-  const clean = () => { el.style.transformOrigin = ''; };
-  anim.onfinish = () => { ROLLED = true; clean(); };
-  anim.oncancel = clean;
-  return () => { anim.cancel(); clean(); };
+  const s = st(); if (!s) return null;
+  const x0 = Math.ceil(window.innerWidth - el.getBoundingClientRect().left + 40); // starts just outside the right edge of the window
+  const { tyreR, unitsPerPx } = s.rollInfo();
+  const turns = Math.max(1, Math.round((x0 * unitsPerPx) / (2 * Math.PI * tyreR))); // whole turns for that distance
+  const html = document.documentElement, ox = html.style.overflowX;
+  html.style.overflowX = 'clip'; // the car starts beyond the right edge: no scrollbar while it drives in
+  const anim = el.animate(
+    [{ transform: `translate3d(${x0}px, 0, 0)` }, { transform: 'translate3d(0, 0, 0)' }],
+    { duration: ROLL_MS, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' },
+  );
+  let raf = 0, over = false;
+  const spin = () => {
+    if (over) return;
+    const p = anim.effect?.getComputedTiming().progress; // distance travelled so far, 0..1 (after the easing)
+    stage()?.wheelSpin(-360 * turns * (p == null ? 1 : p)); // anticlockwise: the top of the wheel moves left, with the car
+    raf = requestAnimationFrame(spin);
+  };
+  const stage = st;
+  const end = (done: boolean) => {
+    over = true; cancelAnimationFrame(raf); html.style.overflowX = ox;
+    stage()?.wheelSpin(null);
+    if (done) ROLLED = true;
+  };
+  spin();
+  anim.onfinish = () => end(true);
+  anim.oncancel = () => end(false);
+  return () => { anim.cancel(); end(false); };
 }
 export function CarStage({ cfg, id, apiRef, onClick, style, rollIn = false }: { cfg: Cfg; id?: string; apiRef?: React.MutableRefObject<StageApi | null>; onClick?: () => void; style?: React.CSSProperties; rollIn?: boolean }) {
   const { kit } = useApp();
@@ -67,7 +81,7 @@ export function CarStage({ cfg, id, apiRef, onClick, style, rollIn = false }: { 
     const t = !apiRef ? 0 : ric ? ric(() => s.preload(true), { timeout: 1500 }) : setTimeout(() => s.preload(true), 300);
     return () => { if (t) (ric ? (window as any).cancelIdleCallback(t) : clearTimeout(t)); s.destroy(); stage.current = null; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (rollIn && host.current) return rollInCar(host.current) || undefined; }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (rollIn && host.current) return rollInCar(host.current, () => stage.current) || undefined; }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { stage.current?.setKit(kit); }, [kit]);
   useEffect(() => { stage.current?.set(cfg); }, [cfg]);
   // Server + first paint: the real car picture (same photo, size and stickers as the Stage's first picture), so the photo

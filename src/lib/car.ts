@@ -27,7 +27,7 @@ let UID = 0;
    door = where the sheet sits on the side-view car [x, y, w, h]; win = the part of the sheet shown on the rear window, as fractions
    [x, y, w, h] of the sheet; gaps = the sheet has the thin cut gaps between the panel and the two lower strips ([y, x] as fractions
    of the sheet): the car's panel crease is drawn in them. */
-interface ArtSrc { mode: 'mask' | 'rgb'; size: number[]; pill: number[]; src: (w: number) => string; door: number[]; win: number[]; gaps?: { y: number; x: number } }
+interface ArtSrc { mode: 'mask' | 'rgb'; size: number[]; pill: number[]; src: (w: number) => string; door: number[]; win: number[]; gaps?: { y: number; x: number }; winPop?: { src: (w: number) => string; box: number[] } }
 /* Door sticker zone (side view): the sheet's bounding box maps onto the door rect, grown by 0.75 so the sheet edge sits under the outline. */
 const DOOR_BOX = [875.25, 657.25, 272.5, 105.5];
 const ART_SIZE = [1946, 708], ART_PILL = [0, 0, 1946, 708];
@@ -35,11 +35,14 @@ const ART_SIZE = [1946, 708], ART_PILL = [0, 0, 1946, 708];
 const ART_GAPS = { y: 0.8185, x: 0.5013 };
 /* Rear window: the right-hand part of the sheet, with the O frame. */
 const WIN_CROP = [1000 / 1946, 0, 683 / 1946, 1];
+/* Ami Pop rear window: the final artwork (a half ring "C"), warped by scripts/make-art.py onto the Pop's window zone (MODEL_DEFS.pop.win)
+   so its outer arc, inner arc and flat edge coincide with the zone. The picture is in photo coordinates; this is its box [x, y, w, h]. */
+const WINPOP_BOX = [1228, 376, 59, 77];
 /* Pictures of designs added in the admin keep the old sheet proportions (2000 x 764). */
 const REMOTE_SIZE = [2000, 764], REMOTE_PILL = [0, 0, 2000, 764];
 const staticSrc = (name: string, ext: string) => (w: number) => IMG_DIR + `art-${name}-${w}.${ext}`;
 const ART_SRC: Record<string, ArtSrc> = {
-  flame: { mode: 'mask', size: ART_SIZE, pill: ART_PILL, src: staticSrc('flame', 'png'), door: DOOR_BOX, win: WIN_CROP, gaps: ART_GAPS },
+  flame: { mode: 'mask', size: ART_SIZE, pill: ART_PILL, src: staticSrc('flame', 'png'), door: DOOR_BOX, win: WIN_CROP, gaps: ART_GAPS, winPop: { src: staticSrc('flame-win', 'png'), box: WINPOP_BOX } },
 };
 const NO_ART = { door: (..._a: any[]) => '', win: (..._a: any[]) => '' };
 
@@ -57,12 +60,16 @@ const MODEL_DEFS: Record<string, any> = {
     name: 'Ami 2025', img: `href="${IMG}" width="2000" height="1125"`,
     door: DOOR_RECT, win: WIN, winT: '', winStroke: 'stroke="#0A0B0C" stroke-width="3"',
     badge: 'x="1016" y="677" width="113" height="56" rx="20"', plate: [1027, 687, 95, 38, 11], dx: 0,
+    /* Wheels for the roll-in: rim centres and radius (the rim edge, measured on the photos: the four car colours share them),
+       and the rolling radius of the tyre (centre to ground). */
+    wheels: [[697.6, 748.8], [1326.8, 749.3]], rimR: 67, tyreR: 96,
   },
   pop: {
     name: 'Ami Pop', img: `href="${POP_IMG}" x="555.9" y="294.8" width="1376.8" height="656"`,
     door: 'x="878" y="657" width="267" height="106" rx="40"', win: 'M1284.7 448.3 L1282.1 449.2 L1279.4 450.0 L1276.7 450.6 L1274.0 451.0 L1271.2 451.2 L1268.5 451.3 L1265.7 451.1 L1263.0 450.7 L1260.2 450.2 L1257.6 449.4 L1255.0 448.5 L1252.4 447.4 L1250.0 446.1 L1247.6 444.7 L1245.3 443.1 L1243.2 441.3 L1241.2 439.4 L1239.3 437.4 L1237.6 435.2 L1236.0 432.9 L1234.6 430.5 L1233.4 428.1 L1232.3 425.5 L1231.5 422.9 L1230.8 420.2 L1230.3 417.5 L1229.9 414.7 L1229.8 411.9 L1229.9 409.2 L1230.2 406.4 L1230.6 403.7 L1231.3 401.0 L1232.1 398.4 L1233.1 395.8 L1234.3 393.3 L1235.7 390.9 L1237.2 388.6 L1238.9 386.4 L1240.7 384.3 L1242.7 382.3 L1244.8 380.5 L1247.0 378.9 L1247.9 378.3 L1258.9 399.2 L1257.9 400.2 L1256.9 401.2 L1256.1 402.4 L1255.3 403.6 L1254.6 404.8 L1254.1 406.2 L1253.7 407.5 L1253.4 408.9 L1253.2 410.3 L1253.2 411.7 L1253.3 413.2 L1253.5 414.6 L1253.8 416.0 L1254.2 417.3 L1254.8 418.6 L1255.4 419.9 L1256.2 421.1 L1257.1 422.2 L1258.1 423.2 L1259.1 424.2 L1260.3 425.0 L1261.5 425.8 L1262.7 426.5 L1264.1 427.0 L1265.4 427.4 L1266.8 427.7 L1268.2 427.9 L1269.6 427.9 L1271.1 427.8 L1272.5 427.6 L1273.9 427.3 L1273.9 427.3Z', winT: 'translate(1269.5 411.6) scale(0.5575) translate(-1230.5 -417)', winStroke: 'stroke="#0A0B0C" stroke-opacity=".55" stroke-width="1.2"',
     lights: { x: 600.7, y: 522.0, w: 20.8, h: 22.4, mask: POP_LIGHTS },
     badge: 'x="1023.5" y="677.5" width="113" height="55.5" rx="22"', plate: [1033, 685, 85, 42, 13], dx: 1,
+    wheels: [[694.7, 745.7], [1333.2, 743.6]], rimR: 75, tyreR: 102,
     /* full / thumb are offset so the Pop's body is centred exactly where the Ami 2025's is (measured on the photos: body boxes
        573-1448 x 292-847 for the Ami 2025 and 559.9-1453.5 x 297.2-849.2 for the Pop), so switching version never moves the car. */
     views: { full: [526.2, 253.7, 1080, 646], door: [826, 598, 372, 222], window: [1154, 342, 230, 138], thumb: [552.2, 275.7, 1032, 594] },
@@ -262,7 +269,7 @@ function nightLayers(u: string, o: CarOpts, ang: Angle, photo: (attrs: string) =
    door(a, b, u) = the whole sheet on the door; win(a, b, u, shape) = a part of the sheet on the rear window ('square' = a rounded square
    in the middle of the glass, the rest of the glass stays bare; any other shape = the whole glass / half ring).
    gapAt = side-view position of the sheet's cut gaps (the horizontal one and the one between the two strips), when the sheet has them. */
-export const ART: Record<string, { door: (a: string, b: string, u: string) => string; win: (a: string, b: string, u: string, shape?: WinShape) => string; gapAt?: { y: number; x: number } }> = {};
+export const ART: Record<string, { door: (a: string, b: string, u: string) => string; win: (a: string, b: string, u: string, shape?: WinShape) => string; winPop?: (a: string, b: string, u: string) => string; gapAt?: { y: number; x: number } }> = {};
 
 /* The artwork picture size follows the device: 1000 px files on small screens / low memory, 1600 px otherwise (the server render uses the
    small one). The SVG works in source px, so the file size never changes the layout. The file only downloads when a car with
@@ -296,7 +303,19 @@ export function registerArt(id: string, S: ArtSrc) {
       ? `<clipPath id="${u}wc"><rect x="${WIN_SQ[0]}" y="${WIN_SQ[1]}" width="${WIN_SQ[2]}" height="${WIN_SQ[3]}" rx="${WIN_SQ[4]}"/></clipPath><g clip-path="url(#${u}wc)">${art(WIN_SQ, winVB, a, bb, u + 'w')}</g>`
       : art(WIN_BOX, winVB, a, bb, u + 'w'),
     gapAt: S.gaps ? { y: S.door[1] + S.gaps.y * S.door[3], x: S.door[0] + S.gaps.x * S.door[2] } : undefined,
+    winPop: S.winPop ? (a, bb, u) => {
+      const [x, y, w, h] = S.winPop!.box, id = u + 'p';
+      return `<filter id="${id}-tone" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${toneMatrix(a, bb)}"/></filter>`
+        + `<image href="${S.winPop!.src(ART_W)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="none" filter="url(#${id}-tone)"/>`;
+    } : undefined,
   };
+}
+/* The rear-window artwork of a car: the Pop has its own picture (when the design has one), made for its window zone; otherwise the
+   sheet's crop, scaled into the zone by the model's winT. */
+function winArt(model: unknown, A: typeof ART[string], a: string, b: string, u: string, shape?: WinShape) {
+  const M = MOD(model);
+  if (M === MODEL_DEFS.pop && A.winPop) return A.winPop(a, b, u);
+  return M.winT ? `<g transform="${M.winT}">${A.win(a, b, u, shape)}</g>` : A.win(a, b, u, shape);
 }
 /* Built-in designs (designs.json "art" names one of ART_SRC). */
 (DATA.designs as any[]).forEach((d) => { if (d.art && ART_SRC[d.art]) registerArt(d.id, ART_SRC[d.art]); });
@@ -341,12 +360,13 @@ export function carSVG(kit: Kit, o: CarOpts): string {
     </g>
     <rect ${M.door} fill="none" stroke="#0E0F10" stroke-width="2.5"/>${G ? `
     <path d="M876 ${G.y.toFixed(1)} H1147" stroke="#060606" stroke-opacity=".8" stroke-width="${gw}"/><path d="M${G.x.toFixed(1)} ${(G.y + 1.5).toFixed(1)} V762" stroke="#060606" stroke-opacity=".8" stroke-width="1.4"/>` : ''}` : '';
-  const win = Z.win ? `<g clip-path="url(#${u}-win)"><g${M.winT ? ` transform="${M.winT}"` : ''}>
-      <rect x="1150" y="335" width="160" height="165" fill="#1C2022"/>
-      <g class="slot-win"><g>${A.win(a, b, u + 'x', shape)}</g></g>
-      <rect x="1150" y="335" width="160" height="165" fill="url(#${u}-ws)"/>
-      <rect class="shine" x="1150" y="335" width="145" height="165" fill="url(#${u}-sh)" ${shine}/>
-    </g></g>
+  const wT = M.winT ? ` transform="${M.winT}"` : '';
+  const win = Z.win ? `<g clip-path="url(#${u}-win)">
+      <g${wT}><rect x="1150" y="335" width="160" height="165" fill="#1C2022"/></g>
+      <g class="slot-win"><g>${winArt(o.model, A, a, b, u + 'x', shape)}</g></g>
+      <g${wT}><rect x="1150" y="335" width="160" height="165" fill="url(#${u}-ws)"/>
+      <rect class="shine" x="1150" y="335" width="145" height="165" fill="url(#${u}-sh)" ${shine}/></g>
+    </g>
     <path d="${M.win}" fill="none" ${M.winStroke} stroke-linejoin="round"/>` : '';
   return `<svg class="car-svg" viewBox="${v.join(' ')}" xmlns="${NS}" ${a11y}>
   <defs>
@@ -504,7 +524,7 @@ export class Stage {
   /* New colours: swap the sticker artwork in place (only the zones in the kit: none in the front view). */
   paint() {
     const C = this.cfg, lid = this.u + 'L' + (++this.lc), A = ART[C.design] || NO_ART, shape = winShapeOf(C);
-    const fns = [A.door, (a: string, b: string, u: string) => A.win(a, b, u, shape)];
+    const fns = [A.door, (a: string, b: string, u: string) => winArt(C.model, A, a, b, u, shape)];
     [0, 1].forEach((n) => {
       const slot = this.slots[n]; if (!slot) return;
       const g = document.createElementNS(NS, 'g'); g.innerHTML = fns[n](hex(C.c1), hex(C.c2), lid + n);
@@ -544,6 +564,26 @@ export class Stage {
     this.vb = box.slice();
     this.svg.setAttribute('viewBox', this.vb.map((n) => n.toFixed(2)).join(' '));
   }
+  /* Drive-in support: a copy of each wheel's rim (the photo clipped to the rim circle), turned by deg around the wheel centre, over the
+     photo. deg = null removes it (a 360 x n turn looks exactly like the photo, so the overlay is dropped at the end). Side view only. */
+  wheelSpin(deg: number | null) {
+    let g = q('.wheels', this.svg);
+    if (deg === null || this.ang !== 'side' || !this.svg) { if (g) g.remove(); return; }
+    const M = MOD(this.cfg.model), u = this.u;
+    if (!g) {
+      const trim = trimOf(this.cfg.model, this.cfg.trim), split = isSplit(this.cfg.model, trim);
+      const nf = this.night ? ` filter="url(#${u}-nd)"` : '';
+      g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'wheels'); g.setAttribute('aria-hidden', 'true');
+      g.innerHTML = (M.wheels as number[][]).map(([cx, cy], i) => {
+        const img = split ? `href="${photoURL(i ? SPLIT_BACK : SPLIT_FRONT, 'side')}" width="2000" height="1125"` : imgOf(this.cfg.model, this.cfg.trim, 'side');
+        return `<clipPath id="${u}-wh${i}"><circle cx="${cx}" cy="${cy}" r="${M.rimR}"/></clipPath><g clip-path="url(#${u}-wh${i})"><g class="wr" data-c="${cx} ${cy}"><image ${img}${nf}/></g></g>`;
+      }).join('');
+      this.svg.lastElementChild.append(g);
+    }
+    qa('.wr', g).forEach((w) => w.setAttribute('transform', `rotate(${deg.toFixed(2)} ${w.getAttribute('data-c')})`));
+  }
+  /* Rolling geometry for the drive-in: rolling radius of the tyre and the svg units per screen pixel. */
+  rollInfo() { const r = this.svg.getBoundingClientRect(); return { tyreR: MOD(this.cfg.model).tyreR as number, unitsPerPx: r.width ? this.vb[2] / r.width : 1 }; }
   destroy() { this.seq++; } // cancels a rebuild still waiting for its photo
 }
 
