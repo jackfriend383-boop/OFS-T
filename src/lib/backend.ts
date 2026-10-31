@@ -236,6 +236,12 @@ export function makeBackend(kit: Kit) {
     });
     return row;
   }
+  /* An order the owner types in by hand (stored as paid). `body` = { customer, items: [{ cfg, qty }], lang, paid_eur?, send_email? }. */
+  async function createOrder(body: Record<string, unknown>): Promise<{ id: string; ref: string; email_sent: boolean }> {
+    const r = await authed('/api/admin/orders', { method: 'POST', body });
+    if (!r || typeof r !== 'object' || !UUID.test(String(r.id))) throw new BackendError(MSG.generic, 'bad_response');
+    return { id: String(r.id), ref: String(r.ref || ''), email_sent: r.email_sent === true };
+  }
   async function setStatus(id: string, status: string) {
     if (!UUID.test(String(id)) || !STATUSES.includes(status)) throw new BackendError(MSG.invalid, 'invalid');
     const row = await authed('/api/admin/orders/' + encodeURIComponent(id), { method: 'PATCH', body: { status } });
@@ -273,6 +279,6 @@ export function makeBackend(kit: Kit) {
     if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
     return authed('/api/admin/designs/' + id, { method: 'DELETE' });
   }
-  return { configured: backendConfigured, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, setStatus };
+  return { configured: backendConfigured, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, createOrder, setStatus };
 }
 export type Backend = ReturnType<typeof makeBackend>;

@@ -31,3 +31,20 @@
 .edit-range input[type=range]{width:100%;min-width:0;accent-color:var(--accent-text)}
 .edit-range output{font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
 @media (max-width:520px){.edit-slot{padding:12px}}
+
+/* Admin: kit fields (Print files tab, New order form) */
+.kf{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));align-items:end;margin:12px 0}
+.kf .co-f{min-width:0}
+.kf-wide{grid-column:1/-1;margin:0}
+.kf-colour{display:flex;gap:8px;align-items:center}
+.kf-colour .field{flex:1;min-width:0}
+.kf-sw{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line-2)}
+.no-form{display:grid;gap:16px;max-width:980px}
+.no-set{display:grid;gap:12px;margin:0;padding:14px;border:1px solid var(--line);border-radius:12px;min-width:0}
+.no-set legend{padding:0 6px;font-weight:600;font-size:14px}
+.no-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));align-items:end}
+.no-line{display:grid;gap:4px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.no-line-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.no-qty{display:grid;grid-template-columns:90px auto;gap:6px 12px;align-items:center;max-width:320px}
+.no-qty label{grid-column:1/-1}
+.no-check{display:flex;gap:8px;align-items:center;font-size:14px}

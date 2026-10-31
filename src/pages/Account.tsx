@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useApp, hasPendingAdd } from '../state';
 import { COUNTRIES_EN } from '../components/Cart';
+import { Thumb } from '../components/Car';
 import type { Customer } from '../lib/backend';
 
 const slot = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
@@ -154,8 +155,13 @@ function Signed({ user, kit, onSaved, onSignOut, to }: { user: Customer; kit: Re
 
   return (
     <>
-      <form className="acct-card co" onSubmit={save} noValidate>
-        <h2>{T('acctProfileH')}</h2>
+      <details className="acct-card acct-fold" id="profile">
+        <summary>
+          <span className="acct-fold-h">{T('acctProfileH')}</span>
+          <span className="acct-fold-hint muted">{user.name || user.email}</span>
+          <svg className="acct-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" /></svg>
+        </summary>
+      <form className="co" onSubmit={save} noValidate>
         <p className="muted" style={{ margin: 0 }}>{T('acctProfileNote')}</p>
         {input('name', T('fName'), { autoComplete: 'name' })}
         {input('phone', T('acctPhone'), { autoComplete: 'tel', type: 'tel', inputMode: 'tel' })}
@@ -168,6 +174,7 @@ function Signed({ user, kit, onSaved, onSignOut, to }: { user: Customer; kit: Re
         {msg && <p className={msg.cls} role={msg.cls === 'err' ? 'alert' : 'status'}>{msg.text}</p>}
         <button className="btn btn-primary" type="submit" disabled={saving} aria-busy={saving || undefined}>{saving ? T('acctSaving') : T('acctSave')}</button>
       </form>
+      </details>
 
       <div className="acct-card" id="orders">
         <h2>{T('acctOrdersH')}</h2>
@@ -185,7 +192,15 @@ function Signed({ user, kit, onSaved, onSignOut, to }: { user: Customer; kit: Re
                   <span className="price">{kit.money(o.total_cents / 100)}</span>
                 </div>
                 <ul className="acct-lines" role="list">
-                  {(Array.isArray(o.items) ? o.items : []).map((i: any, n: number) => <li key={n}>{String(i.name)} × {Number(i.qty)}<span className="muted"> · {String(i.desc)}</span></li>)}
+                  {(Array.isArray(o.items) ? o.items : []).map((i: any, n: number) => {
+                    const cfg = i && i.cfg ? kit.sanitizeCfg(i.cfg, true) : null; // the same car picture the configurator's summary shows
+                    return (
+                      <li key={n} className="acct-line">
+                        {cfg && <Thumb cfg={cfg} className="acct-car" />}
+                        <span>{String(i.name)} × {Number(i.qty)}<span className="muted"> · {String(i.desc)}</span></span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </li>
             ))}

@@ -15,6 +15,8 @@ import { RANGES, customers as groupCustomers, dayKey, delta, inRange, kpis, rang
 import { BarList, Columns, TrendChart } from './admin/Charts';
 import Designs from './admin/Designs';
 import Edits from './admin/Edits';
+import KitFields, { baseCfg } from './admin/KitFields';
+import NewOrder from './admin/NewOrder';
 
 type Panel = 'boot' | 'setup' | 'login' | 'locked' | 'main';
 type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'designs' | 'edits' | 'tools';
@@ -86,7 +88,7 @@ export default function Admin() {
   const [who, setWho] = useState('');
   const [loginErr, setLoginErr] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
-  const [testId, setTestId] = useState(kit.DESIGNS[0].id);
+  const [testCfgV, setTestCfg] = useState<Cfg>(() => baseCfg(kit, kit.DESIGNS[0].id));
   const focusId = useRef<string | null>(null);
 
   const msgHidden = panel !== 'main';
@@ -165,7 +167,6 @@ export default function Admin() {
     try { await backend.addInvoice(order.id, file); setInvoiceOrders((os) => os.filter((o) => o.id !== order.id)); setInvoiceFiles((files) => { const next = { ...files }; delete next[order.id]; return next; }); setInvoicePreviews((previews) => { const next = { ...previews }; delete next[order.id]; return next; }); say(c.invoiceSent); }
     catch (e) { handleError(e); } finally { setBusy(null); }
   }
-  const testCfgV = useMemo(() => kit.defaultCfg(kit.D(testId) || kit.DESIGNS[0]), [kit, testId]);
   const testCfg = () => testCfgV;
   /* The print files of one kit: JPEGs (4:4:4, quality 100) of the final artwork in the kit's two colours: the door sheet and / or the window. */
   const pause = () => new Promise((r) => setTimeout(r, 350)); // browsers drop downloads fired in the same instant
@@ -204,6 +205,7 @@ export default function Admin() {
   const [fPay, setFPay] = useState('all');
   const [sort, setSort] = useState<'new' | 'old' | 'high' | 'low'>('new');
   const [limit, setLimit] = useState(20);
+  const [creating, setCreating] = useState(false);
   const [cSort, setCSort] = useState<'spent' | 'orders' | 'last'>('spent');
   const setTab = (t: Tab) => { setTabState(t); remember(TAB_KEY, t); };
   const setRange = (r: RangeKey) => { setRangeState(r); remember(RANGE_KEY, r); };
@@ -340,12 +342,12 @@ export default function Admin() {
     <section className="adm-tool" aria-labelledby="admToolTitle">
       <h2 id="admToolTitle">{c.toolTitle}</h2>
       <p className="adm-note">{c.toolNote}</p>
+      <KitFields cfg={testCfgV} onChange={setTestCfg} />
       <div className="adm-bar">
-        <label htmlFor="admDesign">{c.design}</label>
-        <select className="field adm-select" id="admDesign" value={testId} onChange={(e) => setTestId(e.target.value)}>{kit.DESIGNS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
-        <button className="btn btn-primary" type="button" id="admTestPng" disabled={busy === 'tpng'} aria-busy={busy === 'tpng' || undefined} onClick={() => download(testCfg(), 'TEST', 'tpng')}>{c.jpg}</button>
+        <button className="btn btn-primary" type="button" id="admTestPng" disabled={busy === 'tpng'} aria-busy={busy === 'tpng' || undefined} onClick={() => download(testCfg(), 'MANUAL', 'tpng')}>{c.jpg}</button>
+        <button className="btn btn-ghost" type="button" onClick={() => setTestCfg(baseCfg(kit, testCfgV.design))}>{d.mfReset}</button>
       </div>
-      <Mold cfg={testCfgV} className="moldp adm-test-prev" label={T('moldPreview', { name: kit.D(testId)!.name })} />
+      <Mold cfg={testCfgV} className="moldp adm-test-prev" label={T('moldPreview', { name: kit.D(testCfgV.design)?.name || '' })} />
     </section>
   );
 
@@ -462,7 +464,11 @@ export default function Admin() {
                 <p className="adm-note">{d.limitNote}</p>
               </>)}
 
-              {tab === 'orders' && (<>
+              {tab === 'orders' && creating && (
+                <NewOrder onClose={() => setCreating(false)} onError={handleError}
+                  onCreated={(ref) => { setCreating(false); void loadOrders().then(() => say(d.noDone(ref))); }} />
+              )}
+              {tab === 'orders' && !creating && (<>
                 <div className="ofilters">
                   <div className="co-f of-q"><label htmlFor="admQ">{d.search}</label><input className="field" id="admQ" type="search" placeholder={d.searchPh} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} /></div>
                   <div className="co-f"><label htmlFor="admFS">{d.status}</label>
@@ -480,6 +486,7 @@ export default function Admin() {
                 </div>
                 <div className="adm-bar">
                   <span className="adm-note ocount">{d.showing(shown.length, orders.length)} · {openKits ? d.bulkNote(openKits) : d.bulkNone}</span>
+                  <button className="btn btn-ghost" type="button" id="admNewOrderBtn" onClick={() => setCreating(true)}>{d.newOrder}</button>
                   <button className="btn btn-ghost" type="button" onClick={exportCSV} disabled={!shown.length}>{d.exportCsv}</button>
                   <button className="btn btn-primary" type="button" onClick={() => bulk()} disabled={!openKits || busy === 'bulk'} aria-busy={busy === 'bulk' || undefined}>{d.bulkJpg}</button>
                 </div>

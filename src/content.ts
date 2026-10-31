@@ -91,7 +91,7 @@ const en = {
     signIn: 'Sign in', email: 'Email', password: 'Password',
     lockedTitle: "This account isn't an admin", lockedText: 'You are signed in, but this account is not listed in the <code>admins</code> table, so no orders are shown.', signOut: 'Sign out',
     listTitle: 'Order list', refresh: 'Refresh',
-    toolTitle: 'Mold file of a design', toolNote: "A test print file (JPEG of the final artwork, quality 100, 4:4:4) in the design's default colours, to check what the supplier receives.", design: 'Design', jpg: 'Print file (JPEG)', invoiceSent: 'Invoice sent to the buyer.',
+    toolTitle: 'Mold file of a design', toolNote: 'Pick a design, the Ami version, the two colours and the kit contents, then download the print file(s): JPEGs of the final artwork (quality 100, 4:4:4) with only the colours changed.', design: 'Design', jpg: 'Print file (JPEG)', invoiceSent: 'Invoice sent to the buyer.',
   },
 };
 
@@ -182,7 +182,7 @@ const pt: typeof en = {
     signIn: 'Iniciar sessão', email: 'Email', password: 'Palavra-passe',
     lockedTitle: 'Esta conta não é de administrador', lockedText: 'Tens sessão iniciada, mas esta conta não consta da tabela <code>admins</code>, por isso não são apresentadas encomendas.', signOut: 'Terminar sessão',
     listTitle: 'Lista de encomendas', refresh: 'Atualizar',
-    toolTitle: 'Ficheiro de molde de um design', toolNote: 'Um ficheiro de impressão de teste (JPEG da arte final, qualidade 100, 4:4:4) nas cores predefinidas do design, para ver o que o fornecedor recebe.', design: 'Design', jpg: 'Ficheiro de impressão (JPEG)', invoiceSent: 'Fatura enviada ao comprador.',
+    toolTitle: 'Ficheiro de molde de um design', toolNote: 'Escolhe o design, a versão do Ami, as duas cores e o conteúdo do kit e descarrega o(s) ficheiro(s) de impressão: JPEG da arte final (qualidade 100, 4:4:4) com apenas as cores alteradas.', design: 'Design', jpg: 'Ficheiro de impressão (JPEG)', invoiceSent: 'Fatura enviada ao comprador.',
   },
 };
 

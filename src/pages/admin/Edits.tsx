@@ -49,7 +49,8 @@ function SlotCard({ id, server, c, say, getToken, onChanged, onExpired }: { id: 
 
   const fail = (e: unknown) => {
     if (e instanceof SettingsApiError && e.code === 'session_expired') { onExpired(); return; }
-    const m = c.failed; setNote(m); say(m);
+    const code = e instanceof SettingsApiError ? e.code : '';
+    const m = code === 'not_found' || code === 'http_404' ? c.needDeploy : code === 'server' || code === 'http_500' ? c.noTable : c.failed; setNote(m); say(m);
   };
 
   async function choose(file: File | undefined) {
@@ -143,13 +144,16 @@ function SlotCard({ id, server, c, say, getToken, onChanged, onExpired }: { id: 
 
 function BackgroundCard({ c, say, getToken, onExpired }: { c: Copy; say: Say; getToken: () => Promise<string>; onExpired: () => void }) {
   const [slots, setSlots] = useState<SlotMap | null>(null);
-  const [err, setErr] = useState(false);
-  const load = useCallback(async () => { try { setSlots(await settingsApi.list()); setErr(false); } catch { setSlots({}); setErr(true); } }, []);
+  const [err, setErr] = useState('');
+  const load = useCallback(async () => {
+    try { setSlots(await settingsApi.list()); setErr(''); }
+    catch (e) { setSlots({}); setErr(e instanceof SettingsApiError && e.status === 404 ? c.needDeploy : c.notReady); }
+  }, [c]);
   useEffect(() => { void load(); }, [load]);
   return (
     <section className="dpanel dpanel-wide edit-card" aria-labelledby="editBgTitle">
       <header><h3 id="editBgTitle">{c.bgTitle}</h3><p className="adm-note">{c.bgNote}</p></header>
-      {err && <p className="adm-empty" role="alert">{c.notReady}</p>}
+      {err && <p className="adm-empty" role="alert">{err}</p>}
       {!slots ? <p className="adm-empty">{c.loading}</p> : (
         <div className="edit-grid">
           {SLOTS.map((id) => <SlotCard key={id} id={id} server={slots[id]} c={c} say={say} getToken={getToken} onChanged={load} onExpired={onExpired} />)}

@@ -31,6 +31,15 @@ const en = {
   invoicesTitle: 'Invoices to send', invoicesNote: 'Paid orders without an invoice. Adding a file sends it to the buyer by email.', invoiceEmpty: 'All paid orders have an invoice.', invoiceFile: 'Invoice file', invoiceItems: 'Ordered items', invoiceSend: 'Add invoice and email buyer', invoiceTypes: 'PDF, PNG or JPEG, up to 750 KB', invoicePreview: 'Preview', invoiceHidePreview: 'Hide preview', invoiceSent: 'Invoice sent to the buyer.',
   csvHead: ['Order', 'Date', 'Status', 'Payment', 'Name', 'Email', 'Street', 'Postcode', 'City', 'Country', 'NIF', 'Items', 'Stickers', 'Total (EUR)'],
   limitNote: 'Figures cover the newest 500 paid orders.',
+  mfDesign: 'Design', mfModel: 'Ami version', mfC1: 'Colour 1 (dark grey areas)', mfC2: 'Colour 2 (light grey areas)', mfWin: 'Window sticker shape', mfParts: 'Kit contents',
+  mfClassic: 'Classic colours', mfMetal: 'Paint to Sample', mfFixed: 'This design keeps its original colours.', mfReset: 'Default colours',
+  newOrder: 'New order', noTitle: 'Create an order manually',
+  noNote: 'For orders taken outside the site (message, in person...). It is saved as paid, so it shows in the order list, the invoice queue and, with the same email, in the customer\'s account.',
+  noCustomer: 'Customer', noKits: 'Kits', noKitN: (n: number) => `Kit ${n}`, noAddKit: 'Add another kit', noRemove: 'Remove', noQty: 'Quantity', noLang: 'Customer language',
+  noPrice: 'Price paid (EUR)', noPriceHint: (p: string) => `Leave empty to charge the list price (${p}).`, noMail: 'Email the customer an order confirmation',
+  noCreate: 'Create order', noCreating: 'Creating…', noCancel: 'Cancel', noDone: (ref: string) => `Order #${ref} created.`,
+  noBad: 'The server refused the order. Check every field (the email and NIF must be valid). If they are all right, the Worker may not be updated yet: publish it (cd worker, then npm run deploy).',
+  noPriceBad: 'The price must be a number between 0.01 and 10000.',
 };
 const pt: typeof en = {
   tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', designs: 'Designs', edits: 'Edições', tools: 'Ficheiros de impressão' },
@@ -64,6 +73,15 @@ const pt: typeof en = {
   invoicesTitle: 'Faturas por enviar', invoicesNote: 'Encomendas pagas sem fatura. Ao adicionar um ficheiro, este é enviado por email ao comprador.', invoiceEmpty: 'Todas as encomendas pagas têm fatura.', invoiceFile: 'Ficheiro da fatura', invoiceItems: 'Artigos pedidos', invoiceSend: 'Adicionar fatura e enviar email', invoiceTypes: 'PDF, PNG ou JPEG, até 750 KB', invoicePreview: 'Pré-visualizar', invoiceHidePreview: 'Fechar pré-visualização', invoiceSent: 'Fatura enviada ao comprador.',
   csvHead: ['Encomenda', 'Data', 'Estado', 'Pagamento', 'Nome', 'Email', 'Morada', 'Código postal', 'Cidade', 'País', 'NIF', 'Artigos', 'Autocolantes', 'Total (EUR)'],
   limitNote: 'Os valores incluem as 500 encomendas pagas mais recentes.',
+  mfDesign: 'Design', mfModel: 'Versão do Ami', mfC1: 'Cor 1 (zonas cinzento escuro)', mfC2: 'Cor 2 (zonas cinzento claro)', mfWin: 'Forma do autocolante do vidro', mfParts: 'Conteúdo do kit',
+  mfClassic: 'Cores clássicas', mfMetal: 'Cores Especiais', mfFixed: 'Este design mantém as cores originais.', mfReset: 'Cores predefinidas',
+  newOrder: 'Nova encomenda', noTitle: 'Criar uma encomenda manualmente',
+  noNote: 'Para encomendas feitas fora do site (mensagem, em pessoa...). Fica guardada como paga, por isso aparece na lista de encomendas, nas faturas por enviar e, com o mesmo email, na conta do cliente.',
+  noCustomer: 'Cliente', noKits: 'Kits', noKitN: (n: number) => `Kit ${n}`, noAddKit: 'Adicionar outro kit', noRemove: 'Remover', noQty: 'Quantidade', noLang: 'Idioma do cliente',
+  noPrice: 'Preço pago (EUR)', noPriceHint: (p: string) => `Deixa vazio para cobrar o preço de tabela (${p}).`, noMail: 'Enviar email de confirmação ao cliente',
+  noCreate: 'Criar encomenda', noCreating: 'A criar…', noCancel: 'Cancelar', noDone: (ref: string) => `Encomenda #${ref} criada.`,
+  noBad: 'O servidor recusou a encomenda. Verifica todos os campos (o email e o NIF têm de ser válidos). Se estiverem certos, o Worker pode não estar atualizado: publica-o (cd worker, depois npm run deploy).',
+  noPriceBad: 'O preço tem de ser um número entre 0,01 e 10000.',
 };
 /* "Edits" tab: one card per editable part of the site. */
 const editsEn = {
@@ -84,6 +102,8 @@ const editsEn = {
   confirmReset: (s: string) => `Remove the custom picture for "${s}" and go back to the default?`,
   failed: 'That did not work. Check your connection and try again.', needImage: 'Upload a picture first.', unsaved: 'Not saved yet',
   ready: 'Ready', savedState: 'Saved',
+  needDeploy: 'The server does not have this feature yet. Publish the updated Worker (cd worker, then npm run deploy) and apply migration 0010, then reload this page.',
+  noTable: 'The server could not save the picture. Apply migration 0010_site_settings.sql to the database, then try again.',
 };
 const editsPt: typeof editsEn = {
   intro: 'Altera partes do site público sem mexer em código. As alterações chegam aos novos visitantes em cerca de um minuto.',
@@ -103,6 +123,8 @@ const editsPt: typeof editsEn = {
   confirmReset: (s: string) => `Remover a imagem própria de "${s}" e voltar à predefinida?`,
   failed: 'Não funcionou. Verifica a ligação e tenta de novo.', needImage: 'Carrega primeiro uma imagem.', unsaved: 'Por guardar',
   ready: 'Pronto', savedState: 'Guardado',
+  needDeploy: 'O servidor ainda não tem esta funcionalidade. Publica o Worker atualizado (cd worker, depois npm run deploy) e aplica a migração 0010, depois recarrega esta página.',
+  noTable: 'O servidor não conseguiu guardar a imagem. Aplica a migração 0010_site_settings.sql à base de dados e tenta de novo.',
 };
 export const EDITS = { en: editsEn, pt: editsPt };
 export const DASH = { en, pt };

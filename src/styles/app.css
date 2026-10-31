@@ -27,3 +27,17 @@
 .acct-pop a:hover,.acct-pop button:hover{background:var(--raise)}
 .acct-pop-who{display:grid;gap:2px;margin:0 0 6px;padding:8px 12px 10px;border-bottom:1px solid var(--line);font-size:13px;overflow-wrap:anywhere}
 @media (max-width:560px){.tools .acct-btn{display:none}}
+.acct-fold{padding:0;gap:0}
+.acct-fold > summary{display:flex;align-items:center;gap:12px;padding:18px 20px;cursor:pointer;list-style:none;border-radius:16px}
+.acct-fold > summary::-webkit-details-marker{display:none}
+.acct-fold-h{font-size:18px;font-weight:600}
+.acct-fold-hint{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.acct-fold-ic{flex:none;width:20px;height:20px;transition:transform .2s ease}
+.acct-fold[open] .acct-fold-ic{transform:rotate(180deg)}
+.acct-fold > summary:focus-visible{outline:2px solid var(--accent-text,var(--accent));outline-offset:-2px}
+.acct-fold > .co{padding:0 20px 20px}
+.acct-line{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr);gap:6px 16px;align-items:center}
+.acct-car{display:block;width:100%}
+.acct-car svg{width:100%;height:auto;display:block}
+@media (max-width:560px){.acct-line{grid-template-columns:1fr}.acct-car{max-width:320px}}
+@media (prefers-reduced-motion:reduce){.acct-fold-ic{transition:none}}

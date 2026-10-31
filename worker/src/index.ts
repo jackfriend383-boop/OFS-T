@@ -19,6 +19,7 @@ import { sendMail, signInEmail, paidEmail, invoiceEmail, shippedEmail, newOrderE
    Admin:   POST   /api/admin/login            {email,password} -> {access_token,expires_in,user}
             POST   /api/admin/logout           revokes every admin session
             GET    /api/admin/orders           newest 500 orders
+            POST   /api/admin/orders           {customer, items, lang, paid_eur?, send_email?}  an order typed in by hand (stored as paid)
             PATCH  /api/admin/orders/:id       {status}
    Trust boundaries: every byte of a request is untrusted (the site's JS can be modified by anyone). Orders are checked
    against the same limits as worker/schema.sql. Admin identity is a random bearer token issued after a correct password;
@@ -469,6 +470,27 @@ async function listOrders(env: Env) {
   }));
 }
 
+/* POST /api/admin/orders: an order the owner types in by hand (taken outside the site). Same checks and pricing as a checkout, the buyer's
+   consents are recorded as given by the owner, and it is stored as already paid (optionally with a different price paid), so it shows up in
+   the order list, the invoice queue and, through the email, in the customer's account. */
+async function createManualOrder(req: Request, env: Env) {
+  const b = await readJson(req);
+  if (!isObj(b)) throw new HttpError(400, 'invalid');
+  const o = validateOrder({ ...b, consent_terms: true, consent_personalised: true }, await pricingDesigns(env));
+  let paid = o.total;
+  if (b.paid_eur !== undefined && b.paid_eur !== null && b.paid_eur !== '') {
+    paid = Math.round(Number(b.paid_eur) * 100);
+    if (!Number.isInteger(paid) || paid < 1 || paid > 1000000) throw new HttpError(400, 'invalid');
+  }
+  const user = await env.DB.prepare('SELECT id FROM users WHERE lower(email) = ?1').bind(o.email.toLowerCase()).first<{ id: string }>();
+  await env.DB.prepare(
+    `INSERT INTO orders (id, customer, items, total_cents, lang, consent_terms, consent_personalised, payment_status, paid_at, paid_cents, user_id)
+     VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, 'paid', ${NOW}, ?7, ?8)`,
+  ).bind(o.id, o.customer, o.items, o.total, o.lang, o.personalised, paid, user ? user.id : null).run();
+  const mailed = b.send_email === true ? (await notifyPaid(env, o.id)) === null : false;
+  return { id: o.id, ref: o.id.slice(-6).toUpperCase(), total_cents: paid, email_sent: mailed };
+}
+
 async function listInvoices(env: Env) {
   const { results } = await env.DB.prepare(
     `SELECT o.id, o.created_at, o.status, o.customer, o.items, o.total_cents, o.payment_status, o.paid_cents
@@ -761,6 +783,7 @@ export default {
           return respond({ ok: true }, 200, req, env);
         }
         if (path === '/api/admin/orders' && req.method === 'GET') return respond(await listOrders(env), 200, req, env);
+        if (path === '/api/admin/orders' && req.method === 'POST') return respond(await createManualOrder(req, env), 201, req, env);
         if (path === '/api/admin/invoices' && req.method === 'GET') return respond(await listInvoices(env), 200, req, env);
         if (path === '/api/admin/designs' && req.method === 'GET') return respond(await adminList(env), 200, req, env);
         const dz = /^\/api\/admin\/designs\/([a-z0-9-]{2,40})$/.exec(path);
