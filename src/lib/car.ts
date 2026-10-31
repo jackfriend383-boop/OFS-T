@@ -30,7 +30,7 @@ let UID = 0;
 interface ArtSrc { mode: 'mask' | 'rgb'; size: number[]; pill: number[]; src: (w: number) => string; door: number[]; win: number[]; gaps?: { y: number; x: number }; winPop?: { src: (w: number) => string; box: number[] } }
 /* Door sticker zone (side view): the sheet's bounding box maps onto the door rect, grown by 0.75 so the sheet edge sits under the outline. */
 const DOOR_BOX = [875.25, 657.25, 272.5, 105.5];
-const ART_SIZE = [1946, 708], ART_PILL = [0, 0, 1946, 708];
+const ART_SIZE = [1946, 706], ART_PILL = [0, 0, 1946, 706];
 /* Cut gaps of the final design (centre of the horizontal gap and of the vertical gap between the two strips, as fractions of the sheet). */
 const ART_GAPS = { y: 0.8185, x: 0.5013 };
 /* Rear window: the right-hand part of the sheet, with the O frame. */

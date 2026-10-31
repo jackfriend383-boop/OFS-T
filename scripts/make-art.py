@@ -60,7 +60,10 @@ def clean_thin(cls):
 
 # ------------------------------------------------------------------ door
 def make_door():
-    L = np.asarray(Image.open(ROOT / 'src/data/masters/flame-final-door.jpg').convert('L'), dtype=np.float64)
+    src = Image.open(ROOT / 'src/data/masters/flame-final-door.jpg').convert('L')
+    if src.width != 2000:                                          # the constants below are in "2000 px" source units
+        src = src.resize((2000, round(src.height * 2000 / src.width)), Image.LANCZOS)
+    L = np.asarray(src, dtype=np.float64)
     H, W = L.shape
 
     # 1. White page = bright pixels connected to the border.
@@ -81,7 +84,11 @@ def make_door():
 
     gap_rows = np.nonzero(L[:, 200:1800].mean(axis=1) > 200)[0]
     gap_rows = gap_rows[(gap_rows > H * 0.6) & (gap_rows < H * 0.9)]
-    panel_bot, strip_top = gap_rows.min() - 1, gap_rows.max() + 1
+    run_end = gap_rows[0]                                          # the gap is the first run of bright rows (the page margin follows below)
+    for r_ in gap_rows[1:]:
+        if r_ != run_end + 1: break
+        run_end = r_
+    panel_bot, strip_top = gap_rows.min() - 1, run_end + 1
     strips = L[strip_top + 20:strip_top + 100]
     coldark = (strips < 150).mean(axis=0)
     mid = np.arange(W // 3, 2 * W // 3)
