@@ -21,7 +21,7 @@ src/
   content/{pt,en}/*.html       long prose pages (about, privacy, terms, refunds, cookies)
   data/designs.json, site.json designs, prices, business details, order API address (same files as before)
   i18n/{pt,en}.json            UI strings (same files as before)
-  lib/                         kit (data helpers), car (SVG renderer + live stage), backend (Cloudflare Worker API), printfile (print-ready PDF/SVG from a design's master), motion
+  lib/                         kit (data helpers), car (SVG renderer + live stage), backend (Cloudflare Worker API), printfile + jpeg444 (print-ready JPEGs: the final artwork recoloured with the order's two colours; weight maps from scripts/make-print-maps.py in public/assets/print/), motion
   components/, pages/          React components
   styles/site.css              the original stylesheet, unchanged apart from the font paths
 scripts/prerender.mjs          renders every route, writes sitemap.xml, fixes the site URL in robots.txt / llms.txt

@@ -91,7 +91,7 @@ const en = {
     signIn: 'Sign in', email: 'Email', password: 'Password',
     lockedTitle: "This account isn't an admin", lockedText: 'You are signed in, but this account is not listed in the <code>admins</code> table, so no orders are shown.', signOut: 'Sign out',
     listTitle: 'Order list', refresh: 'Refresh',
-    toolTitle: 'Mold file of a design', toolNote: "A test print file (true-scale vector PDF) in the design's default colours, to check the printer setup.", design: 'Design', pdf: 'Print PDF', svg: 'SVG + cut line', invoiceSent: 'Invoice sent to the buyer.',
+    toolTitle: 'Mold file of a design', toolNote: "A test print file (JPEG of the final artwork, quality 100, 4:4:4) in the design's default colours, to check what the supplier receives.", design: 'Design', jpg: 'Print file (JPEG)', invoiceSent: 'Invoice sent to the buyer.',
   },
 };
 
@@ -182,7 +182,7 @@ const pt: typeof en = {
     signIn: 'Iniciar sessão', email: 'Email', password: 'Palavra-passe',
     lockedTitle: 'Esta conta não é de administrador', lockedText: 'Tens sessão iniciada, mas esta conta não consta da tabela <code>admins</code>, por isso não são apresentadas encomendas.', signOut: 'Terminar sessão',
     listTitle: 'Lista de encomendas', refresh: 'Atualizar',
-    toolTitle: 'Ficheiro de molde de um design', toolNote: 'Um ficheiro de impressão de teste (PDF vetorial à escala real) nas cores predefinidas do design, para verificar a configuração da impressora.', design: 'Design', pdf: 'PDF de impressão', svg: 'SVG + linha de corte', invoiceSent: 'Fatura enviada ao comprador.',
+    toolTitle: 'Ficheiro de molde de um design', toolNote: 'Um ficheiro de impressão de teste (JPEG da arte final, qualidade 100, 4:4:4) nas cores predefinidas do design, para ver o que o fornecedor recebe.', design: 'Design', jpg: 'Ficheiro de impressão (JPEG)', invoiceSent: 'Fatura enviada ao comprador.',
   },
 };
 

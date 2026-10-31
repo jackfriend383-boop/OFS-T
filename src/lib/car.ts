@@ -191,11 +191,17 @@ function warp(id: string, H: number[], [x, y, w, h]: number[], content: string, 
 /* Car colour of a version (an unknown one falls back to that version's first) and the photo for it and an angle. */
 const trimOf = (m: unknown, t: unknown) => { const pop = MOD(m) === MODEL_DEFS.pop, L = TRIMS[pop ? 'pop' : 'qs']; return typeof t === 'string' && (L.includes(t) || (!pop && t === SPLIT_TRIM)) ? t : L[0]; };
 const angleOf = (m: unknown, a: unknown): Angle => (anglesOf(m).includes(a as Angle) ? (a as Angle) : 'side');
-/* The split car (home page model box): front half black (this trim), back half brown, cut along the door's rear shut line (the door
-   sticker ends at x 1147, the shut line runs from the window frame at x 1161 down to x 1207), so the door sticker is whole on the black
-   half and the factory graphics of the black car's rear window (behind the line) never show. Every other angle shows the black car. */
+/* The split car (home page model box): front half black (this trim), back half brown, cut straight down the middle of the door
+   (x 1011.5), so the car is half and half; the door sticker is drawn whole over both halves and the black car's factory graphics
+   behind the cut never show. Every other angle shows the black car. */
 const SPLIT_FRONT = 'yellow', SPLIT_BACK = 'brown';
-const SPLIT_CUT = '0,0 1160,0 1161,345 1200,495 1207,640 1203,745 1203,1125 0,1125';
+const SPLIT_X = 1011.5; // middle of the door panel (door x 815..1207 in the photo; the sticker x 876..1147)
+/* Front-half mask: a clean vertical cut down the middle of the door (3 px feather), widened below the sills (y >= 788) so the black
+   photo's darker floor shadow fades into the brown one's instead of leaving a vertical edge under the car. */
+const SPLIT_MASK = (() => {
+  const g = (id: string, w: number) => `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${SPLIT_X - w}" x2="${SPLIT_X + w}" y1="0" y2="0"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>`;
+  return `${g('ofst-sg1', 1.5)}${g('ofst-sg2', 45)}<mask id="ofst-split" maskUnits="userSpaceOnUse" x="0" y="0" width="2000" height="1125"><rect x="0" y="0" width="2000" height="788" fill="url(#ofst-sg1)"/><rect x="0" y="788" width="2000" height="337" fill="url(#ofst-sg2)"/></mask>`;
+})();
 const isSplit = (m: unknown, t: unknown) => MOD(m) === MODEL_DEFS.qs && t === SPLIT_TRIM;
 const photoTrim = (t: string) => (t === SPLIT_TRIM ? SPLIT_FRONT : t); // the real photo set behind a trim code
 const photoURL = (trim: string, ang: Angle) => `${IMG_DIR}ami/${photoTrim(trim)}-${ang}.webp`;
@@ -205,7 +211,7 @@ const imgOf = (m: unknown, t: unknown, ang: Angle) => (MOD(m) === MODEL_DEFS.qs 
 const photoTag = (m: unknown, t: unknown, ang: Angle, attrs = '') => {
   if (ang === 'side' && isSplit(m, trimOf(m, t))) {
     const w = 'width="2000" height="1125"';
-    return `<clipPath id="ofst-split"><polygon points="${SPLIT_CUT}"/></clipPath><image href="${photoURL(SPLIT_BACK, 'side')}" ${w} ${attrs}/><g clip-path="url(#ofst-split)"><image href="${photoURL(SPLIT_FRONT, 'side')}" ${w} ${attrs}/></g>`;
+    return `${SPLIT_MASK}<image href="${photoURL(SPLIT_BACK, 'side')}" ${w} ${attrs}/><g mask="url(#ofst-split)"><image href="${photoURL(SPLIT_FRONT, 'side')}" ${w} ${attrs}/></g>`;
   }
   return `<image ${imgOf(m, t, ang)} ${attrs}/>`;
 };

@@ -1,16 +1,16 @@
-/* Print files from the design masters (admin page only, lazy-loaded).
+/* Print files (admin page only, lazy-loaded).
 
-   A MASTER is one SVG per design, drawn in millimetres at real size (the door sticker sheet is 746 x 285 mm, plus 5 mm bleed
-   all round). It has two layers:
-     <g id="Artwork">   the art. Parts that change with the customer's colours carry data-slot="c1" or data-slot="c2".
-     <g id="CutContour"> the cut lines (magenta in the SVG; a spot colour called CutContour in the PDF).
-   To make a customer's print file the two slot colours are swapped and the result is written out as:
-     - an SVG (all vector), and
-     - a PDF at true scale, all vector (no pictures), cut line as the CutContour spot colour, with a trim box.
-   The PDF writer below is small and has no libraries: it supports the shapes the masters use (path with M L H V C Z, circle, rect,
-   groups that pass fill / stroke settings down). Built-in masters live in src/data/masters/<name>.svg; designs added in the admin
-   keep their master on the shop's server (setRemoteMaster). */
-import type { Cfg, Kit } from './kit';
+   THE PRINT FILE IS A JPEG of the owner's final artwork with only the two colours changed (the supplier already owns the cutting mould).
+   The built-in design's artwork is src/data/masters/flame-final-door.jpg (door sheet) and flame-final-window.png (Ami Pop window); the
+   script scripts/make-print-maps.py turns each into a WEIGHT MAP (public/assets/print/*.png: per pixel the share of colour 1, colour 2
+   and white, black = the rest). Here the map is recoloured (black #000000, white #FFFFFF, c1, c2 = the order's colours) and written as a
+   4:4:4 quality-100 JPEG by ./jpeg444 (same pixels as the artwork, nothing resampled).
+   Designs added in the admin only have a vector MASTER (one SVG, millimetres, layers <g id="Artwork"> with data-slot="c1" / "c2"
+   parts and <g id="CutContour">): for those the master is drawn to a picture (without the cut line) and written as the same kind of JPEG.
+   The master code below (parse, recolour, sanitize, validate) is also used by the admin preview and the "Designs" tab.
+   Built-in masters live in src/data/masters/<name>.svg; masters of added designs stay on the shop's server (setRemoteMaster). */
+import { includedPieces, normWinShape, type Cfg, type Kit } from './kit';
+import { encodeJpeg444 } from './jpeg444';
 
 const BUILTIN = import.meta.glob('../data/masters/*.svg', { query: '?raw', import: 'default' }) as Record<string, () => Promise<string>>;
 const cache = new Map<string, string>();
@@ -90,7 +90,6 @@ export function moldSVG(master: string, c1: string | null, c2: string | null, { 
   if (label) { root.setAttribute('role', 'img'); root.setAttribute('aria-label', label); }
   return new XMLSerializer().serializeToString(doc);
 }
-export const svgBlob = (master: string, c1: string | null, c2: string | null) => new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + moldSVG(master, c1, c2, { download: true })], { type: 'image/svg+xml' });
 
 /* ---------- PDF ---------- */
 const MM = 72 / 25.4;
@@ -174,44 +173,119 @@ function buildPdfContent(doc: Document) {
   return { content: out.join(''), w: vw * MM, h: vh * MM, trim: [bleed * MM, bleed * MM, (vw - bleed) * MM, (vh - bleed) * MM] };
 }
 
-async function deflate(data: Uint8Array): Promise<Uint8Array | null> {
-  try {
-    if (typeof CompressionStream === 'undefined') return null;
-    const stream = new Blob([data as BlobPart]).stream().pipeThrough(new CompressionStream('deflate'));
-    return new Uint8Array(await new Response(stream).arrayBuffer());
-  } catch { return null; }
-}
+/* ---------- JPEG print files ---------- */
+const MAP_DIR = import.meta.env.BASE_URL + 'assets/print/';
+/* Per built-in artwork (design.art): its weight maps and the grey levels the artwork was drawn with (used for fixed-colour designs, which print as drawn). */
+const ART_MAPS: Record<string, { door: string; win: string; doorGreys: [number, number]; winGreys: [number, number] }> = {
+  flame: { door: 'flame-door-map.png', win: 'flame-win-map.png', doorGreys: [51, 92], winGreys: [51, 71] },
+};
+/* The door sticker's bounding box inside the 2000 x 852 picture (same box scripts/make-art.py crops, ART_SIZE in car.ts), and the rear window
+   of the Ami 2025 = its right-hand part (WIN_CROP in car.ts: x from 1000/1946 of the sheet width, width 683/1946, full height). */
+const DOOR_BOX = { x: 28, y: 75, w: 1946, h: 708 };
+const WIN_CROP_X = 1000, WIN_CROP_W = 683;
+/* Print size: the sticker box (1946 px) is the 746 mm wide door mould, i.e. 66 px per inch (JFIF stores whole dpi: 749 mm). The Ami Pop window
+   picture has no known physical size: 72 dpi (nominal). */
+export const DOOR_DPI = 66, POP_WIN_DPI = 72;
 
-/* A true-scale vector PDF of the master in the customer's colours. */
-export async function pdfBlob(master: string, c1: string | null, c2: string | null, title = 'OFS/T print file'): Promise<Blob> {
-  const doc = parseXml(colourMaster(master, c1, c2));
-  const { content, w, h, trim } = buildPdfContent(doc);
-  const enc = new TextEncoder(), raw = enc.encode(content), packed = await deflate(raw), body = packed || raw;
-  const parts: Uint8Array[] = [], offsets: number[] = [];
-  let len = 0;
-  const push = (b: Uint8Array | string) => { const u = typeof b === 'string' ? enc.encode(b) : b; parts.push(u); len += u.length; };
-  const obj = (n: number, text: string) => { offsets[n] = len; push(`${n} 0 obj\n${text}\nendobj\n`); };
-  push('%PDF-1.6\n%\xE2\xE3\xCF\xD3\n'.replace(/[\u0080-ÿ]/g, ' '));
-  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
-  obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-  const box = (b: number[]) => `[${b.map(f).join(' ')}]`;
-  obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(w)} ${f(h)}] /BleedBox [0 0 ${f(w)} ${f(h)}] /TrimBox ${box(trim)} /Contents 4 0 R /Resources << /ColorSpace << /CutCS [/Separation /CutContour /DeviceCMYK 5 0 R] >> /ExtGState << /GS0 << /OP true /op true /OPM 1 >> >> >> >>`);
-  offsets[4] = len; push(`4 0 obj\n<< /Length ${body.length}${packed ? ' /Filter /FlateDecode' : ''} >>\nstream\n`); push(body); push('\nendstream\nendobj\n');
-  obj(5, '<< /FunctionType 2 /Domain [0 1] /C0 [0 0 0 0] /C1 [0 1 0 0] /N 1 >>');
-  obj(6, `<< /Title (${title.replace(/[^\x20-\x7e]/g, '').replace(/[()\\]/g, '')}) /Producer (OFS/T) >>`);
-  const xref = len;
-  push(`xref\n0 7\n0000000000 65535 f \n${[1, 2, 3, 4, 5, 6].map((n) => String(offsets[n]).padStart(10, '0') + ' 00000 n \n').join('')}`);
-  push(`trailer\n<< /Size 7 /Root 1 0 R /Info 6 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
-  return new Blob(parts as BlobPart[], { type: 'application/pdf' });
+interface Plane { w: number; h: number; data: Uint8ClampedArray }
+const planes = new Map<string, Promise<Plane>>();
+function loadPlane(file: string): Promise<Plane> {
+  let p = planes.get(file);
+  if (!p) {
+    p = (async () => {
+      const img = new Image(); img.src = MAP_DIR + file; await img.decode();
+      const cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+      const ctx = cv.getContext('2d', { willReadFrequently: true })!; ctx.drawImage(img, 0, 0);
+      return { w: cv.width, h: cv.height, data: ctx.getImageData(0, 0, cv.width, cv.height).data };
+    })();
+    planes.set(file, p);
+    p.catch(() => planes.delete(file));
+  }
+  return p;
+}
+export const hexRgb = (hex: string | null | undefined, fallback: [number, number, number]): [number, number, number] => {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex || '');
+  return m ? [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4, 6), 16)] : fallback;
+};
+/* map pixel (R = share of colour 1, G = colour 2, B = white, black = the rest) -> colours. Returns RGBA of the rectangle. */
+export function recolourMap(map: Plane, c1: number[], c2: number[], rect: { x: number; y: number; w: number; h: number }): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(rect.w * rect.h * 4), d = map.data;
+  let o = 0;
+  for (let y = rect.y; y < rect.y + rect.h; y++) {
+    let i = (y * map.w + rect.x) * 4;
+    for (let x = 0; x < rect.w; x++, i += 4, o += 4) {
+      const a = d[i], b = d[i + 1], w = d[i + 2];
+      for (let k = 0; k < 3; k++) out[o + k] = Math.round((a * c1[k] + b * c2[k] + w * 255) / 255);
+      out[o + 3] = 255;
+    }
+  }
+  return out;
+}
+const jpegBlob = (rgba: Uint8ClampedArray, w: number, h: number, dpi: number) => new Blob([encodeJpeg444(rgba, w, h, { quality: 100, dpi }) as BlobPart], { type: 'image/jpeg' });
+
+/* A built-in master of an added design drawn as a picture (no cut line), 2400 px wide. */
+async function masterJpeg(master: string, c1: string | null, c2: string | null): Promise<Blob> {
+  const doc = parseXml(colourMaster(master, c1, c2)), root = doc.documentElement;
+  root.querySelector('#CutContour')?.remove();
+  sanitize(root);
+  const [, , vw, vh] = viewBoxOf(root), W = 2400, H = Math.round((W * vh) / vw);
+  root.setAttribute('width', String(W)); root.setAttribute('height', String(H));
+  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(doc)], { type: 'image/svg+xml' }));
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d', { willReadFrequently: true })!; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.drawImage(img, 0, 0, W, H);
+    return jpegBlob(ctx.getImageData(0, 0, W, H).data, W, H, Math.round((W * 25.4) / vw));
+  } finally { URL.revokeObjectURL(url); }
 }
 
 /* ---------- File names ---------- */
 const safeTag = (t: unknown) => String(t || '').replace(/[^A-Z0-9-]/gi, '').slice(0, 12);
-export const fileBase = (kit: Kit, c: Cfg, tag: string) => `OFS-T_${safeTag(tag) ? safeTag(tag) + '_' : ''}${c.design}_${kit.D(c.design)!.fixed ? 'original' : c.c1 + '-' + c.c2}_door`;
+const slug = (t: unknown) => String(t || '').replace(/[^a-z0-9]+/gi, '').toLowerCase().slice(0, 24) || 'x';
+/* OFST-<order#>-<model>-<part>-<colour1>-<colour2>  (part: door | window-full | window-square | window-circle) */
+export const fileBase = (c: Cfg, tag: string, part: string, fixed = false) =>
+  `OFST-${safeTag(tag) ? safeTag(tag) + '-' : ''}${c.model === 'pop' ? 'amipop' : 'ami2025'}-${part}-${fixed ? 'original' : slug(c.c1) + '-' + slug(c.c2)}`;
 export function saveFile(name: string, blob: Blob) {
   const url = URL.createObjectURL(blob), a = document.createElement('a');
   a.href = url; a.download = name; a.hidden = true; document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+export interface PrintFile { name: string; blob: Blob }
+/* The print files of one ordered kit, as JPEGs of the final artwork in the order's two colours:
+     door sheet      (kits with door stickers)     the whole 2000 x 852 picture of the sheet
+     window          Ami 2025 'full' / 'square'    the window part of the recoloured sheet (the supplier cuts the shape with their own mould)
+                     Ami Pop 'circle'              the half-ring window picture
+   There is no artwork for the Pop front accent piece: no file is made for it. Older orders (only design / c1 / c2) are the full kit, and a
+   missing window shape or unknown colour gets the model's default / the design's own colours. Returns [] when the kit has no printable piece. */
+export async function printFiles(kit: Kit, c: Cfg, tag: string): Promise<PrintFile[]> {
+  const d = kit.D(c.design), model = c.model === 'pop' ? 'pop' : 'qs';
+  const fixed = !!d?.fixed;
+  const hex = (id: string, fb: string | undefined) => kit.COLORS[id]?.hex || fb || null;
+  const h1 = fixed ? null : hex(c.c1, d?.c1 && kit.COLORS[d.c1]?.hex), h2 = fixed ? null : hex(c.c2, d?.c2 && kit.COLORS[d.c2]?.hex);
+  const pieces = includedPieces({ model, pieces: kit.piecesOf({ ...c, model }) });
+  const wantDoor = pieces.includes('door'), wantWin = pieces.includes('window');
+  const out: PrintFile[] = [];
+  const maps = d ? ART_MAPS[d.art || ''] : ART_MAPS.flame;
+  if (!maps) { // a design added in the admin: only its vector master exists
+    if (wantDoor || wantWin) out.push({ name: fileBase(c, tag, 'door', fixed) + '.jpg', blob: await masterJpeg(await loadMaster(kit, c.design), h1, h2) });
+    return out;
+  }
+  const dc1 = fixed ? maps.doorGreys[0] : 0, dc2 = fixed ? maps.doorGreys[1] : 0;
+  const door1 = fixed ? [dc1, dc1, dc1] : hexRgb(h1, [51, 51, 51]), door2 = fixed ? [dc2, dc2, dc2] : hexRgb(h2, [92, 92, 92]);
+  if (wantDoor || (wantWin && model === 'qs')) {
+    const sheet = await loadPlane(maps.door);
+    if (wantDoor) out.push({ name: fileBase(c, tag, 'door', fixed) + '.jpg', blob: jpegBlob(recolourMap(sheet, door1, door2, { x: 0, y: 0, w: sheet.w, h: sheet.h }), sheet.w, sheet.h, DOOR_DPI) });
+    if (wantWin && model === 'qs') {
+      const shape = normWinShape(c.winShape, 'qs'), r = { x: DOOR_BOX.x + WIN_CROP_X, y: DOOR_BOX.y, w: WIN_CROP_W, h: DOOR_BOX.h };
+      out.push({ name: fileBase(c, tag, 'window-' + shape, fixed) + '.jpg', blob: jpegBlob(recolourMap(sheet, door1, door2, r), r.w, r.h, DOOR_DPI) });
+    }
+  }
+  if (wantWin && model === 'pop') {
+    const win = await loadPlane(maps.win), w1 = fixed ? [maps.winGreys[0], maps.winGreys[0], maps.winGreys[0]] : hexRgb(h1, [51, 51, 51]), w2 = fixed ? [maps.winGreys[1], maps.winGreys[1], maps.winGreys[1]] : hexRgb(h2, [71, 71, 71]);
+    out.push({ name: fileBase(c, tag, 'window-circle', fixed) + '.jpg', blob: jpegBlob(recolourMap(win, w1, w2, { x: 0, y: 0, w: win.w, h: win.h }), win.w, win.h, POP_WIN_DPI) });
+  }
+  return out;
 }
 
 /* ---------- Preview pictures for the shop (used by the admin "Designs" tab for a design added there) ----------

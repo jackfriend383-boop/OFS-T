@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type
 import { useApp } from '../state';
 import { COPY } from '../content';
 import { isUUID } from '../lib/backend';
-import { fileBase, loadMaster, moldSVG, pdfBlob, saveFile, slotColours, svgBlob } from '../lib/printfile';
+import { loadMaster, moldSVG, printFiles, saveFile, slotColours } from '../lib/printfile';
 import type { Cfg } from '../lib/kit';
 import { DASH } from './admin/copy';
 import { RANGES, customers as groupCustomers, dayKey, delta, inRange, kpis, rangeBounds, printCounts, reports, series, sheetsOf, toCSV, type CustomerRow, type Point, type RangeKey } from './admin/stats';
@@ -167,14 +167,19 @@ export default function Admin() {
   }
   const testCfgV = useMemo(() => kit.defaultCfg(kit.D(testId) || kit.DESIGNS[0]), [kit, testId]);
   const testCfg = () => testCfgV;
-  /* One print file: the design's master with this kit's colours, as a true-scale vector PDF (print) or an SVG. */
-  async function makeFile(cfg: Cfg, kind: 'pdf' | 'svg', name: string) {
-    const m = await loadMaster(kit, cfg.design), [a, b] = slotColours(kit, cfg);
-    if (kind === 'svg') saveFile(name + '.svg', svgBlob(m, a, b)); else saveFile(name + '.pdf', await pdfBlob(m, a, b, name));
+  /* The print files of one kit: JPEGs (4:4:4, quality 100) of the final artwork in the kit's two colours: the door sheet and / or the window. */
+  const pause = () => new Promise((r) => setTimeout(r, 350)); // browsers drop downloads fired in the same instant
+  async function makeFiles(cfg: Cfg, tag: string, suffix = ''): Promise<number> {
+    const files = await printFiles(kit, cfg, tag);
+    for (let i = 0; i < files.length; i++) {
+      if (i) await pause();
+      saveFile(suffix ? files[i].name.replace(/\.jpg$/, suffix + '.jpg') : files[i].name, files[i].blob);
+    }
+    return files.length;
   }
-  async function download(cfg: Cfg, kind: 'pdf' | 'svg', tag: string, key: string) {
+  async function download(cfg: Cfg, tag: string, key: string) {
     setBusy(key);
-    try { say(T('preparing')); await makeFile(cfg, kind, fileBase(kit, cfg, tag)); say(T('fileReady')); }
+    try { say(T('preparing')); say(await makeFiles(cfg, tag) ? T('fileReady') : T('fileNone')); }
     catch { say(T('fileFailed')); } finally { setBusy(null); }
   }
   async function advance(id: string) {
@@ -248,18 +253,19 @@ export default function Admin() {
     ]));
     saveFile(`ofst-orders-${dayKey(new Date())}.csv`, new Blob([toCSV(rows)], { type: 'text/csv;charset=utf-8' }));
   }
-  async function bulk(kind: 'pdf' | 'svg') {
+  async function bulk() {
     const jobs = allOpen.flatMap((o) => o.items.map((it) => ({ cfg: it.cfg, ref: o.ref })));
     if (!jobs.length) { say(d.bulkNone); return; }
     setBusy('bulk');
     try {
+      let n = 0;
       for (let i = 0; i < jobs.length; i++) {
         say(d.bulkProgress(i + 1, jobs.length));
-        const j = jobs[i], name = fileBase(kit, j.cfg, j.ref) + (jobs.length > 1 ? `-${i + 1}` : '');
-        await makeFile(j.cfg, kind, name);
-        await new Promise((r) => setTimeout(r, 350)); // browsers drop downloads fired in the same instant
+        const j = jobs[i];
+        n += await makeFiles(j.cfg, j.ref, jobs.length > 1 ? `-${i + 1}` : '');
+        await pause();
       }
-      say(d.bulkDone(jobs.length));
+      say(d.bulkDone(n));
     } catch { say(T('fileFailed')); } finally { setBusy(null); }
   }
 
@@ -313,8 +319,7 @@ export default function Admin() {
                     <p>{kit.descOf(cf)}<br />{T('qtyLine', { q: it.qty, price: euro(it.list * it.qty) })}
                       {cf.numberOn && cf.number && <><br />{T('badgeIn', { text: '\u0000', colour: kit.COLORS[cf.c1].name }).split('\u0000').map((p, k) => (k ? [<b key="b">{cf.number}</b>, p] : p))}</>}</p>
                     <div className="btns">
-                      <button className="btn btn-primary" type="button" disabled={busy === key} onClick={() => download(cf, 'pdf', o.ref, key)}>{T('dlPdf')}<span className="sr">{forOrder}</span></button>
-                      <button className="btn btn-ghost" type="button" onClick={() => download(cf, 'svg', o.ref, key)}>{T('dlSvg')}<span className="sr">{forOrder}</span></button>
+                      <button className="btn btn-primary" type="button" disabled={busy === key} aria-busy={busy === key || undefined} onClick={() => download(cf, o.ref, key)}>{T('dlJpg')}<span className="sr">{forOrder}</span></button>
                     </div>
                   </div>
                 </div>
@@ -338,8 +343,7 @@ export default function Admin() {
       <div className="adm-bar">
         <label htmlFor="admDesign">{c.design}</label>
         <select className="field adm-select" id="admDesign" value={testId} onChange={(e) => setTestId(e.target.value)}>{kit.DESIGNS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
-        <button className="btn btn-primary" type="button" id="admTestPng" disabled={busy === 'tpng'} aria-busy={busy === 'tpng' || undefined} onClick={() => download(testCfg(), 'pdf', 'TEST', 'tpng')}>{c.pdf}</button>
-        <button className="btn btn-ghost" type="button" id="admTestSvg" onClick={() => download(testCfg(), 'svg', 'TEST', 'tsvg')}>{c.svg}</button>
+        <button className="btn btn-primary" type="button" id="admTestPng" disabled={busy === 'tpng'} aria-busy={busy === 'tpng' || undefined} onClick={() => download(testCfg(), 'TEST', 'tpng')}>{c.jpg}</button>
       </div>
       <Mold cfg={testCfgV} className="moldp adm-test-prev" label={T('moldPreview', { name: kit.D(testId)!.name })} />
     </section>
@@ -477,8 +481,7 @@ export default function Admin() {
                 <div className="adm-bar">
                   <span className="adm-note ocount">{d.showing(shown.length, orders.length)} · {openKits ? d.bulkNote(openKits) : d.bulkNone}</span>
                   <button className="btn btn-ghost" type="button" onClick={exportCSV} disabled={!shown.length}>{d.exportCsv}</button>
-                  <button className="btn btn-primary" type="button" onClick={() => bulk('pdf')} disabled={!openKits || busy === 'bulk'} aria-busy={busy === 'bulk' || undefined}>{d.bulkPdf}</button>
-                  <button className="btn btn-ghost" type="button" onClick={() => bulk('svg')} disabled={!openKits || busy === 'bulk'}>{d.bulkSvg}</button>
+                  <button className="btn btn-primary" type="button" onClick={() => bulk()} disabled={!openKits || busy === 'bulk'} aria-busy={busy === 'bulk' || undefined}>{d.bulkJpg}</button>
                 </div>
                 <div className="orders" id="admOrders">
                   {!orders.length && <p className="adm-empty">{T('noOrders')}</p>}
