@@ -54,7 +54,7 @@ function Swatches({ slot, labelId, cfg, onPick, groups }: { slot: 'c1' | 'c2'; l
 
 /* Car colour (factory trim of the chosen Ami version): one radio per trim, a round two-tone swatch plus its name.
    Arrow keys move and select, like the vinyl colour swatches. */
-const TRIM_SW: Record<string, [string, string]> = { yellow: ['#111214', '#E4F21B'], purple: ['#111214', '#B79BEA'], brown: ['#8C8379', '#8C8379'], browncolor: ['#8C8379', '#5BE07A'], base: ['#8C8379', '#8C8379'] };
+const TRIM_SW: Record<string, [string, string]> = { yellow: ['#111214', '#E4F21B'], purple: ['#111214', '#B79BEA'], brown: ['#8C8379', '#8C8379'], base: ['#8C8379', '#8C8379'] };
 function Trims({ labelId, value, items, names, onPick }: { labelId: string; value: string; items: string[]; names: Record<string, string>; onPick: (k: string) => void }) {
   const row = useRef<HTMLDivElement>(null);
   const onKey = (e: React.KeyboardEvent) => {

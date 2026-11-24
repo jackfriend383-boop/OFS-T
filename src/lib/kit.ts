@@ -54,7 +54,7 @@ function mergedDesigns(all = false): (Record<string, any>)[] {
 
 export const MODELS = { qs: 'Ami 2025', pop: 'Ami Pop' } as const;
 /* Factory colour schemes of the car in each version (preview only: not part of the kit key, not saved with orders). First = default. */
-export const TRIMS: Record<'qs' | 'pop', string[]> = { qs: ['yellow', 'purple', 'brown', 'browncolor'], pop: ['base'] };
+export const TRIMS: Record<'qs' | 'pop', string[]> = { qs: ['yellow', 'purple', 'brown'], pop: ['base'] };
 /* Preview-only car "colour" of the Ami 2025 for the home page model box: the front half of the car photo is the black car, the back
    half the brown one. Not selectable (not in TRIMS); `<Thumb cfg={{ ...cfg, trim: SPLIT_TRIM }} />` and CarStage draw it (side view). */
 export const SPLIT_TRIM = 'split';

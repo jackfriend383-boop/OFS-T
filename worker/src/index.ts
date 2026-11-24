@@ -135,6 +135,14 @@ async function readJson(req: Request, max = MAX_BODY): Promise<any> {
 
 const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
 
+/* For now we only deliver to the island of São Miguel (Azores): Portugal, postcodes 9500-9699 except Santa Maria (9580-9589). Checks made at
+   checkout only; the owner's hand-made orders (createManualOrder) can go anywhere. Same rule as sanMiguelPostcode in src/components/Cart.tsx. */
+function deliverable(country: string, postcode: string): boolean {
+  const m = /^(\d{4})(?:\s?-?\s?\d{3})?$/.exec(String(postcode || '').trim());
+  const n = m ? Number(m[1]) : 0;
+  return country === 'Portugal' && n >= 9500 && n <= 9699 && !(n >= 9580 && n <= 9589);
+}
+
 /* ---------- order validation (mirrors the CHECK constraints in schema.sql) ---------- */
 function validateOrder(b: any, designs: Parameters<typeof priceItem>[2]) {
   if (!isObj(b)) throw new HttpError(400, 'invalid');
@@ -212,6 +220,7 @@ async function startCheckout(req: Request, env: Env) {
   const uid = await customerId(req, env);
   if (!uid) throw new HttpError(401, 'sign_in_required'); // only signed-in customers can buy
   const o = validateOrder(await readJson(req), await pricingDesigns(env)); // prices come from the built-in list + the designs table
+  { const c = JSON.parse(o.customer); if (!deliverable(c.country, c.postcode)) throw new HttpError(400, 'region_not_served'); } // only São Miguel for now
   // Receipts and invoices go to the account's verified email, never to an address typed at checkout (a typo would leak the order).
   const acct = await env.DB.prepare('SELECT email FROM users WHERE id = ?1').bind(uid).first<{ email: string }>();
   if (!acct) throw new HttpError(401, 'session_expired');

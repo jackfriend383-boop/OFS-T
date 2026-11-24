@@ -15,6 +15,10 @@ function slot(str: string, name: string, node: ReactNode): ReactNode {
 }
 
 export const COUNTRIES_EN = ['Portugal', 'Spain', 'France', 'Italy', 'Germany', 'Netherlands', 'Belgium'];
+/* For now orders are delivered only on the island of São Miguel (Azores): Portugal, postcodes 9500-9699 except Santa Maria (9580-9589).
+   The Worker checks the same rule (worker/src/index.ts, deliverable). Other islands and Europe are coming soon. */
+export const SHIP_COUNTRIES = ['Portugal'];
+export const sanMiguelPostcode = (v: string) => { const m = /^(\d{4})(?:\s?-?\s?\d{3})?$/.exec(v.trim()); const n = m ? Number(m[1]) : 0; return n >= 9500 && n <= 9699 && !(n >= 9580 && n <= 9589); };
 
 export function CartDrawer() {
   const { kit, T, to, lang, cart, changeQty, removeItem, modal, closeModal, drawerMode, setDrawerMode, announce, live, backend, onEditConfig } = useApp();
@@ -76,6 +80,7 @@ export function CartDrawer() {
       <div className="row"><span className="muted">{T('shipping')}</span><span className="price">{T('shippingCalc')}</span></div>
       <div className="row big"><span>{T('total')}</span><span className="price">{money(sub)}</span></div>
       <p className="muted cart-vat">{T('vatNote')}</p>
+      <p className="muted cart-vat">{T('shipOnly')}</p>
       <button type="button" className="btn btn-primary" id="checkout" onClick={() => { setDrawerMode('checkout'); }}>{T('checkout')}</button>
     </>
   ) : null;
@@ -136,6 +141,7 @@ function Checkout({ onBack }: { onBack: () => void }) {
       const v = el.value.trim();
       if (!v) msg = MSG[el.id] || T('required');
       else if ((el as HTMLInputElement).type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) msg = T('badEmail');
+      else if (el.id === 'coPost' && !sanMiguelPostcode(v)) msg = T('shipPostMsg');
     }
     // NIF is optional: empty is fine, otherwise 9 digits with a valid check digit.
     if (el.id === 'coNif') { const v = el.value.replace(/\s+/g, ''); msg = !v || validNif(v) ? '' : T('badNif'); }
@@ -208,7 +214,8 @@ function Checkout({ onBack }: { onBack: () => void }) {
       <div className="co-2">{field(FIELDS[3])}{field(FIELDS[4])}</div>
       <div className="co-f">
         <label htmlFor="coCountry">{T('fCountry')}</label>
-        <select className="field" id="coCountry" name="country" autoComplete="country-name" required defaultValue={u?.country && COUNTRIES_EN.includes(u.country) ? u.country : undefined}>{COUNTRIES_EN.map((c, i) => <option key={c} value={c}>{countryLabels[i]}</option>)}</select>
+        <select className="field" id="coCountry" name="country" autoComplete="country-name" required defaultValue="Portugal">{SHIP_COUNTRIES.map((c) => <option key={c} value={c}>{countryLabels[COUNTRIES_EN.indexOf(c)]}</option>)}</select>
+        <p className="note" id="coShip" style={{ margin: 0 }}>{T('shipOnly')}</p>
       </div>
       <div className="co-f">
         <label htmlFor="coNif">{T('fNif')}</label>

@@ -18,7 +18,7 @@ How the weights are found (per pixel, from the luminance L of the source):
 """
 from pathlib import Path
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from scipy import ndimage as ndi
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -115,3 +115,23 @@ if __name__ == '__main__':
         rec = recolour(m, [(0, 0, 0), (levels[1],) * 3, (levels[2],) * 3, (255, 255, 255)])
         d = np.abs(rec.astype(int) - np.asarray(img).astype(int)).max(-1)
         print(f'{name}: {img.size}  mean abs diff {d.mean():.3f}  >12: {(d > 12).sum()} px  >40: {(d > 40).sum()} px  max {d.max()}')
+
+    # ---- Ami 2025 square rear-window sticker (see make_square in make-art.py: same geometry): the whole square is part of the door design.
+    # The outside of the rounded square is the white page. 600 x 600 px = the 70.1 px photo square at the door's print scale.
+    SQ_OUT, SQ_R, SQ_BORDER, SQ_IN, SQ_IR = 70.1, 22.8, 6.0, 58.1, 16.8
+    SQ_CROP = (520, 150, 460, 460)              # x, y, w, h in the 2000 px source units
+    door = np.asarray(Image.open(OUT / 'flame-door-map.png').convert('RGB')).astype(np.float64) / 255
+    k = door.shape[1] / 2000
+    x, y, w, h = [int(round(v * k)) for v in SQ_CROP]
+    N = 600
+    crop = door[y:y + h, x:x + w]
+    des = np.dstack([np.asarray(Image.fromarray((crop[..., c] * 255).astype(np.uint8)).resize((N, N), Image.LANCZOS)) for c in range(3)]).astype(np.float64) / 255
+    m = Image.new('L', (N * 4, N * 4), 0)
+    ImageDraw.Draw(m).rounded_rectangle([0, 0, N * 4 - 1, N * 4 - 1], radius=SQ_R * N / SQ_OUT * 4, fill=255)
+    out_m = np.asarray(m.resize((N, N), Image.BOX)).astype(np.float64) / 255
+    wt = des * out_m[..., None] + np.array([0, 0, 1.]) * (1 - out_m[..., None])      # outside the rounded square: the white page
+    q = np.rint(wt * 255).astype(np.int32); over = q.sum(-1) > 255
+    if over.any():
+        kk = np.argmax(q, axis=-1); ii, jj = np.indices(kk.shape); q[ii, jj, kk] -= np.where(over, q.sum(-1) - 255, 0)
+    Image.fromarray(q.astype(np.uint8), 'RGB').save(OUT / 'flame-sq-map.png', optimize=True)
+    print(f'flame-sq-map.png: ({N}, {N})')

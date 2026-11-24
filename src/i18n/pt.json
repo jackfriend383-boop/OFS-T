@@ -159,6 +159,9 @@
     "fAddrMsg": "Indica a tua morada.",
     "fPost": "Código postal",
     "fPostMsg": "Indica o teu código postal.",
+    "shipOnly": "Por agora só entregamos na ilha de São Miguel (Açores). Outras ilhas e restante Europa em breve.",
+    "shipPostMsg": "Por agora só entregamos em São Miguel (códigos postais 9500 a 9699, exceto Santa Maria).",
+    "beRegion": "Por agora só entregamos na ilha de São Miguel (Açores). Outras ilhas e Europa em breve.",
     "fCity": "Localidade",
     "fCityMsg": "Indica a tua localidade.",
     "fCountry": "País",
@@ -214,6 +217,7 @@
     "carAngle_front": ", vista de frente",
     "carAngle_front34": ", vista de frente a três quartos",
     "carAngle_back": ", vista de trás a três quartos",
+    "carAngle_back34": ", vista de lado e de trás, a três quartos",
 
     "lightTone": "Tom claro",
     "darkTone": "Tom escuro",

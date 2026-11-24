@@ -54,7 +54,7 @@ export function makeBackend(kit: Kit) {
   /* Messages in the page language. */
   const MSG = {
     config: T('beConfig'), network: T('beNetwork'), timeout: T('beTimeout'), rate: T('beRate'), server: T('beServer'), age: T('beAgeRestricted'),
-    payment: T('bePayment'), signIn: T('beSignIn'), nif: T('badNif'), link: T('beLink'), mail: T('beMail'), invalid: T('beInvalid'), credentials: T('beCredentials'), session: T('beSession'), denied: T('beDenied'), generic: T('beGeneric'),
+    payment: T('bePayment'), signIn: T('beSignIn'), nif: T('badNif'), link: T('beLink'), mail: T('beMail'), invalid: T('beInvalid'), credentials: T('beCredentials'), session: T('beSession'), denied: T('beDenied'), generic: T('beGeneric'), region: T('beRegion'),
   };
 
   /* ---------- HTTP ---------- */
@@ -84,6 +84,7 @@ export function makeBackend(kit: Kit) {
     if (code === 'invalid_link') return new BackendError(MSG.link, 'invalid_link');
     if (code === 'sign_in_required') return new BackendError(MSG.signIn, 'sign_in_required');
     if (code === 'invalid_nif') return new BackendError(MSG.nif, 'invalid_nif');
+    if (code === 'region_not_served') return new BackendError(MSG.region, 'region_not_served');
     if (code === 'age_restricted') return new BackendError(MSG.age, 'age_restricted');
     if (code === 'mail_unavailable') return new BackendError(MSG.mail, 'mail_unavailable');
     if (code === 'invalid_credentials') return new BackendError(MSG.credentials, 'invalid_credentials');

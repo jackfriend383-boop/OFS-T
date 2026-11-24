@@ -21,6 +21,7 @@ flat edge). The final window artwork is a "C" (half ring with a vertical flat ed
 zone: radius and angle are mapped so that the C's outer arc, inner arc and flat edge land exactly on the zone's. The output is a picture
 in the photo's own axes (rotated as the zone is), covering WINPOP_BOX of car.ts; it is printed at the end.
 """
+import json
 import re
 import sys
 from pathlib import Path
@@ -186,7 +187,7 @@ def make_door():
         r = img.convert('RGBa').resize((w, h), Image.LANCZOS).convert('RGBA')
         r.save(OUT / f'art-flame-{w}.png', optimize=True)
         print('wrote', OUT / f'art-flame-{w}.png', r.size)
-    return ring_dbg
+    return img, (int(bx0), int(by0))
 
 
 # ------------------------------------------------------------------ Ami Pop rear window
@@ -194,9 +195,9 @@ POP_WIN = None   # read from car.ts
 
 
 def pop_zone():
-    """The Pop's window zone from car.ts: two concentric circles (fitted) and the flat edge (through the outer arc's two end points)."""
-    src = (ROOT / 'src/lib/car.ts').read_text(encoding='utf8')
-    d = re.search(r"pop: \{.*?win: '(M[^']*)'", src, re.S).group(1)
+    """The Pop's window zone from src/data/pop.json (made by scripts/make-pop.py): two concentric circles (fitted) and the flat edge
+    (through the outer arc's two end points)."""
+    d = json.loads((ROOT / 'src/data/pop.json').read_text(encoding='utf8'))['win']
     pts = np.array([(float(a), float(b)) for a, b in re.findall(r'(-?[\d.]+) (-?[\d.]+)', d)])
     # the path: outer arc, a line across the flat edge to the inner arc, the inner arc, close (the second flat edge piece)
     jumps = np.hypot(*np.diff(pts, axis=0).T)
@@ -296,6 +297,37 @@ def make_window():
         print('wrote', OUT / f'art-flame-win-{outw}.png', (ow, oh))
 
 
+# ------------------------------------------------------------------ Ami 2025 square rear-window sticker
+# The factory sticker is a rounded square (70.1 px, corner radius 22.8, in side-photo px; SQ_OUTER in src/lib/car.ts). Ours covers the same
+# area completely with a piece of the door design (colour 1 mainly, colour 2 where the design has it): no border.
+SQ_OUT, SQ_R, SQ_BORDER, SQ_IN, SQ_IR = 70.1, 22.8, 6.0, 58.1, 16.8
+SQ_CROP = (520, 150, 460, 460)   # the part of the door design shown inside: x, y, w, h in the 2000 px source (a piece of the main panel: colour 1 with black, a colour 2 band and pinlines)
+
+
+def rr_mask(n, x0, y0, x1, y1, r, S=4):
+    m = Image.new('L', (n * S, n * S), 0)
+    ImageDraw.Draw(m).rounded_rectangle([x0 * S, y0 * S, x1 * S - 1, y1 * S - 1], radius=r * S, fill=255)
+    return np.asarray(m.resize((n, n), Image.BOX)).astype(np.float64) / 255
+
+
+def square_layers(n, design):
+    """design = float RGB (n x n x 3, tones as R = c1, G = c2, B = white). The whole rounded square carries the design (no border). Returns RGBA float of n x n."""
+    return np.dstack([design, rr_mask(n, 0, 0, n, n, SQ_R * n / SQ_OUT)])
+
+
+def make_square(door_img, origin):
+    ox, oy = origin
+    x, y, w, h = SQ_CROP
+    crop = door_img.crop((x - ox, y - oy, x - ox + w, y - oy + h))
+    for outw in (1000, 1600):
+        n = 500 if outw == 1000 else 800
+        d = np.asarray(crop.convert('RGBa').resize((n, n), Image.LANCZOS).convert('RGBA')).astype(np.float64) / 255
+        lay = square_layers(n, d[..., :3])
+        Image.fromarray((np.clip(lay, 0, 1) * 255 + .5).astype(np.uint8), 'RGBA').save(OUT / f'art-flame-sq-{outw}.png', optimize=True)
+        print('wrote', OUT / f'art-flame-sq-{outw}.png', (n, n))
+
+
 if __name__ == '__main__':
-    make_door()
+    door_img, door_origin = make_door()
     make_window()
+    make_square(door_img, door_origin)

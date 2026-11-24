@@ -145,6 +145,9 @@
     "fAddrMsg": "Enter your street address.",
     "fPost": "Postcode",
     "fPostMsg": "Enter your postcode.",
+    "shipOnly": "For now we only deliver to the island of São Miguel (Azores). Other islands and the rest of Europe are coming soon.",
+    "shipPostMsg": "For now we only deliver to São Miguel (postcodes 9500 to 9699, except Santa Maria).",
+    "beRegion": "For now we only deliver to the island of São Miguel (Azores). Other islands and Europe are coming soon.",
     "fCity": "City",
     "fCityMsg": "Enter your town or city.",
     "fCountry": "Country",
@@ -200,6 +203,7 @@
     "carAngle_front": ", seen from the front",
     "carAngle_front34": ", seen from the front three-quarter",
     "carAngle_back": ", seen from the rear three-quarter",
+    "carAngle_back34": ", seen from the side, rear three-quarter",
 
     "lightTone": "Light tone",
     "darkTone": "Dark tone",
