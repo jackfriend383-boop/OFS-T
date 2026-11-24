@@ -1,5 +1,6 @@
 import { priceItem, isPersonalised, type PricedItem } from './pricing';
 import { DesignError, adminDelete, adminList, adminMaster, adminSave, designArt, pricingDesigns, publicList } from './designs';
+import { PriceError, loadPrices, savePrices, shippingCents, type Prices } from './prices';
 import { SettingsError, deleteSlot, publicSettings, putImage, putSettings, slotImage } from './settings';
 import { createCheckoutSession, expireCheckoutSession, verifyWebhook } from './stripe';
 import { sendMail, signInEmail, paidEmail, invoiceEmail, shippedEmail, newOrderEmail, adminAlertEmail, type MailAttachment } from './mail';
@@ -144,7 +145,7 @@ function deliverable(country: string, postcode: string): boolean {
 }
 
 /* ---------- order validation (mirrors the CHECK constraints in schema.sql) ---------- */
-function validateOrder(b: any, designs: Parameters<typeof priceItem>[2]) {
+function validateOrder(b: any, designs: Parameters<typeof priceItem>[2], prices: Prices) {
   if (!isObj(b)) throw new HttpError(400, 'invalid');
   const c = b.customer;
   if (!isObj(c)) throw new HttpError(400, 'invalid');
@@ -166,7 +167,7 @@ function validateOrder(b: any, designs: Parameters<typeof priceItem>[2]) {
   // Every line is re-validated and priced here from the shared price list; any total the browser sends is ignored.
   if (!Array.isArray(b.items) || b.items.length < 1 || b.items.length > 50) throw new HttpError(400, 'invalid');
   const orderLang: 'pt' | 'en' = b.lang === 'en' ? 'en' : 'pt';
-  const priced = b.items.map((it: any) => priceItem(it, orderLang, designs));
+  const priced = b.items.map((it: any) => priceItem(it, orderLang, designs, prices));
   if (priced.some((i: PricedItem | null) => !i)) throw new HttpError(400, 'invalid');
   const lines = priced as PricedItem[];
   const itemsJson = JSON.stringify(lines);
@@ -219,7 +220,11 @@ async function startCheckout(req: Request, env: Env) {
   if (!env.STRIPE_SECRET_KEY || !env.SITE_URL) throw new HttpError(503, 'not_configured');
   const uid = await customerId(req, env);
   if (!uid) throw new HttpError(401, 'sign_in_required'); // only signed-in customers can buy
-  const o = validateOrder(await readJson(req), await pricingDesigns(env)); // prices come from the built-in list + the designs table
+  const prices = await loadPrices(env); // the owner's price list (admin "Prices" tab) over the defaults in designs.json
+  const o = validateOrder(await readJson(req), await pricingDesigns(env), prices); // prices come from the built-in list + the designs table
+  // Shipping (0 = free) is added to what is charged, as its own line on Stripe; the stored lines stay the kits only.
+  const shipping = shippingCents(prices, o.total);
+  o.total += shipping;
   { const c = JSON.parse(o.customer); if (!deliverable(c.country, c.postcode)) throw new HttpError(400, 'region_not_served'); } // only São Miguel for now
   // Receipts and invoices go to the account's verified email, never to an address typed at checkout (a typo would leak the order).
   const acct = await env.DB.prepare('SELECT email FROM users WHERE id = ?1').bind(uid).first<{ email: string }>();
@@ -250,7 +255,7 @@ async function startCheckout(req: Request, env: Env) {
   let session: { id: string; url: string };
   try {
     session = await createCheckoutSession({
-      secretKey: env.STRIPE_SECRET_KEY, orderId: o.id, email: o.email, items: o.lines, locale: o.lang,
+      secretKey: env.STRIPE_SECRET_KEY, orderId: o.id, email: o.email, items: o.lines, locale: o.lang, shippingCents: shipping,
       successUrl: `${root}/order/?o=${o.id}`, cancelUrl: `${root}/order/?o=${o.id}&cancelled=1`,
     });
   } catch {
@@ -485,7 +490,7 @@ async function listOrders(env: Env) {
 async function createManualOrder(req: Request, env: Env) {
   const b = await readJson(req);
   if (!isObj(b)) throw new HttpError(400, 'invalid');
-  const o = validateOrder({ ...b, consent_terms: true, consent_personalised: true }, await pricingDesigns(env));
+  const o = validateOrder({ ...b, consent_terms: true, consent_personalised: true }, await pricingDesigns(env), await loadPrices(env));
   let paid = o.total;
   if (b.paid_eur !== undefined && b.paid_eur !== null && b.paid_eur !== '') {
     paid = Math.round(Number(b.paid_eur) * 100);
@@ -778,6 +783,8 @@ export default {
         const origin = allowedOrigin(req, env); if (origin) { h['Access-Control-Allow-Origin'] = origin; h['Vary'] = 'Origin'; }
         return new Response(img.bytes, { status: 200, headers: h });
       }
+      // Price list (pairs, badge, shipping) as the owner set it in the admin: the site shows exactly what checkout charges.
+      if (path === '/api/prices' && req.method === 'GET') return respond(await loadPrices(env), 200, req, env, { 'Cache-Control': 'public, max-age=30' });
       if (path === '/api/checkout' && req.method === 'POST') return respond(await startCheckout(req, env), 201, req, env);
       const cancel = /^\/api\/checkout\/([^/]+)\/cancel$/.exec(path);
       if (cancel && req.method === 'POST') return respond(await cancelCheckout(req, env, cancel[1]), 200, req, env);
@@ -800,6 +807,8 @@ export default {
         if (dz && req.method === 'DELETE') return respond(await adminDelete(env, dz[1]), 200, req, env);
         const dzm = /^\/api\/admin\/designs\/([a-z0-9-]{2,40})\/master$/.exec(path);
         if (dzm && req.method === 'GET') return respond({ master: await adminMaster(env, dzm[1]) }, 200, req, env);
+        if (path === '/api/admin/prices' && req.method === 'GET') return respond(await loadPrices(env), 200, req, env);
+        if (path === '/api/admin/prices' && req.method === 'PUT') return respond(await savePrices(env, await readJson(req, 2_000)), 200, req, env);
         const ss = /^\/api\/admin\/site-settings\/([A-Za-z]{4,12})$/.exec(path);
         if (ss && req.method === 'PUT') return respond(await putSettings(env, ss[1], await readJson(req, 2_000)), 200, req, env);
         if (ss && req.method === 'DELETE') return respond(await deleteSlot(env, ss[1]), 200, req, env);
@@ -812,7 +821,7 @@ export default {
       }
       throw new HttpError(404, 'not_found');
     } catch (e: any) {
-      if (e instanceof HttpError || e instanceof DesignError || e instanceof SettingsError) return respond({ error: e.code }, e.status, req, env);
+      if (e instanceof HttpError || e instanceof DesignError || e instanceof SettingsError || e instanceof PriceError) return respond({ error: e.code }, e.status, req, env);
       console.error('unhandled', e && e.message);
       return respond({ error: 'server' }, 500, req, env);
     }

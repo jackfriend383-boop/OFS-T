@@ -1,30 +1,30 @@
 # OFS/T
 
-> OFS/T sells pre-cut vinyl sticker kits for the CitroÃ«n Ami. Each kit covers the lower door panel and the rear quarter window on both sides (full kit), or as single pairs. 2 designs, full kit from â‚¬69, prices in EUR.
+> OFS/T sells pre-cut vinyl sticker kits for the Citroën Ami. Each kit covers the lower door panel and the rear quarter window on both sides of the car (full kit), or single pieces, always sold as a left + right pair. One design for now (Flame Camo) in four colour combinations, full kit from €65, prices in EUR.
 
-> A OFS/T vende kits de autocolantes em vinil prÃ©-cortados para o CitroÃ«n Ami. Cada kit cobre o painel inferior da porta e o vidro lateral traseiro de um lado. 15 designs, a partir de 39Â â‚¬ por lado, preÃ§os em EUR.
+> A OFS/T vende kits de autocolantes em vinil pré-cortados para o Citroën Ami. Cada kit cobre o painel inferior da porta e o vidro lateral traseiro dos dois lados do carro (kit completo), ou peças individuais, sempre vendidas aos pares, esquerda + direita. Para já, um design (Flame Camo) em quatro combinações de cores, kit completo a partir de 65 €, preços em EUR.
 
-Kits are outdoor vinyl, pre-cut, in matte or gloss, and fitted at home with a step-by-step guide. Options: two vinyl colours per design (except fixed-colour artwork), matte or gloss finish, single pieces (door, window, Pop front accents) in pairs and rim stickers as an extra. OFS/T is independent and not affiliated with CitroÃ«n or Stellantis.
+Kits are outdoor vinyl, pre-cut, and fitted at home with a step-by-step guide. Options: two vinyl colours per design (except fixed-colour artwork), the rear-window sticker shape on the Ami 2025 (full window or square), and single pieces (door, window, Pop front accents), each sold as a pair, one for each side of the car. Delivery: for now only to the island of São Miguel (Azores); other islands and Europe are coming soon. OFS/T is independent and not affiliated with Citroën or Stellantis.
 
 The site is bilingual: European Portuguese (pt-PT, the default, at https://ofstdesigns.com/) and English (under https://ofstdesigns.com/en/). Both languages have the same pages, designs and prices.
 
 ## English
 
 - [Home](https://ofstdesigns.com/en/): overview, popular designs, how ordering and fitting work, compatible cars
-- [Shop](https://ofstdesigns.com/en/shop/): all designs with category and full-kit price
-- [Configurator](https://ofstdesigns.com/en/configurator/): live preview on the Ami 2025 or Ami Pop; pick design, colours, finish, pieces (full kit or single pairs) and badge text. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)
+- [Shop](https://ofstdesigns.com/en/shop/): all designs and colour combinations
+- [Configurator](https://ofstdesigns.com/en/configurator/): live preview on the Ami 2025 or Ami Pop; pick design, colours, pieces (full kit or single pairs) and window sticker shape. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)
 - [About & FAQ](https://ofstdesigns.com/en/about/): who makes the kits; fitting time, car washes, removal, compatibility, custom designs
 
-## PortuguÃªs
+## Português
 
-- [InÃ­cio](https://ofstdesigns.com/): apresentaÃ§Ã£o, designs populares, como encomendar e aplicar, carros compatÃ­veis
-- [Loja](https://ofstdesigns.com/shop/): os designs, com categoria e preÃ§o do kit completo
-- [Configurador](https://ofstdesigns.com/configurator/): prÃ©-visualizaÃ§Ã£o em direto no Ami 2025 ou Ami Pop; design, cores, acabamento, peÃ§as (kit completo ou pares) e texto do emblema. LigaÃ§Ã£o direta a um design com ?design=<id> (acrescente &model=pop para o Ami Pop)
-- [Sobre nÃ³s e perguntas frequentes](https://ofstdesigns.com/about/): quem faz os kits; tempo de aplicaÃ§Ã£o, lavagens, remoÃ§Ã£o, compatibilidade, designs personalizados
+- [Início](https://ofstdesigns.com/): apresentação, designs populares, como encomendar e aplicar, carros compatíveis
+- [Loja](https://ofstdesigns.com/shop/): todos os designs e combinações de cores
+- [Configurador](https://ofstdesigns.com/configurator/): pré-visualização em direto no Ami 2025 ou Ami Pop; design, cores, peças (kit completo ou pares) e formato do autocolante do vidro. Ligação direta a um design com ?design=<id> (acrescente &model=pop para o Ami Pop)
+- [Sobre nós e perguntas frequentes](https://ofstdesigns.com/about/): quem faz os kits; tempo de aplicação, lavagens, remoção, compatibilidade, designs personalizados
 
 ## Designs
 
-- [Flame Camo](https://ofstdesigns.com/en/configurator/?design=flame-red): Launch Edition, â‚¬69 full kit (both sides). Two-tone flames, black cuts (PortuguÃªs: https://ofstdesigns.com/configurator/?design=flame-red â€” Chamas em dois tons, recortes a preto)
+- [Flame Camo](https://ofstdesigns.com/en/configurator/?design=flame-red): Launch Edition, €65 full kit (both sides of the car). Two-tone flames, black cuts. Português: https://ofstdesigns.com/configurator/?design=flame-red (chamas em dois tons, recortes a preto)
 
 ## Optional
 
@@ -32,7 +32,7 @@ The site is bilingual: European Portuguese (pt-PT, the default, at https://ofstd
 - [Terms of sale](https://ofstdesigns.com/en/terms/): conditions of sale
 - [Refunds & returns](https://ofstdesigns.com/en/refunds/): returns and withdrawal
 - [Cookie policy](https://ofstdesigns.com/en/cookies/): cookies and local storage
-- [PolÃ­tica de privacidade](https://ofstdesigns.com/privacy/): como sÃ£o tratados os dados pessoais
-- [CondiÃ§Ãµes de venda](https://ofstdesigns.com/terms/): condiÃ§Ãµes gerais de venda
-- [Reembolsos e devoluÃ§Ãµes](https://ofstdesigns.com/refunds/): devoluÃ§Ãµes e direito de livre resoluÃ§Ã£o
-- [PolÃ­tica de cookies](https://ofstdesigns.com/cookies/): cookies e armazenamento local
+- [Política de privacidade](https://ofstdesigns.com/privacy/): como são tratados os dados pessoais
+- [Condições de venda](https://ofstdesigns.com/terms/): condições gerais de venda
+- [Reembolsos e devoluções](https://ofstdesigns.com/refunds/): devoluções e direito de livre resolução
+- [Política de cookies](https://ofstdesigns.com/cookies/): cookies e armazenamento local

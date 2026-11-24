@@ -181,6 +181,7 @@ export default function Home() {
       <section className="section kit-cards" style={{ paddingTop: 0 }} aria-labelledby="kitCardsTitle">
         <div className="sec-head"><div><span className="eyebrow">{c.kitEyebrow}</span><h2 className="display" id="kitCardsTitle">{c.kitTitle}</h2></div></div>
         <p className="muted kc-lead">{c.kitLead} <span className="kc-hint">{c.kitHint}</span></p>
+        <p className="muted kc-lead">{kit.shipText()}</p>
         <ul className="kc-grid">
           {c.kitCards.map(([code, name, qty, tag, size, text]) => <KitCard key={code} code={code} name={name} qty={qty} tag={tag} size={size} text={text} sizeLabel={c.kitSize} qtyLabel={c.kitQty} soon={code === 'rims' ? c.soon : undefined} />)}
         </ul>

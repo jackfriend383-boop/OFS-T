@@ -12,6 +12,7 @@ export interface CheckoutParams {
   successUrl: string;
   cancelUrl: string;
   locale: 'pt' | 'en';
+  shippingCents?: number; // 0 / missing = free delivery; otherwise one extra line on the Stripe page
 }
 
 /* Creates a Checkout Session; returns its id and the Stripe-hosted URL the customer is sent to. */
@@ -39,6 +40,14 @@ export async function createCheckoutSession(p: CheckoutParams): Promise<{ id: st
     f.set(`line_items[${n}][price_data][product_data][name]`, i.name.slice(0, 250));
     f.set(`line_items[${n}][price_data][product_data][description]`, i.desc.slice(0, 500));
   });
+  if (p.shippingCents && p.shippingCents > 0) {
+    const n = p.items.length;
+    f.set(`line_items[${n}][quantity]`, '1');
+    f.set(`line_items[${n}][price_data][currency]`, 'eur');
+    f.set(`line_items[${n}][price_data][unit_amount]`, String(p.shippingCents));
+    f.set(`line_items[${n}][price_data][product_data][name]`, p.locale === 'pt' ? 'Portes de envio' : 'Shipping');
+    f.set(`line_items[${n}][price_data][product_data][description]`, p.locale === 'pt' ? 'Entrega em São Miguel (Açores)' : 'Delivery to São Miguel (Azores)');
+  }
   const res = await fetch(`${API}/checkout/sessions`, {
     method: 'POST',
     headers: {

@@ -37,15 +37,15 @@
     "t_odr": "The EU online dispute resolution (ODR) platform closed in July 2025. For out-of-court dispute resolution, see our <a href=\"{{lroot}}terms/#disputes\" style=\"display:inline;padding:0;text-decoration:underline\">terms</a>.",
     "t_cart_title": "Your cart",
     "t_close_cart": "Close cart",
-    "t_search_ph": "Search designs, e.g. racing, retro, camo",
+    "t_search_ph": "Search designs, e.g. flame, camo",
     "t_designs": "Designs",
     "t_view_cart": "View cart"
   },
 
   "pages": {
-    "home": {"title": "{brand} — Sticker kits for the Citroën Ami", "description": "Pre-cut vinyl sticker kits for the Citroën Ami door panel and rear quarter window. Pick from {count} designs, set two colours and preview the kit on your car before you order."},
-    "shop": {"title": "Shop all designs — {brand}", "crumb": "Shop", "description": "All {count} OFS/T sticker kit designs for the Citroën Ami: signature flame camo, street, racing, retro and minimal. Full kit from {min}, both sides."},
-    "configurator": {"title": "Configurator: design your Ami kit — {brand}", "crumb": "Configurator", "description": "Design your Citroën Ami sticker kit live on an Ami 2025 or Ami Pop: choose a design, two vinyl colours, matte or gloss, full kit or single pieces and custom badge text, then add it to your cart."},
+    "home": {"title": "{brand} — Sticker kits for the Citroën Ami", "description": "Pre-cut vinyl sticker kits for the Citroën Ami door panel and rear quarter window. Pick a design, set two colours and preview the kit on your car before you order."},
+    "shop": {"title": "Shop all designs — {brand}", "crumb": "Shop", "description": "Browse OFS/T sticker kit designs for the Citroën Ami, starting with the signature Flame Camo in four colour combinations. Full kit from {min}, for both sides of the car."},
+    "configurator": {"title": "Configurator: design your Ami kit — {brand}", "crumb": "Configurator", "description": "Design your Citroën Ami sticker kit live on an Ami 2025 or Ami Pop: choose a design, two vinyl colours, the window sticker shape and a full kit or single pairs of pieces, then add it to your cart."},
     "about": {"title": "About & FAQ — {brand}", "crumb": "About & FAQ", "description": "Who makes OFS/T sticker kits for the Citroën Ami, how they are cut, and answers on fitting, car washes, removal and compatibility."},
     "privacy": {"title": "Privacy policy — {brand}", "crumb": "Privacy policy", "description": "How OFS/T handles personal data in its online shop for Citroën Ami sticker kits."},
     "terms": {"title": "Terms of sale — {brand}", "crumb": "Terms of sale", "description": "Terms of sale for OFS/T sticker kits for the Citroën Ami."},
@@ -67,8 +67,6 @@
     "dark_tone": "Dark tone",
     "primary": "Primary",
     "accent": "Accent",
-    "matte": "Matte",
-    "kit_one_side": "{name} kit, both sides",
     "logo_alt": "{brand} logo",
     "home": "Home",
     "item_list": "OFS/T sticker kit designs",
@@ -79,11 +77,11 @@
 
   "llms": {
     "heading": "English",
-    "intro": "{brand} sells pre-cut vinyl sticker kits for the Citroën Ami. Each kit covers the lower door panel and the rear quarter window on both sides. {count} designs, full kit from {min}, prices in EUR.",
+    "intro": "{brand} sells pre-cut vinyl sticker kits for the Citroën Ami. Each kit covers the lower door panel and the rear quarter window on both sides. Full kit from {min}, prices in EUR.",
     "pages": [
       ["home", "Home", "overview, popular designs, how ordering and fitting work, compatible cars"],
-      ["shop", "Shop", "all {count} designs with category and full-kit price"],
-      ["configurator", "Configurator", "live preview on the Ami 2025 or Ami Pop; pick design, colours, finish, pieces and badge text. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)"],
+      ["shop", "Shop", "all designs with category and full-kit price"],
+      ["configurator", "Configurator", "live preview on the Ami 2025 or Ami Pop; pick design, colours, pieces and window sticker shape. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)"],
       ["about", "About & FAQ", "who makes the kits; fitting time, car washes, removal, compatibility, custom designs"]
     ],
     "legal": [
@@ -97,7 +95,7 @@
 
   "placeholders": {},
 
-  "cats": {"All": "All", "Signature": "Launch Edition", "Launch Edition": "Launch Edition", "Street": "Street", "Racing": "Racing", "Retro": "Retro", "Minimal": "Minimal"},
+  "cats": {"All": "All", "Signature": "Launch Edition", "Launch Edition": "Launch Edition"},
   "colors": {},
   "tags": {},
 
@@ -116,6 +114,11 @@
     "subtotal": "Subtotal",
     "shipping": "Shipping",
     "shippingCalc": "Calculated at checkout",
+    "shipFreeWord": "Free",
+    "shipFreeLine": "Free delivery to São Miguel (Azores).",
+    "shipFeeLine": "Delivery to São Miguel (Azores): {fee}.",
+    "shipFeeFromLine": "Delivery to São Miguel (Azores): {fee}, free for orders of {from} or more.",
+    "shipSoon": "Other islands and the rest of Europe are coming soon.",
     "vatNote": "VAT not applicable (art. 53 CIVA exemption).",
     "total": "Total",
     "checkout": "Checkout",
@@ -123,13 +126,6 @@
     "openCart_other": "Open cart, {n} items",
     "openCartEmpty": "Open cart, empty",
     "originalColours": "Original colours",
-    "gloss": "Gloss",
-    "matte": "Matte",
-    "glossLc": "gloss",
-    "matteLc": "matte",
-    "oneSide": "One side",
-    "bothSides": "Both sides",
-    "oneSideLc": "one side",
     "bothSidesLc": "both sides",
     "badgeDesc": "Badge “{text}”",
     "personalised": "Personalised",
@@ -185,7 +181,7 @@
     "noPaymentShort": "No payment is taken online.",
     "removed": "{name} removed from cart",
     "qtyNow": "Quantity of {name}: {n}",
-    "searchNone": "No designs match “{q}”. Try street, racing, retro or minimal.",
+    "searchNone": "No designs match “{q}”. Try a different word, for example flame or camo.",
     "found_one": "{n} design found",
     "found_other": "{n} designs found",
     "noneFound": "No designs found",
@@ -209,8 +205,6 @@
     "darkTone": "Dark tone",
     "primary": "Primary",
     "accent": "Accent",
-    "kitOneSide": "{name} kit, both sides",
-    "secondSide": "Second side",
     "badgeText": "Badge text “{text}”",
     "cfgSay": "{name}, {model}, {colours}, {sides}. Total {total}.",
     "cfgSayPers": " Personalised kit: no change-of-mind returns.",

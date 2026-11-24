@@ -1,6 +1,6 @@
 /* Interface text for the dashboard tabs (pt-PT + English). Plain text only, rendered by React as text. */
 const en = {
-  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', invoices: 'Invoices', customers: 'Customers', designs: 'Designs', edits: 'Edits', tools: 'Print tools' },
+  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', invoices: 'Invoices', customers: 'Customers', designs: 'Designs', prices: 'Prices & shipping', edits: 'Edits', tools: 'Print tools' },
   tabsLabel: 'Dashboard sections',
   range: 'Period', ranges: { today: 'Today', '7': '7 days', '30': '30 days', '90': '90 days', all: 'All time' },
   vsPrev: 'vs previous period',
@@ -12,7 +12,7 @@ const en = {
   statusMix: 'Fulfilment', payMix: 'Payment',
   topDesigns: 'Top designs', topDesignsNote: 'Kits sold · revenue on hover',
   colours: 'Most-ordered colours', coloursNote: 'Kits using each colour (custom-colour designs)',
-  kitType: 'Kit type', finish: 'Finish', model: 'Car model', badge: 'Custom number badge', badgeOf: (p: string) => `${p} of kits add a number`,
+  model: 'Car model', badge: 'Custom number badge', badgeOf: (p: string) => `${p} of kits add a number`,
   countries: 'Countries', cities: 'Top cities', weekdays: 'Orders by weekday', hours: 'Orders by hour',
   wd: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
   kits: (n: number) => (n === 1 ? '1 kit' : `${n} kits`), ordersShort: (n: number) => `${n}`,
@@ -42,7 +42,7 @@ const en = {
   noPriceBad: 'The price must be a number between 0.01 and 10000.',
 };
 const pt: typeof en = {
-  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', designs: 'Designs', edits: 'Edições', tools: 'Ficheiros de impressão' },
+  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', designs: 'Designs', prices: 'Preços e portes', edits: 'Edições', tools: 'Ficheiros de impressão' },
   tabsLabel: 'Secções do painel',
   range: 'Período', ranges: { today: 'Hoje', '7': '7 dias', '30': '30 dias', '90': '90 dias', all: 'Sempre' },
   vsPrev: 'vs período anterior',
@@ -54,7 +54,7 @@ const pt: typeof en = {
   statusMix: 'Produção', payMix: 'Pagamento',
   topDesigns: 'Designs mais vendidos', topDesignsNote: 'Kits vendidos · receita ao passar o rato',
   colours: 'Cores mais pedidas', coloursNote: 'Kits com cada cor (designs de cor personalizável)',
-  kitType: 'Tipo de kit', finish: 'Acabamento', model: 'Modelo', badge: 'Número personalizado', badgeOf: (p: string) => `${p} dos kits têm número`,
+  model: 'Modelo', badge: 'Número personalizado', badgeOf: (p: string) => `${p} dos kits têm número`,
   countries: 'Países', cities: 'Principais cidades', weekdays: 'Encomendas por dia da semana', hours: 'Encomendas por hora',
   wd: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
   kits: (n: number) => (n === 1 ? '1 kit' : `${n} kits`), ordersShort: (n: number) => `${n}`,

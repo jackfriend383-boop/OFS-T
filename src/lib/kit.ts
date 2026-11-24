@@ -8,7 +8,7 @@ export type Lang = 'pt' | 'en';
 export interface Design { id: string; name: string; tag: string; cat: string; catName: string; price: number; c1: string; c2: string; art?: string; fixed?: boolean; master?: string; custom?: boolean; hidden?: boolean }
 /* Shape of the rear-window sticker: Ami 2025 = 'full' (the whole glass) or 'square'; Ami Pop = 'circle' (its half-ring glass) only. */
 export type WinShape = 'full' | 'circle' | 'square';
-export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; finish: 'matte' | 'gloss'; kit: 'one' | 'both'; numberOn: boolean; number: string; trim: string; pieces: Piece[]; winShape: WinShape }
+export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; numberOn: boolean; number: string; trim: string; pieces: Piece[]; winShape: WinShape }
 export interface CartItem { key: string; cfg: Cfg; qty: number }
 
 export const I18N: Record<Lang, any> = { pt: PT, en: EN };
@@ -75,7 +75,33 @@ export const normWinShape = (raw: unknown, model: string): WinShape => {
    (Rim stickers were removed: an old cart / order that still lists 'rims' just ignores it.) */
 export type Piece = 'full' | 'door' | 'window' | 'accent';
 export const PIECES: Piece[] = ['full', 'door', 'window', 'accent']; // display order
-export const PIECE_PRICE = DATA.pieces as Record<'door' | 'window' | 'accent', number>;
+/* Prices of a PAIR of each piece, the badge and shipping. These start from designs.json and are replaced by the price list the owner sets in
+   the admin "Prices" tab (GET /api/prices, see setRemotePrices); the objects are changed in place so every import sees the new numbers. */
+export const PIECE_PRICE: Record<'door' | 'window' | 'accent', number> = { ...(DATA.pieces as Record<'door' | 'window' | 'accent', number>) };
+export const EXTRA_PRICE = { badge: DATA.extras.badge };
+export const SHIPPING = { fee: (DATA as any).shipping?.fee ?? 0, freeFrom: (DATA as any).shipping?.freeFrom ?? 0 }; // euros; fee 0 = free, freeFrom 0 = no threshold
+export interface RemotePrices { door: number; window: number; accent: number; badge: number; shipping: number; freeFrom: number }
+const euros = (v: unknown, min: number, max: number): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? Math.round(v * 100) / 100 : null);
+/* Keeps only sane numbers (the list comes from the network); anything missing keeps its default. */
+export function cleanRemotePrices(raw: unknown): Partial<RemotePrices> {
+  const r: any = raw && typeof raw === 'object' ? raw : {}, out: Partial<RemotePrices> = {};
+  for (const k of ['door', 'window', 'accent', 'badge'] as const) { const v = euros(r[k], 1, 999); if (v != null) out[k] = v; }
+  const s = euros(r.shipping, 0, 999), f = euros(r.freeFrom, 0, 9999);
+  if (s != null) out.shipping = s;
+  if (f != null) out.freeFrom = f;
+  return out;
+}
+export function setRemotePrices(p: Partial<RemotePrices>) {
+  if (p.door != null) PIECE_PRICE.door = p.door;
+  if (p.window != null) PIECE_PRICE.window = p.window;
+  if (p.accent != null) PIECE_PRICE.accent = p.accent;
+  if (p.badge != null) EXTRA_PRICE.badge = p.badge;
+  if (p.shipping != null) SHIPPING.fee = p.shipping;
+  if (p.freeFrom != null) SHIPPING.freeFrom = p.freeFrom;
+  (Object.keys(cache) as Lang[]).forEach((k) => { delete cache[k]; });
+}
+/* Shipping for an order whose kits cost `subtotal` euros: 0 when shipping is free or the order reaches the free-shipping threshold. */
+export const shippingFor = (subtotal: number) => (SHIPPING.fee > 0 && !(SHIPPING.freeFrom > 0 && subtotal >= SHIPPING.freeFrom) ? SHIPPING.fee : 0);
 
 /* ---------- Colour presets (designs.json "presets") ----------
    Ready-made colour pairs offered next to the colour pickers. PRESETS has the English colour names; kit.presets (same order) has the
@@ -88,21 +114,23 @@ export const PRESETS: Preset[] = presetsFor((k) => PRESET_COLOURS[k]?.name || k)
 /* What the full kit contains for each version. */
 export const fullPieces = (model: string): Piece[] => (model === 'pop' ? ['door', 'window', 'accent'] : ['door', 'window']);
 /* Clean a list of piece codes (array or "door,rims"): unknown codes and Pop-only accents on the Ami 2025 are dropped,
-   full replaces the pieces it contains, choosing every piece of the full kit becomes the full kit only when that is not
-   dearer than the pieces (designPrice), and an empty choice means the full kit. Returned sorted and without repeats. */
-export function normPieces(raw: unknown, model: string, designPrice = 0): Piece[] {
+   full replaces the pieces it contains, choosing every piece of the full kit is the full kit (which never costs more than
+   the pieces: see kitPrice), and an empty choice means the full kit. Returned sorted and without repeats. */
+export function normPieces(raw: unknown, model: string, _designPrice = 0): Piece[] {
   const list: unknown[] = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : [];
   const set = new Set(list.filter((x): x is Piece => typeof x === 'string' && (PIECES as string[]).includes(x)));
   if (model !== 'pop') set.delete('accent');
   const full = fullPieces(model);
-  const partsCost = full.reduce((t, p) => t + PIECE_PRICE[p as 'door'], 0);
-  if (set.has('full') || (full.every((p) => set.has(p)) && designPrice <= partsCost)) { full.forEach((p) => set.delete(p)); set.add('full'); }
+  if (set.has('full') || full.every((p) => set.has(p))) { full.forEach((p) => set.delete(p)); set.add('full'); }
   if (!set.size) set.add('full');
   return [...set].sort();
 }
+/* What the full kit really costs: the design's price, but never more than the same pieces bought separately (so splitting a kit never
+   saves money, whatever the owner types in the admin). */
+export const kitPrice = (model: string, designPrice: number) => Math.min(designPrice, fullPieces(model).reduce((t, p) => t + PIECE_PRICE[p as 'door'], 0));
 /* Price of the pieces alone (no extras). */
-export const piecesPrice = (pieces: Piece[], designPrice: number) =>
-  pieces.includes('full') ? designPrice : pieces.reduce((s, p) => s + (p === 'full' ? 0 : PIECE_PRICE[p]), 0);
+export const piecesPrice = (pieces: Piece[], designPrice: number, model = 'qs') =>
+  pieces.includes('full') ? kitPrice(model, designPrice) : pieces.reduce((s, p) => s + (p === 'full' ? 0 : PIECE_PRICE[p]), 0);
 /* Pieces actually in the box: full expanded to its parts (display order). */
 export const includedPieces = (c: Pick<Cfg, 'model' | 'pieces'>): Exclude<Piece, 'full'>[] => {
   const ps = c.pieces || ['full'], full = ps.includes('full') ? fullPieces(c.model) : [];
@@ -151,11 +179,11 @@ function build(lang: Lang) {
   const ALL_D: Design[] = mergedDesigns(true).map(mapD); // includes hidden designs (old orders still need them)
   const DESIGNS: Design[] = mergedDesigns().map((d) => ({ ...d, tag: (lang === 'pt' ? d.tagPt : d.tagEn) || (has(L.tags, d.id) ? L.tags[d.id] : d.tag), catName: T.cat(d.cat) })) as Design[];
   const CATS: string[] = ['All', ...Array.from(new Set(DESIGNS.map((d) => d.cat)))];
-  const EXTRA = DATA.extras as { secondSide: number; badge: number };
+  const EXTRA = EXTRA_PRICE;
   const presets = presetsFor((k) => (has(L.colors, k) ? L.colors[k] : PRESET_COLOURS[k]?.name || k));
   const D = (id: unknown): Design | undefined => ALL_D.find((d) => d.id === id);
   const modelName = (m: unknown) => (has(MODELS, m) ? MODELS[m as keyof typeof MODELS] : MODELS.qs);
-  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, finish: 'matte', kit: 'both', numberOn: false, number: 'OFST', trim: TRIMS.qs[0], pieces: ['full'], winShape: DEFAULT_WIN_SHAPE.qs }); // every kit covers both sides
+  const defaultCfg = (d: Design): Cfg => ({ model: 'qs', design: d.id, c1: d.c1, c2: d.c2, numberOn: false, number: 'OFST', trim: TRIMS.qs[0], pieces: ['full'], winShape: DEFAULT_WIN_SHAPE.qs }); // every kit covers both sides
   const cleanNumber = (v: unknown) => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9 .#&!-]/g, '').slice(0, 8);
 
   /* Validate a config from an untrusted source (query string, localStorage, order rows). Returns a full config or null. */
@@ -168,7 +196,6 @@ function build(lang: Lang) {
     out.trim = TRIMS[out.model].includes(c.trim) || (out.model === 'qs' && c.trim === SPLIT_TRIM) ? c.trim : TRIMS[out.model][0];
     if (has(COLORS, c.c1)) out.c1 = c.c1;
     if (has(COLORS, c.c2)) out.c2 = c.c2;
-    if (c.finish === 'matte' || c.finish === 'gloss') out.finish = c.finish;
     // Kit size is no longer offered: every kit (including older saved carts) is both sides.
     if (typeof c.number === 'string') out.number = cleanNumber(c.number);
     // The custom badge is only offered on the Ami 2025 (the Pop door has no badge plate).
@@ -187,10 +214,17 @@ function build(lang: Lang) {
     return !!(c!.numberOn && c!.number);
   }
   const piecesOf = (c: Cfg) => normPieces(c.pieces, c.model, D(c.design)?.price ?? 0);
-  const priceOf = (c: Cfg) => piecesPrice(piecesOf(c), D(c.design)!.price) + (c.kit === 'both' ? EXTRA.secondSide : 0) + (c.numberOn && c.number ? EXTRA.badge : 0);
-  const keyOf = (c: Cfg) => [c.design, c.c1, c.c2, c.kit, c.numberOn ? c.number : '', c.model || 'qs', piecesOf(c).join(','), normWinShape(c.winShape, c.model)].join('|');
+  const priceOf = (c: Cfg) => piecesPrice(piecesOf(c), D(c.design)!.price, c.model) + (c.numberOn && c.number ? EXTRA.badge : 0);
+  const keyOf = (c: Cfg) => [c.design, c.c1, c.c2, c.numberOn ? c.number : '', c.model || 'qs', piecesOf(c).join(','), normWinShape(c.winShape, c.model)].join('|');
   /* "Full kit · Rims" / "Door stickers (pair) · Window stickers (pair)", in display order. */
   const piecesLabel = (c: Cfg) => { const ps = piecesOf(c); return PIECES.filter((p) => ps.includes(p)).map((p) => T('pc_' + p)).join(' · '); };
+  /* One sentence on delivery, from the owner's shipping price (admin "Prices" tab): free, a fixed fee, or a fee that is free above an amount. */
+  const shipText = () => {
+    const lead = SHIPPING.fee <= 0 ? T('shipFreeLine')
+      : SHIPPING.freeFrom > 0 ? T('shipFeeFromLine', { fee: T.price(SHIPPING.fee), from: T.price(SHIPPING.freeFrom) })
+      : T('shipFeeLine', { fee: T.price(SHIPPING.fee) });
+    return `${lead} ${T('shipSoon')}`;
+  };
   const colourLabel = (c: Cfg) => (D(c.design)!.fixed ? T('originalColours') : `${COLORS[c.c1].name} / ${COLORS[c.c2].name}`);
   /* Window shape name, only when the kit has window stickers ("Full window" / "Square" / "Circle"; keys winShape_full|circle|square). */
   const winShapeLabel = (c: Cfg) => (includedPieces({ model: c.model, pieces: piecesOf(c) }).includes('window') ? T('winShape_' + normWinShape(c.winShape, c.model)) : '');
@@ -199,7 +233,7 @@ function build(lang: Lang) {
     `${winShapeLabel(c) ? ' · ' + winShapeLabel(c) : ''}` +
     `${c.numberOn && c.number ? ' · ' + T('badgeDesc', { text: c.number }) : ''}${isPersonalised(c) ? ' · ' + T('personalised') : ''}`;
   const cfgQuery = (c: Cfg) => {
-    const p = new URLSearchParams({ design: c.design, c1: c.c1, c2: c.c2, kit: c.kit });
+    const p = new URLSearchParams({ design: c.design, c1: c.c1, c2: c.c2 });
     if (c.numberOn && c.number) p.set('number', c.number);
     if (normWinShape(c.winShape, c.model) !== DEFAULT_WIN_SHAPE[c.model || 'qs']) p.set('win', normWinShape(c.winShape, c.model));
     if (c.model && c.model !== 'qs') p.set('model', c.model);
@@ -207,21 +241,21 @@ function build(lang: Lang) {
     const ps = piecesOf(c); if (ps.join() !== 'full') p.set('pieces', ps.join(','));
     return p.toString();
   };
-  /* Config from a query string (?design=&c1=&c2=&finish=&kit=&number=&model=&trim=&pieces=door,rims), validated against the data. */
+  /* Config from a query string (?design=&c1=&c2=&number=&model=&trim=&pieces=door,window), validated against the data. */
   function cfgFromQuery(search: string): Cfg | null {
     let q: URLSearchParams; try { q = new URLSearchParams(search); } catch { return null; }
     // A link with only ?model= (from the home page version cards) starts on the first design in that version;
     // same for a link with only ?trim= (car colour).
     const d = D(q.get('design')) || (q.get('model') || q.get('trim') ? DESIGNS[0] : null); if (!d) return null;
     const num = q.has('number') ? cleanNumber(q.get('number')) : '';
-    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, kit: q.get('kit'), number: num || 'OFST', numberOn: !!num, winShape: q.get('win'), trim: q.get('trim'), pieces: q.get('pieces') });
+    return sanitizeCfg({ model: q.get('model'), design: d.id, c1: q.get('c1') || d.c1, c2: q.get('c2') || d.c2, number: num || 'OFST', numberOn: !!num, winShape: q.get('win'), trim: q.get('trim'), pieces: q.get('pieces') });
   }
   /* A full config for a design in a colour preset (kit.presets / designs.json "presets"); null for an unknown design or preset. */
   const presetCfg = (designId: string, presetId: string): Cfg | null => {
     const d = D(designId), p = presets.find((x) => x.id === presetId);
     return d && p ? { ...defaultCfg(d), c1: p.c1, c2: p.c2 } : null;
   };
-  return { lang, L, T, presets, presetCfg, winShapeLabel, COLORS, DESIGNS, CATS, EXTRA, D, has, modelName, defaultCfg, cleanNumber, sanitizeCfg, isPersonalised, priceOf, keyOf, piecesOf, piecesLabel, colourLabel, descOf, cfgQuery, cfgFromQuery, money: T.price };
+  return { lang, L, T, presets, presetCfg, winShapeLabel, COLORS, DESIGNS, CATS, EXTRA, D, has, modelName, defaultCfg, cleanNumber, sanitizeCfg, isPersonalised, priceOf, shipText, keyOf, piecesOf, piecesLabel, colourLabel, descOf, cfgQuery, cfgFromQuery, money: T.price };
 }
 
 const cache: Partial<Record<Lang, Kit>> = {};

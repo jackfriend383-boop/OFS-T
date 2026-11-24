@@ -152,3 +152,10 @@ CREATE TABLE IF NOT EXISTS site_settings (
   ver         INTEGER NOT NULL DEFAULT 1,
   updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+-- Round 7: prices and shipping edited in the admin "Prices" tab (see migrations/0011_prices.sql)
+CREATE TABLE IF NOT EXISTS site_prices (
+  key        TEXT PRIMARY KEY CHECK (key IN ('door', 'window', 'accent', 'badge', 'shipping', 'freeFrom')),
+  cents      INTEGER NOT NULL CHECK (cents BETWEEN 0 AND 1000000),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);

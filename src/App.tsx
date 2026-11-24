@@ -50,7 +50,8 @@ function HeadSync({ seo }: { seo: SeoKey }) {
   const first = useRef(true);
   useEffect(() => {
     // The first load of a prerendered page already has its head; the dev server (no prerender) needs it added.
-    if (first.current) { first.current = false; if (document.head.querySelector('[data-h]')) return; }
+    // (An unknown address is always redone: a host that answers it with the home page's HTML would otherwise leave an indexable head.)
+    if (first.current) { first.current = false; if (seo !== '404' && document.head.querySelector('[data-h]')) return; }
     // The about page's head lists its FAQ, which lives in the page text: fetch that first (it is a separate file).
     if (seo === 'about') { let live = true; loadProse(lang, seo).catch(() => '').then(() => { if (live) applyHead(seo, lang); }); return () => { live = false; }; }
     applyHead(seo, lang);

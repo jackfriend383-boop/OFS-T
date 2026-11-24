@@ -255,6 +255,21 @@ export function makeBackend(kit: Kit) {
     try { const r = await request('/api/designs'); return Array.isArray(r) ? r : (r && Array.isArray(r.designs) ? r.designs : []); }
     catch { return []; }
   }
+  /* Price list the owner set in the admin "Prices" tab (pairs, badge, shipping). Failing is fine: the defaults in designs.json are used. */
+  async function pricesPublic(): Promise<unknown> {
+    try { return await request('/api/prices'); } catch { return null; }
+  }
+  async function getPrices(): Promise<Record<string, number>> {
+    const r = await authed('/api/admin/prices');
+    if (!r || typeof r !== 'object') throw new BackendError(MSG.generic, 'bad_response');
+    return r as Record<string, number>;
+  }
+  /* body: { door?, window?, accent?, badge?, shipping?, freeFrom? } in euros; null puts one back to its default. */
+  async function savePrices(body: Record<string, number | null>): Promise<Record<string, number>> {
+    const r = await authed('/api/admin/prices', { method: 'PUT', body });
+    if (!r || typeof r !== 'object') throw new BackendError(MSG.generic, 'bad_response');
+    return r as Record<string, number>;
+  }
   /* Preview picture of an extra design as a blob: address (the page may only load images from itself, data: and blob:). */
   async function designArtBlob(id: string, w: 1000 | 1600, ver: number): Promise<string> {
     if (!backendConfigured || !/^[a-z0-9][a-z0-9-]{1,38}$/.test(id)) throw new BackendError(MSG.invalid, 'invalid');
@@ -280,6 +295,6 @@ export function makeBackend(kit: Kit) {
     if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
     return authed('/api/admin/designs/' + id, { method: 'DELETE' });
   }
-  return { configured: backendConfigured, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, createOrder, setStatus };
+  return { configured: backendConfigured, pricesPublic, getPrices, savePrices, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, createOrder, setStatus };
 }
 export type Backend = ReturnType<typeof makeBackend>;

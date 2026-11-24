@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [react(), htmlVars(), securityHeaders()],
   build: {
     target: 'es2022',
+    assetsDir: 'build', // hashed scripts, styles and fonts go to /build/ (cached for a year, see vite.shared.ts); /assets/ is the unhashed public folder
     cssMinify: true,
     rollupOptions: {
       output: {

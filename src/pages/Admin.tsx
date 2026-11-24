@@ -14,13 +14,14 @@ import { DASH } from './admin/copy';
 import { RANGES, customers as groupCustomers, dayKey, delta, inRange, kpis, rangeBounds, printCounts, reports, series, sheetsOf, toCSV, type CustomerRow, type Point, type RangeKey } from './admin/stats';
 import { BarList, Columns, TrendChart } from './admin/Charts';
 import Designs from './admin/Designs';
+import Prices from './admin/Prices';
 import Edits from './admin/Edits';
 import KitFields, { baseCfg } from './admin/KitFields';
 import NewOrder from './admin/NewOrder';
 
 type Panel = 'boot' | 'setup' | 'login' | 'locked' | 'main';
-type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'designs' | 'edits' | 'tools';
-const TABS: Tab[] = ['overview', 'reports', 'orders', 'invoices', 'customers', 'designs', 'edits', 'tools'];
+type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'designs' | 'prices' | 'edits' | 'tools';
+const TABS: Tab[] = ['overview', 'reports', 'orders', 'invoices', 'customers', 'designs', 'prices', 'edits', 'tools'];
 const TAB_KEY = 'ofst-admin-tab', RANGE_KEY = 'ofst-admin-range';
 const remember = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* private mode */ } };
 const recall = (k: string) => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } };
@@ -453,8 +454,6 @@ export default function Admin() {
                 <div className="dgrid">
                   <Card title={d.topDesigns} note={d.topDesignsNote}><BarList rows={rep.designs} fmt={(v) => d.kits(v)} fmtSub={(r) => euro0(r.sub || 0)} empty={d.noData} /></Card>
                   <Card title={d.colours} note={d.coloursNote}><BarList swatches rows={rep.colours} fmt={(v) => nf.format(v)} empty={d.noData} /></Card>
-                  <Card title={d.kitType}><BarList rows={rep.kitType} fmt={(v) => d.kits(v)} empty={d.noData} /></Card>
-                  <Card title={d.finish}><BarList rows={rep.finish} fmt={(v) => d.kits(v)} empty={d.noData} /></Card>
                   <Card title={d.model}><BarList rows={rep.model} fmt={(v) => d.kits(v)} empty={d.noData} /></Card>
                   <Card title={d.countries}><BarList rows={rep.countries} fmt={(v) => d.ordersN(v)} fmtSub={(r) => euro0(r.sub || 0)} empty={d.noData} /></Card>
                   <Card title={d.cities}><BarList rows={rep.cities} fmt={(v) => d.ordersN(v)} fmtSub={(r) => euro0(r.sub || 0)} empty={d.noData} /></Card>
@@ -547,6 +546,7 @@ export default function Admin() {
               </>)}
 
               {tab === 'designs' && <Designs />}
+              {tab === 'prices' && <Prices />}
               {tab === 'edits' && <Edits onExpired={() => handleError({ code: 'session_expired', message: T('beSession') })} />}
               {tab === 'tools' && toolSection}
             </div>

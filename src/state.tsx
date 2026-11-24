@@ -2,7 +2,7 @@
    Replaces core.js. The cart is shared between languages and tabs, exactly as before (same storage key). */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { cleanRemoteDesigns, getKit, setRemoteDesigns, langOfPath, pageOfPath, pagePath, type Cfg, type CartItem, type Kit, type Lang, type PageKey } from './lib/kit';
+import { cleanRemoteDesigns, cleanRemotePrices, getKit, setRemoteDesigns, setRemotePrices, langOfPath, pageOfPath, pagePath, type Cfg, type CartItem, type Kit, type Lang, type PageKey } from './lib/kit';
 import { registerRemoteArt } from './lib/car';
 import { makeBackend, type Backend, type Customer } from './lib/backend';
 
@@ -117,6 +117,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       if (!live) return;
       setRemoteDesigns(list);
+      setCart(loadCart(getKit(langRef.current)));
+      setDesignVer((v) => v + 1);
+    })();
+    return () => { live = false; };
+  }, []);
+  /* Prices the owner set in the admin (pairs, badge, shipping): fetched once, then every kit is rebuilt and the cart is read again.
+     If the server can't be reached the prices in designs.json are used (the server charges its own list either way). */
+  useEffect(() => {
+    let live = true;
+    if (!backendRef0.current.configured) return;
+    (async () => {
+      const p = cleanRemotePrices(await backendRef0.current.pricesPublic());
+      if (!live || !Object.keys(p).length) return;
+      setRemotePrices(p);
       setCart(loadCart(getKit(langRef.current)));
       setDesignVer((v) => v + 1);
     })();

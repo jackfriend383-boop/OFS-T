@@ -139,3 +139,11 @@
 .dz-form .co-f{display:grid;gap:6px}
 .dz-check{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.4}
 .dz-prev{max-width:420px}
+
+/* Prices tab */
+.pr-form{display:grid;gap:14px}
+.pr-form h3{margin:8px 0 0;font-size:15px}
+.pr-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.pr-check{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.pr-check p{margin:2px 0 0}
+.pr-check .err{color:var(--bad,#c0392b);font-size:12.5px}

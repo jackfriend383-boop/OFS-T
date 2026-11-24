@@ -1,11 +1,11 @@
 /* Configurator: live stage (the arrows turn the car between camera angles; day or night scene following the site theme), design picker strip,
-   Ami version/car colour/vinyl colour/pieces/finish/extras options, summary and the mobile bar.
-   Reads an optional starting config from the query string (?design=&c1=&c2=&finish=&kit=&number=&model=&trim=&pieces=), validated against the data. */
+   Ami version/car colour/vinyl colour/pieces/window shape options, summary and the mobile bar.
+   Reads an optional starting config from the query string (?design=&c1=&c2=&number=&model=&trim=&pieces=), validated against the data. */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useApp } from '../state';
 import { COPY } from '../content';
-import { TRIMS, PIECES, PIECE_PRICE, WIN_SHAPES, includedPieces, piecesPrice, type Cfg, type Piece } from '../lib/kit';
+import { TRIMS, PIECES, PIECE_PRICE, WIN_SHAPES, includedPieces, kitPrice, piecesPrice, type Cfg, type Piece } from '../lib/kit';
 import { CarStage, Thumb, type StageApi } from '../components/Car';
 import { viewIcon, anglesOf, type Angle } from '../lib/car';
 import { FilterTabs } from '../components/DesignCard';
@@ -267,7 +267,7 @@ export default function Configurator() {
   const ps = cfg.pieces, isFull = ps.includes('full');
   /* Price lines: the full kit, or each chosen pair. */
   const lines: [string, string][] = [];
-  if (isFull) lines.push([c.kitFull(d.name), money(d.price)]);
+  if (isFull) lines.push([c.kitFull(d.name), money(kitPrice(cfg.model, d.price))]);
   else (['door', 'window', 'accent'] as const).forEach((p) => { if (ps.includes(p)) lines.push([T('pc_' + p), money(PIECE_PRICE[p])]); });
   const hasWindow = isFull || ps.includes('window');
   const winAllowed: string[] = WIN_SHAPES[cfg.model] as string[];
@@ -318,7 +318,7 @@ export default function Configurator() {
     [c.version, kit.modelName(cfg.model), '', 'optModelCard'],
     ...(trims.length > 1 ? [[c.carColour, c.trims[cfg.trim] || cfg.trim, '', 'optModelCard'] as [string, string, string, string]] : []),
     [c.colours, colourText, '', 'optColourCard'],
-    [c.pieces, kit.piecesLabel(cfg), money(piecesPrice(ps, d.price)), 'optPiecesCard'],
+    [c.pieces, kit.piecesLabel(cfg), money(piecesPrice(ps, d.price, cfg.model)), 'optPiecesCard'],
     ...(hasWindow ? [[c.winTitle, c.win[winShape], '', 'optWinCard'] as [string, string, string, string]] : []),
   ];
   const toggleFull = () => {
@@ -394,13 +394,13 @@ export default function Configurator() {
           </header>
 
           <section className="ocard" id="optDesignCard" aria-labelledby="pickerTitle">
-            <div className="ocard-head"><h2 id="pickerTitle">{c.choose}</h2><span className="ocard-price">{money(d.price)}</span></div>
+            <div className="ocard-head"><h2 id="pickerTitle">{c.choose}</h2><span className="ocard-price">{money(kitPrice(cfg.model, d.price))}</span></div>
             <div className="picker" id="picker">
               {kit.CATS.length > 2 && <FilterTabs id="cfgTabs" cats={kit.CATS} value={cat} onPick={setCat} label={COPY[lang].shop.filter} />}
               <div className="strip" id="strip" role="group" aria-label={c.designsGroup} ref={strip}>
                 {DESIGNS.map((x) => (
                   <button key={x.id} type="button" className={'pcard' + (cat !== 'All' && x.cat !== cat ? ' out' : '')} data-id={x.id} data-cat={x.cat} aria-pressed={x.id === cfg.design} onClick={() => pickDesign(x.id, true)}>
-                    <Thumb cfg={kit.defaultCfg(x)} /><b>{x.name}</b><small><span>{x.tag}</span><span className="price">{money(x.price)}</span></small>
+                    <Thumb cfg={kit.defaultCfg(x)} /><b>{x.name}</b><small><span>{x.tag}</span><span className="price">{money(kitPrice(cfg.model, x.price))}</span></small>
                   </button>
                 ))}
               </div>
@@ -409,7 +409,7 @@ export default function Configurator() {
 
           <section className="ocard" id="optModelCard" aria-labelledby="optModelLbl">
             <div className="ocard-head"><h2 id="optModelLbl">{c.version}</h2><span className="ocard-val">{kit.modelName(cfg.model)}</span></div>
-            <Seg id="segModel" labelledBy="optModelLbl" value={cfg.model} items={[['qs', 'Ami 2025'], ['pop', 'Pop']]} onPick={(v) => update({ model: v as Cfg['model'] })} />
+            <Seg id="segModel" labelledBy="optModelLbl" value={cfg.model} items={[['qs', 'Ami 2025'], ['pop', 'Ami Pop']]} onPick={(v) => update({ model: v as Cfg['model'] })} />
             {trims.length > 1 && <>
               <div className="sub-label"><span id="trimLabel">{c.carColour}</span><span id="trimName">{c.trims[cfg.trim] || cfg.trim}</span></div>
               <Trims labelId="trimLabel" value={cfg.trim} items={trims} names={c.trims} onPick={(k) => update({ trim: k })} />
@@ -435,12 +435,12 @@ export default function Configurator() {
 
           {/* Pieces: full kit (default) or individual pairs; rims as an add-on. */}
           <section className="ocard" id="optPiecesCard" aria-labelledby="optPiecesLbl">
-            <div className="ocard-head"><h2 id="optPiecesLbl">{c.pieces}</h2><span className="ocard-price">{money(piecesPrice(ps, d.price))}</span></div>
+            <div className="ocard-head"><h2 id="optPiecesLbl">{c.pieces}</h2><span className="ocard-price">{money(piecesPrice(ps, d.price, cfg.model))}</span></div>
             <div className="pcs" role="group" aria-labelledby="optPiecesLbl">
               {pieceItems.map((p) => {
                 const on = ps.includes(p);
                 const note = p === 'full' ? c.fullNote(pop) : c.pair;
-                const price = p === 'full' ? d.price : PIECE_PRICE[p];
+                const price = p === 'full' ? kitPrice(cfg.model, d.price) : PIECE_PRICE[p];
                 return <button key={p} type="button" className="pc" data-p={p} role="checkbox" aria-checked={on} onClick={() => togglePiece(p)}>
                   <span className="pc-ic">{pieceIcon(p === 'window' && pop ? 'windowPop' : p)}</span>
                   <span className="pc-t"><b>{c.pc[p]}</b><small>{note}</small></span>
@@ -500,7 +500,7 @@ export default function Configurator() {
           {addBtn('addCart')}
           <button type="button" className="btn btn-2" onClick={() => jump('optDesignCard')}>{c.change}</button>
           <p className="pers-note" id="persNote" hidden={!pers}>{c.persBefore}<Link to={to('refunds') + '#personalised'}>{c.persLink}</Link>{c.persAfter}</p>
-          <div className="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7" /><circle cx="6" cy="17.5" r="1.7" /><circle cx="17" cy="17.5" r="1.7" /></svg><span>{c.ship[0]}<br />{c.ship[1]}</span></div>
+          <div className="ship"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7" /><circle cx="6" cy="17.5" r="1.7" /><circle cx="17" cy="17.5" r="1.7" /></svg><span>{c.ship[0]}<br />{kit.shipText()}</span></div>
           <p className="sr" id="sumLive" role="status" aria-live="polite" ref={sumLive} />
           <dl className="specs">{c.specs.map(([k, v]) => <div key={k} style={{ display: 'contents' }}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         </section>

@@ -159,7 +159,7 @@ function Footer() {
         </address>
       </div>
       <div><h2>{ui.t_foot_shop}</h2><Link to={to('shop')}>{ui.t_all_designs}</Link><Link to={to('configurator')}>{ui.t_configurator}</Link></div>
-      <div><h2>{ui.t_help}</h2><Link to={to('about')}>{dec(ui.t_fitting)}</Link><Link to={to('about') + '#faq'}>{ui.t_faq}</Link></div>
+      <div><h2>{ui.t_help}</h2><Link to={to('about') + '#faq'}>{ui.t_faq}</Link></div>
       <div>
         <h2>{ui.t_legal}</h2>
         <Link to={to('privacy')}>{ui.t_privacy}</Link><Link to={to('terms')}>{ui.t_terms}</Link><Link to={to('refunds')}>{dec(ui.t_refunds)}</Link><Link to={to('cookies')}>{ui.t_cookies}</Link>

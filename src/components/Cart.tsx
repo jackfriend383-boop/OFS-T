@@ -7,6 +7,7 @@ import { Thumb } from './Car';
 import { dec } from './Html';
 import { easeInCartItems } from '../lib/motion';
 import { validNif } from '../lib/backend';
+import { shippingFor } from '../lib/kit';
 
 /* "text {slot} text" with a React node in place of {slot}. */
 function slot(str: string, name: string, node: ReactNode): ReactNode {
@@ -40,6 +41,7 @@ export function CartDrawer() {
 
   const editHref = (i: number) => to('configurator', kit.cfgQuery(cart[i].cfg));
   const sub = cart.reduce((s, i) => s + kit.priceOf(i.cfg) * i.qty, 0);
+  const ship = shippingFor(sub); // 0 = free (set in the admin "Prices" tab)
 
   const cartView = !cart.length ? (
     <div className="empty">
@@ -77,10 +79,10 @@ export function CartDrawer() {
   const cartFoot = cart.length ? (
     <>
       <div className="row"><span className="muted">{T('subtotal')}</span><span className="price">{money(sub)}</span></div>
-      <div className="row"><span className="muted">{T('shipping')}</span><span className="price">{T('shippingCalc')}</span></div>
-      <div className="row big"><span>{T('total')}</span><span className="price">{money(sub)}</span></div>
+      <div className="row"><span className="muted">{T('shipping')}</span><span className="price">{ship > 0 ? money(ship) : T('shipFreeWord')}</span></div>
+      <div className="row big"><span>{T('total')}</span><span className="price">{money(sub + ship)}</span></div>
       <p className="muted cart-vat">{T('vatNote')}</p>
-      <p className="muted cart-vat">{T('shipOnly')}</p>
+      <p className="muted cart-vat">{kit.shipText()}</p>
       <button type="button" className="btn btn-primary" id="checkout" onClick={() => { setDrawerMode('checkout'); }}>{T('checkout')}</button>
     </>
   ) : null;
@@ -215,7 +217,7 @@ function Checkout({ onBack }: { onBack: () => void }) {
       <div className="co-f">
         <label htmlFor="coCountry">{T('fCountry')}</label>
         <select className="field" id="coCountry" name="country" autoComplete="country-name" required defaultValue="Portugal">{SHIP_COUNTRIES.map((c) => <option key={c} value={c}>{countryLabels[COUNTRIES_EN.indexOf(c)]}</option>)}</select>
-        <p className="note" id="coShip" style={{ margin: 0 }}>{T('shipOnly')}</p>
+        <p className="note" id="coShip" style={{ margin: 0 }}>{kit.shipText()}</p>
       </div>
       <div className="co-f">
         <label htmlFor="coNif">{T('fNif')}</label>

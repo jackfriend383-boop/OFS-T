@@ -36,6 +36,12 @@ export function securityHeaders(): Plugin {
         '  Referrer-Policy: strict-origin-when-cross-origin',
         '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()',
         '  Cross-Origin-Opener-Policy: same-origin',
+        // Files in /build/ have a content hash in their name (a changed file gets a new name): cache them for a year. Pictures and other
+        // files in /assets/ keep their names, so they are cached for an hour only (an updated picture shows up soon).
+        '/build/*',
+        '  Cache-Control: public, max-age=31536000, immutable',
+        '/assets/*',
+        '  Cache-Control: public, max-age=3600',
         '',
       ].join('\n'));
     },

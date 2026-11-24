@@ -83,7 +83,7 @@ function bump(m: Map<string, Row>, key: string, label: string, value: number, su
 /* Everything the "Sales reports" tab shows. */
 export function reports(kit: Kit, list: AOrder[], T: Kit['T']) {
   const designs = new Map<string, Row>(), colours = new Map<string, Row>(), countries = new Map<string, Row>(), cities = new Map<string, Row>();
-  const kitType = new Map<string, Row>(), finish = new Map<string, Row>(), model = new Map<string, Row>();
+  const model = new Map<string, Row>();
   const weekday = Array.from({ length: 7 }, () => 0), hour = Array.from({ length: 24 }, () => 0);
   let lines = 0, badges = 0;
   list.forEach((o) => {
@@ -98,14 +98,12 @@ export function reports(kit: Kit, list: AOrder[], T: Kit['T']) {
       if (d && !d.fixed) {
         [c.c1, c.c2].forEach((k) => { const col = kit.COLORS[k]; if (col) bump(colours, k, col.name, it.qty, 0, col.hex); });
       }
-      bump(kitType, c.kit, c.kit === 'both' ? T('bothSides') : T('oneSide'), it.qty);
-      bump(finish, c.finish, c.finish === 'gloss' ? T('gloss') : T('matte'), it.qty);
       bump(model, c.model, kit.modelName(c.model), it.qty);
     });
   });
   return {
     designs: top(designs), colours: top(colours, 12), countries: top(countries), cities: top(cities, 8),
-    kitType: top(kitType), finish: top(finish), model: top(model),
+    model: top(model),
     badgeRate: lines ? badges / lines : 0, lines, weekday, hour,
   };
 }
