@@ -396,9 +396,16 @@ function carLabel(kit: Kit, o: Cfg, full: boolean, ang: Angle = 'side') {
 
 interface CarOpts extends Cfg { uid: string; view: string; live?: boolean; decorative?: boolean; angle?: Angle; night?: boolean }
 /* The front accent strips of a photo, recoloured with the first colour: a rectangle of that colour seen through the strips' mask (Pop only). */
-const lightsTag = (u: string, L: { x: number; y: number; w: number; h: number; mask: string } | undefined, fill: string, on: boolean) => (L && on
-  ? `<mask id="${u}-lt" maskUnits="userSpaceOnUse" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}"><image href="${L.mask}" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" preserveAspectRatio="none"/></mask><rect class="lights" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" fill="${fill}" mask="url(#${u}-lt)"/>`
-  : '');
+/* The strips are grown a little (LIGHT_GROW = 1 photo px all round) so the factory strips' coloured edges never show around our sticker. */
+const LIGHT_GROW = 1;
+const lightsTag = (u: string, L: { x: number; y: number; w: number; h: number; mask: string } | undefined, fill: string, on: boolean) => {
+  if (!L || !on) return '';
+  const p = Math.ceil(LIGHT_GROW) + 2, x = L.x - p, y = L.y - p, w = L.w + 2 * p, h = L.h + 2 * p;
+  return `<filter id="${u}-ltg" filterUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"><feMorphology operator="dilate" radius="${LIGHT_GROW}"/></filter><mask id="${u}-lt" maskUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"><g filter="url(#${u}-ltg)"><image href="${L.mask}" x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" preserveAspectRatio="none"/></g></mask><rect class="lights" x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" mask="url(#${u}-lt)"/>`;
+};
+/* A sticker zone as a mask, grown by `sw` / 2 all round: the sticker slightly overlaps the factory sticker's edge, so no black outline is needed
+   to hide it (real stickers have none). */
+const zoneMask = (id: string, shape: string, sw: number) => `<mask id="${id}" maskUnits="userSpaceOnUse" x="-500" y="-500" width="3000" height="2100">${shape.replace('/>', ` fill="#fff" stroke="#fff" stroke-width="${sw.toFixed(2)}" stroke-linejoin="round"/>`)}</mask>`;
 /* The body seam (glass / C-pillar) that splits the factory square sticker, in side-photo coordinates: the glass's slanted rear edge. */
 const SEAM = [[1229, 355], [1303, 489]];
 const SQ_SHAPE = `x="${SQ_OUTER[0]}" y="${SQ_OUTER[1]}" width="${SQ_OUTER[2]}" height="${SQ_OUTER[3]}" rx="${SQ_OUTER[4]}"`;
@@ -416,27 +423,26 @@ export function carSVG(kit: Kit, o: CarOpts): string {
   // Door sticker: the sheet on the panel (the cut gaps between its parts show the bare panel), its shading and the panel creases in the gaps.
   // The sheet is drawn in Ami 2025 coordinates; the Pop moves it onto its own door zone (doorT).
   const G = A.gapAt, gw = 1.7, dT = M.doorT ? ` transform="${M.doorT}"` : '';
-  const door = Z.door ? `<g clip-path="url(#${u}-door)"><g${dT}>
+  const door = Z.door ? `<g mask="url(#${u}-door)"><g${dT}>
       <rect x="860" y="645" width="300" height="130" fill="${panelOf(o.model, o.trim, 'side')}"/>
       <g class="slot-door"><g>${A.door(a, b, u + 'x')}</g></g>
       <rect x="860" y="645" width="300" height="130" fill="url(#${u}-ds)"/>
       <rect class="shine" x="860" y="645" width="300" height="130" fill="url(#${u}-sh)" ${shine}/>
     </g></g>
-    <rect ${M.door} fill="none" stroke="#0E0F10" stroke-width="2.5"/>${G ? `<g${dT}>
+    ${G ? `<g${dT}>
     <path d="M876 ${G.y.toFixed(1)} H1147" stroke="#060606" stroke-opacity=".8" stroke-width="${gw}"/><path d="M${G.x.toFixed(1)} ${(G.y + 1.5).toFixed(1)} V762" stroke="#060606" stroke-opacity=".8" stroke-width="1.4"/></g>` : ''}` : '';
   const wT = og ? ` transform="${mat(OG_TF)}"` : M.winT ? ` transform="${M.winT}"` : '';
-  const win = Z.win ? `<g clip-path="url(#${u}-win)">
+  const win = Z.win ? `<g mask="url(#${u}-win)">
       ${sq ? '' : `<g${wT}><rect x="1150" y="335" width="160" height="165" fill="#1C2022"/></g>`}
       <g class="slot-win"><g>${winArt(o.model, A, a, b, u + 'x', shape)}</g></g>
       ${sq ? `<path d="M${seam[0].join(' ')} L${seam[1].join(' ')}" stroke="#0A0B0C" stroke-width="2.4" stroke-linecap="butt"/>` : ''}
       <g${wT}><rect x="1150" y="335" width="160" height="165" fill="url(#${u}-ws)"/>
       <rect class="shine" x="1150" y="335" width="145" height="165" fill="url(#${u}-sh)" ${shine}/></g>
-    </g>${sq ? '' : `
-    <path d="${winD}" fill="none" ${M.winStroke} stroke-linejoin="round"/>`}` : '';
+    </g>` : '';
   return `<svg class="car-svg" viewBox="${v.join(' ')}" xmlns="${NS}" ${a11y}>
   <defs>
-    <clipPath id="${u}-door"><rect ${M.door}/></clipPath>
-    <clipPath id="${u}-win">${sq ? (og ? `<path d="${OG_SQ_D}"/>` : `<rect ${SQ_SHAPE}/>`) : `<path d="${winD}"/>`}</clipPath>
+    ${zoneMask(u + '-door', `<rect ${M.door}/>`, 2.5)}
+    ${zoneMask(u + '-win', sq ? (og ? `<path d="${OG_SQ_D}"/>` : `<rect ${SQ_SHAPE}/>`) : `<path d="${winD}"/>`, sq ? 0 : M === MODEL_DEFS.qs ? 3 : 2)}
     <clipPath id="${u}-badge"><rect ${M.badge}/></clipPath>
     <linearGradient id="${u}-ds" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></linearGradient>
     <linearGradient id="${u}-ws" x1="0" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>
@@ -475,24 +481,22 @@ function carSVGAt(kit: Kit, o: CarOpts, ang: Angle): string {
   const line = (x0: number, y0: number, x1: number, y1: number, st: string) => { const p = hp(z.Hd, x0, y0), q2 = hp(z.Hd, x1, y1); return `<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)} L${q2[0].toFixed(1)} ${q2[1].toFixed(1)}" ${st}/>`; };
   const sw = (n: number) => (n * z.ds).toFixed(2); // stroke widths scale with the door; the outlines keep a minimum so no factory graphic edge shows
   const G = A.gapAt, wb = S.winBox, winZone = sq ? z.sq : og ? z.winG : z.win, SM = og ? OG_SEAM : SEAM, ringD = og ? mapPath(z.Hw, OG_RING_PTS) : '';
-  const door = Z.door ? `<g clip-path="url(#${u}-door)">
+  const door = Z.door ? `<g mask="url(#${u}-door)">
       <path d="${z.door}" fill="${panelOf(o.model, o.trim, ang)}"/>
       ${D.body}
       <g transform="${mat(z.dA)}"><rect x="860" y="645" width="300" height="130" fill="url(#${u}-ds)"/><rect class="shine" x="860" y="645" width="300" height="130" fill="url(#${u}-sh)" ${shine}/></g>
     </g>
-    <path d="${z.door}" fill="none" stroke="#0E0F10" stroke-width="${Math.max(3.2 * z.ds, 2.8).toFixed(2)}" stroke-linejoin="round"/>
     ${G ? line(876, G.y, 1147, G.y, `stroke="#060606" stroke-opacity=".8" stroke-width="${sw(1.7)}"`) + line(G.x, G.y + 1.5, G.x, 762, `stroke="#060606" stroke-opacity=".8" stroke-width="${sw(1.4)}"`) : ''}` : '';
-  const win = Z.win ? `<g clip-path="url(#${u}-win)">
+  const win = Z.win ? `<g mask="url(#${u}-win)">
       ${sq ? '' : `<path d="${og ? z.winG : z.win}" fill="#1C2022"/>`}
       ${W.body}
       ${sq ? (() => { const p = hp(z.Hw, SM[0][0], SM[0][1]), q2 = hp(z.Hw, SM[1][0], SM[1][1]); return `<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)} L${q2[0].toFixed(1)} ${q2[1].toFixed(1)}" stroke="#0A0B0C" stroke-width="${Math.max(2.4 * z.ws, 1.6).toFixed(2)}"/>`; })() : ''}
       <g transform="${mat(z.wA)}"><rect x="${wb[0]}" y="${wb[1]}" width="${wb[2]}" height="${wb[3]}" fill="url(#${u}-ws)"/><rect class="shine" x="${wb[0]}" y="${wb[1]}" width="${wb[2] * 0.9}" height="${wb[3]}" fill="url(#${u}-sh)" ${shine}/></g>
-    </g>${sq ? '' : `
-    <path d="${og ? z.winG : z.win}" fill="none" stroke="#0A0B0C" stroke-width="${Math.max(4.5 * z.ws, 3).toFixed(2)}" stroke-linejoin="round"/>`}` : '';
+    </g>` : '';
   return `${head}
   <defs>
-    <clipPath id="${u}-door"><path d="${z.door}"/></clipPath>
-    <clipPath id="${u}-win"><path d="${winZone}"/></clipPath>
+    ${zoneMask(u + '-door', `<path d="${z.door}"/>`, Math.max(3.2 * z.ds, 2.8))}
+    ${zoneMask(u + '-win', `<path d="${winZone}"/>`, sq ? 0 : Math.max(4.5 * z.ws, 3))}
     <clipPath id="${u}-badge"><path d="${z.badge || z.door}"/></clipPath>
     <linearGradient id="${u}-ds" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></linearGradient>
     <linearGradient id="${u}-ws" x1="0" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>
