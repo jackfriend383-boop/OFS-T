@@ -2,6 +2,7 @@
    Replaces core.js. The cart is shared between languages and tabs, exactly as before (same storage key). */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { cleanReviews, type Review } from './lib/reviews';
 import { cleanRemoteDesigns, cleanRemotePrices, getKit, setRemoteDesigns, setRemotePrices, langOfPath, pageOfPath, pagePath, type Cfg, type CartItem, type Kit, type Lang, type PageKey } from './lib/kit';
 import { registerRemoteArt } from './lib/car';
 import { makeBackend, type Backend, type Customer } from './lib/backend';
@@ -12,6 +13,8 @@ export type LiveChannel = 'live' | 'cartLive' | 'sresCount';
 
 interface Ctx {
   lang: Lang; kit: Kit; T: Kit['T']; backend: Backend;
+  /** Customer reviews the owner added in the admin (empty until loaded, or if there are none). */
+  reviews: Review[];
   /** Router path of a page in the current language (always with a trailing slash). */
   to: (key: PageKey | string, query?: string) => string;
   /** The signed-in customer (null for guests). `ready` is false until the stored session has been checked. */
@@ -136,6 +139,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })();
     return () => { live = false; };
   }, []);
+  /* Customer reviews the owner added in the admin: fetched once; none if the server can't be reached. */
+  const [reviews, setReviews] = useState<Review[]>([]);
+  useEffect(() => {
+    let live = true;
+    if (!backendRef0.current.configured) return;
+    backendRef0.current.reviewsPublic().then((r) => { if (live) setReviews(cleanReviews(r)); });
+    return () => { live = false; };
+  }, []);
   const commit = useCallback((next: CartItem[]) => { setCart(next); store.set(CART_KEY, JSON.stringify(next)); }, []);
   const cartRef = useRef(cart); cartRef.current = cart;
 
@@ -212,7 +223,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback((c0: Cfg) => {
     const k = kitRef.current, c = k.sanitizeCfg(c0); if (!c) return false;
-    if (!signedIn()) { sendToSignIn(c); return false; }
     putInCart(c);
     showToast(k.T('addedToCart', { name: k.D(c.design)!.name }));
     const b = document.getElementById('cartCount');
@@ -257,9 +267,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const onEditConfig = useRef<((c: Cfg) => void) | null>(null);
 
   const value = useMemo<Ctx>(() => ({
-    lang, kit, T, backend, to, account, setCustomer, signOutCustomer, cart, cartCount: cart.reduce((s, i) => s + i.qty, 0), cartReady, addToCart, goSignIn, finishPendingAdd, changeQty, removeItem, clearCart,
+    lang, kit, T, backend, reviews, to, account, setCustomer, signOutCustomer, cart, cartCount: cart.reduce((s, i) => s + i.qty, 0), cartReady, addToCart, goSignIn, finishPendingAdd, changeQty, removeItem, clearCart,
     modal, openModal, closeModal, drawerMode, setDrawerMode, toast, hideToast, live, announce, cfgProvider, onPickDesign, onEditConfig, restoreRef,
-  }), [lang, kit, T, backend, to, account, setCustomer, signOutCustomer, cart, cartReady, addToCart, goSignIn, finishPendingAdd, changeQty, removeItem, clearCart, modal, openModal, closeModal, drawerMode, toast, hideToast, live, announce]);
+  }), [lang, kit, T, backend, reviews, to, account, setCustomer, signOutCustomer, cart, cartReady, addToCart, goSignIn, finishPendingAdd, changeQty, removeItem, clearCart, modal, openModal, closeModal, drawerMode, toast, hideToast, live, announce]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

@@ -115,7 +115,7 @@ const FIELDS = [
 function Checkout({ onBack }: { onBack: () => void }) {
   const { kit, T, to, cart, backend, account, setCustomer, goSignIn } = useApp();
   // Only signed-in customers can check out (the Worker refuses guests too).
-  const needSignIn = backend.configured && account.ready && !account.user;
+  const needSignIn = false; // guests can check out: the Worker creates their account from the email they type, after the payment is confirmed
   const u = account.user; // signed-in customer: checkout starts pre-filled from their saved details
   const saved: Record<string, string> = { coName: u?.name || '', coEmail: u?.email || '', coAddr: u?.street || '', coPost: u?.postcode || '', coCity: u?.city || '' };
   const [errs, setErrs] = useState<Record<string, string>>({});

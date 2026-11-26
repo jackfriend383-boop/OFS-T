@@ -3,7 +3,7 @@
 import { useId } from 'react';
 import { useApp } from '../../state';
 import { DASH } from './copy';
-import { DEFAULT_WIN_SHAPE, PIECES, WIN_SHAPES, normPieces, normWinShape, type Cfg, type Piece } from '../../lib/kit';
+import { DEFAULT_WIN_SHAPE, PIECES, TRIMS, WIN_SHAPES, normPieces, normWinShape, pieceModel, type Cfg, type Piece } from '../../lib/kit';
 
 /* A kit config for a design with the design's own colours. */
 export const baseCfg = (kit: ReturnType<typeof useApp>['kit'], design: string): Cfg => kit.defaultCfg(kit.D(design) || kit.DESIGNS[0]);
@@ -13,7 +13,7 @@ export default function KitFields({ cfg, onChange }: { cfg: Cfg; onChange: (c: C
   const d = DASH[lang], id = useId();
   const design = kit.D(cfg.design), fixed = !!design?.fixed;
   const keys = Object.keys(kit.COLORS);
-  const classic = keys.filter((k) => !kit.COLORS[k].metal), metal = keys.filter((k) => kit.COLORS[k].metal);
+  
   const parts: Piece[] = PIECES;
   const colourSelect = (field: 'c1' | 'c2', label: string) => (
     <div className="co-f">
@@ -21,15 +21,15 @@ export default function KitFields({ cfg, onChange }: { cfg: Cfg; onChange: (c: C
       <div className="kf-colour">
         <span className="kf-sw" style={{ background: kit.COLORS[cfg[field]]?.hex }} aria-hidden="true" />
         <select className="field" id={`${id}-${field}`} value={cfg[field]} disabled={fixed} onChange={(e) => onChange({ ...cfg, [field]: e.target.value })}>
-          <optgroup label={d.mfClassic}>{classic.map((k) => <option key={k} value={k}>{kit.COLORS[k].name}</option>)}</optgroup>
-          <optgroup label={d.mfMetal}>{metal.map((k) => <option key={k} value={k}>{kit.COLORS[k].name}</option>)}</optgroup>
+          {keys.map((k) => <option key={k} value={k}>{kit.COLORS[k].name}</option>)}
         </select>
       </div>
     </div>
   );
-  const setModel = (m: 'qs' | 'pop') => onChange({ ...cfg, model: m, winShape: DEFAULT_WIN_SHAPE[m], numberOn: m === 'pop' ? false : cfg.numberOn, pieces: normPieces(cfg.pieces, m, design?.price ?? 0) });
+  const setVariant = (m: 'qs' | 'pop', trim: string) => { const pm = pieceModel(m, trim); onChange({ ...cfg, model: m, trim, winShape: normWinShape(cfg.winShape, pm), numberOn: m === 'pop' ? false : cfg.numberOn, pieces: normPieces(cfg.pieces, pm, design?.price ?? 0) }); };
+  const setModel = (m: 'qs' | 'pop') => { const pm = pieceModel(m, TRIMS[m][0]); onChange({ ...cfg, model: m, trim: TRIMS[m][0], winShape: DEFAULT_WIN_SHAPE[pm], numberOn: m === 'pop' ? false : cfg.numberOn, pieces: normPieces(cfg.pieces, pm, design?.price ?? 0) }); };
   const setDesign = (did: string) => { const b = baseCfg(kit, did); onChange({ ...cfg, design: did, c1: b.c1, c2: b.c2 }); };
-  const shapes = WIN_SHAPES[cfg.model];
+  const pm = pieceModel(cfg.model, cfg.trim), shapes = WIN_SHAPES[pm];
   return (
     <div className="kf">
       <div className="co-f">
@@ -42,11 +42,19 @@ export default function KitFields({ cfg, onChange }: { cfg: Cfg; onChange: (c: C
           <option value="qs">{kit.modelName('qs')}</option><option value="pop">{kit.modelName('pop')}</option>
         </select>
       </div>
+      {cfg.model === 'pop' && (
+        <div className="co-f">
+          <label htmlFor={`-trim`}>Variant</label>
+          <select className="field" id={`-trim`} value={cfg.trim} onChange={(e) => setVariant('pop', e.target.value)}>
+            <option value="base">Pop</option><option value="blue">Blue</option><option value="ogbrown">Brown</option>
+          </select>
+        </div>
+      )}
       {colourSelect('c1', d.mfC1)}
       {colourSelect('c2', d.mfC2)}
       <div className="co-f">
         <label htmlFor={`${id}-win`}>{d.mfWin}</label>
-        <select className="field" id={`${id}-win`} value={normWinShape(cfg.winShape, cfg.model)} disabled={shapes.length < 2} onChange={(e) => onChange({ ...cfg, winShape: e.target.value as Cfg['winShape'] })}>
+        <select className="field" id={`${id}-win`} value={normWinShape(cfg.winShape, pm)} disabled={shapes.length < 2} onChange={(e) => onChange({ ...cfg, winShape: e.target.value as Cfg['winShape'] })}>
           {shapes.map((s) => <option key={s} value={s}>{T('winShape_' + s)}</option>)}
         </select>
       </div>

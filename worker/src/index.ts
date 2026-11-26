@@ -1,9 +1,10 @@
 import { priceItem, isPersonalised, type PricedItem } from './pricing';
 import { DesignError, adminDelete, adminList, adminMaster, adminSave, designArt, pricingDesigns, publicList } from './designs';
 import { PriceError, loadPrices, savePrices, shippingCents, type Prices } from './prices';
+import { ReviewError, addReview, deleteReview, listReviews, saveReview } from './reviews';
 import { SettingsError, deleteSlot, publicSettings, putImage, putSettings, slotImage } from './settings';
 import { createCheckoutSession, expireCheckoutSession, verifyWebhook } from './stripe';
-import { sendMail, signInEmail, paidEmail, invoiceEmail, shippedEmail, newOrderEmail, adminAlertEmail, type MailAttachment } from './mail';
+import { sendMail, signInEmail, paidEmail, invoiceEmail, accountCreatedEmail, shippedEmail, newOrderEmail, adminAlertEmail, type MailAttachment } from './mail';
 
 /* OFS/T order API (Cloudflare Worker + D1). The only code that touches the database.
    Public:  POST   /api/checkout               (signed-in customers only) validate + price an order on the server, keep it as a
@@ -218,8 +219,7 @@ const STALE_AWAITING = '-30 days';
    hand back its URL. Nothing is written to `orders` until Stripe's signed webhook says it was paid (see stripeWebhook). */
 async function startCheckout(req: Request, env: Env) {
   if (!env.STRIPE_SECRET_KEY || !env.SITE_URL) throw new HttpError(503, 'not_configured');
-  const uid = await customerId(req, env);
-  if (!uid) throw new HttpError(401, 'sign_in_required'); // only signed-in customers can buy
+  const uid = await customerId(req, env); // null = guest checkout: the account is created from the buyer's email once the payment is confirmed
   const prices = await loadPrices(env); // the owner's price list (admin "Prices" tab) over the defaults in designs.json
   const o = validateOrder(await readJson(req), await pricingDesigns(env), prices); // prices come from the built-in list + the designs table
   // Shipping (0 = free) is added to what is charged, as its own line on Stripe; the stored lines stay the kits only.
@@ -227,15 +227,23 @@ async function startCheckout(req: Request, env: Env) {
   o.total += shipping;
   { const c = JSON.parse(o.customer); if (!deliverable(c.country, c.postcode)) throw new HttpError(400, 'region_not_served'); } // only São Miguel for now
   // Receipts and invoices go to the account's verified email, never to an address typed at checkout (a typo would leak the order).
-  const acct = await env.DB.prepare('SELECT email FROM users WHERE id = ?1').bind(uid).first<{ email: string }>();
-  if (!acct) throw new HttpError(401, 'session_expired');
-  o.email = acct.email;
-  o.customer = JSON.stringify({ ...JSON.parse(o.customer), email: acct.email });
+  if (uid) {
+    const acct = await env.DB.prepare('SELECT email FROM users WHERE id = ?1').bind(uid).first<{ email: string }>();
+    if (!acct) throw new HttpError(401, 'session_expired');
+    o.email = acct.email;
+    o.customer = JSON.stringify({ ...JSON.parse(o.customer), email: acct.email });
+  } else {
+    const email = o.email.trim().toLowerCase();
+    o.email = email;
+    o.customer = JSON.stringify({ ...JSON.parse(o.customer), email });
+  }
   // Per-visitor and per-account limits stop one person from filling the shop-wide cap and blocking everyone else.
-  const { n: mine } = (await env.DB.prepare(
-    "SELECT count(*) AS n FROM pending_checkouts WHERE user_id = ?1 AND awaiting_payment = 0 AND created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-30 minutes')",
-  ).bind(uid).first<{ n: number }>())!;
-  if (mine >= MAX_UNPAID_PER_ACCOUNT_30_MIN) throw new HttpError(429, 'rate_limited');
+  if (uid) {
+    const { n: mine } = (await env.DB.prepare(
+      "SELECT count(*) AS n FROM pending_checkouts WHERE user_id = ?1 AND awaiting_payment = 0 AND created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-30 minutes')",
+    ).bind(uid).first<{ n: number }>())!;
+    if (mine >= MAX_UNPAID_PER_ACCOUNT_30_MIN) throw new HttpError(429, 'rate_limited');
+  }
   if (!(await allowHit(env, 'checkout:' + clientIp(req), 10, MAX_CHECKOUTS_PER_IP_10_MIN))) throw new HttpError(429, 'rate_limited');
   // Opportunistic clean-up of abandoned drafts, then the global flood cap.
   await env.DB.prepare(
@@ -271,10 +279,9 @@ async function startCheckout(req: Request, env: Env) {
    can never be lost if the customer actually paid in another tab. Answers ok either way (nothing to reveal). */
 async function cancelCheckout(req: Request, env: Env, id: string) {
   if (!UUID.test(id)) throw new HttpError(400, 'invalid');
-  const uid = await customerId(req, env); // only the customer who started the checkout can cancel it
-  if (!uid) return { ok: true };
-  const row = await env.DB.prepare('SELECT stripe_session_id FROM pending_checkouts WHERE id = ?1 AND awaiting_payment = 0 AND user_id = ?2')
-    .bind(id.toLowerCase(), uid).first<{ stripe_session_id: string | null }>();
+  const uid = await customerId(req, env); // a signed-in customer's draft can only be cancelled by that customer; a guest's draft by whoever holds its (unguessable) id
+  const row = await env.DB.prepare('SELECT stripe_session_id FROM pending_checkouts WHERE id = ?1 AND awaiting_payment = 0 AND (user_id IS NULL OR user_id = ?2)')
+    .bind(id.toLowerCase(), uid ?? '').first<{ stripe_session_id: string | null }>();
   if (!row) return { ok: true };
   const status = row.stripe_session_id && env.STRIPE_SECRET_KEY ? await expireCheckoutSession(env.STRIPE_SECRET_KEY, row.stripe_session_id) : null;
   if (status === 'expired' || !row.stripe_session_id) {
@@ -296,7 +303,38 @@ async function orderStatus(env: Env, id: string) {
 }
 
 /* Payment confirmation email. Best effort: a mail problem must never make the webhook fail (the order is already paid). */
+/* A guest's paid order gets an account made from the email used in the purchase (or is linked to the account that already has it),
+   and a new account gets an email with a sign-in link valid for 7 days. Best effort: never blocks the order or the payment email. */
+async function attachGuestAccount(env: Env, orderId: string): Promise<void> {
+  try {
+    const o = await env.DB.prepare('SELECT customer, lang, user_id FROM orders WHERE id = ?1').bind(orderId).first<{ customer: string; lang: string | null; user_id: string | null }>();
+    if (!o || o.user_id) return;
+    const c = JSON.parse(o.customer), email = String(c.email || '').trim().toLowerCase();
+    if (!EMAIL.test(email) || email.length > 254) return;
+    const lang: 'pt' | 'en' = o.lang === 'en' ? 'en' : 'pt';
+    let user = await env.DB.prepare('SELECT id FROM users WHERE email = ?1').bind(email).first<{ id: string }>();
+    let created = false;
+    if (!user) {
+      const id = crypto.randomUUID();
+      const lim = (v: unknown, n: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null);
+      await env.DB.prepare('INSERT OR IGNORE INTO users (id, email, name, street, postcode, city, country, lang) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)')
+        .bind(id, email, lim(c.name, 200), lim(c.street, 300), lim(c.postcode, 20), lim(c.city, 120), lim(c.country, 60), lang).run();
+      user = await env.DB.prepare('SELECT id FROM users WHERE email = ?1').bind(email).first<{ id: string }>();
+      created = true;
+    }
+    if (!user) return;
+    await env.DB.prepare('UPDATE orders SET user_id = ?2 WHERE id = ?1 AND user_id IS NULL').bind(orderId, user.id).run();
+    if (!created || !env.SITE_URL) return;
+    const token = newToken();
+    await env.DB.prepare(`INSERT INTO login_links (token_hash, email, expires_at) VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+7 days'))`).bind(hex(await sha256(token)), email).run();
+    const site = env.SITE_URL.trim().replace(/\/$/, '');
+    const m = accountCreatedEmail(lang, `${site}${lang === 'en' ? '/en' : ''}/account/#token=${token}`);
+    await sendMail(env, email, m.subject, m.html, m.text);
+  } catch (e: any) { console.error('guest account not created', e && e.message); }
+}
+
 async function notifyPaid(env: Env, orderId: string): Promise<string | null> {
+  await attachGuestAccount(env, orderId);
   try {
     const o = await env.DB.prepare('SELECT customer, items, COALESCE(paid_cents, total_cents) AS total_cents, lang, consent_personalised FROM orders WHERE id = ?1').bind(orderId).first<any>();
     if (!o) return 'not_found';
@@ -785,6 +823,8 @@ export default {
       }
       // Price list (pairs, badge, shipping) as the owner set it in the admin: the site shows exactly what checkout charges.
       if (path === '/api/prices' && req.method === 'GET') return respond(await loadPrices(env), 200, req, env, { 'Cache-Control': 'public, max-age=30' });
+      // Customer reviews the owner added in the admin "Reviews" tab (home page + configurator).
+      if (path === '/api/reviews' && req.method === 'GET') return respond(await listReviews(env), 200, req, env, { 'Cache-Control': 'public, max-age=60' });
       if (path === '/api/checkout' && req.method === 'POST') return respond(await startCheckout(req, env), 201, req, env);
       const cancel = /^\/api\/checkout\/([^/]+)\/cancel$/.exec(path);
       if (cancel && req.method === 'POST') return respond(await cancelCheckout(req, env, cancel[1]), 200, req, env);
@@ -809,6 +849,11 @@ export default {
         if (dzm && req.method === 'GET') return respond({ master: await adminMaster(env, dzm[1]) }, 200, req, env);
         if (path === '/api/admin/prices' && req.method === 'GET') return respond(await loadPrices(env), 200, req, env);
         if (path === '/api/admin/prices' && req.method === 'PUT') return respond(await savePrices(env, await readJson(req, 2_000)), 200, req, env);
+        if (path === '/api/admin/reviews' && req.method === 'GET') return respond(await listReviews(env), 200, req, env);
+        if (path === '/api/admin/reviews' && req.method === 'POST') return respond(await addReview(env, await readJson(req, 250_000)), 201, req, env);
+        const rv = /^\/api\/admin\/reviews\/(\d{1,9})$/.exec(path);
+        if (rv && req.method === 'PUT') return respond(await saveReview(env, Number(rv[1]), await readJson(req, 250_000)), 200, req, env);
+        if (rv && req.method === 'DELETE') return respond(await deleteReview(env, Number(rv[1])), 200, req, env);
         const ss = /^\/api\/admin\/site-settings\/([A-Za-z]{4,12})$/.exec(path);
         if (ss && req.method === 'PUT') return respond(await putSettings(env, ss[1], await readJson(req, 2_000)), 200, req, env);
         if (ss && req.method === 'DELETE') return respond(await deleteSlot(env, ss[1]), 200, req, env);
@@ -821,7 +866,7 @@ export default {
       }
       throw new HttpError(404, 'not_found');
     } catch (e: any) {
-      if (e instanceof HttpError || e instanceof DesignError || e instanceof SettingsError || e instanceof PriceError) return respond({ error: e.code }, e.status, req, env);
+      if (e instanceof HttpError || e instanceof DesignError || e instanceof SettingsError || e instanceof PriceError || e instanceof ReviewError) return respond({ error: e.code }, e.status, req, env);
       console.error('unhandled', e && e.message);
       return respond({ error: 'server' }, 500, req, env);
     }

@@ -1118,3 +1118,23 @@ html.lite .stage-ctrl,html.lite .ctrl-group{backdrop-filter:none;-webkit-backdro
 /* Colourway of a shop / home card: two colour dots before its name. */
 .dc-sw{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:3px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgba(128,128,128,.45)}
 .dc-sw + .dc-sw{margin-right:7px}
+
+/* Home hero tagline ("Eleva o estilo do teu Ami"): big and readable instead of a small label. */
+.hero-copy > .eyebrow{font-size:clamp(1.25rem,2.3vw,1.95rem);font-weight:600;line-height:1.2;letter-spacing:-.015em;color:#fff;text-shadow:0 1px 14px rgba(0,0,0,.55),0 0 2px rgba(0,0,0,.35)}
+
+/* Info and legal pages (about, terms, privacy, refunds, cookies): heading and text column centred on the page. */
+.view:is([data-view="terms"],[data-view="privacy"],[data-view="refunds"],[data-view="cookies"],[data-view="about"]) .page-head{max-width:calc(1000px + 2 * var(--gutter));margin-inline:auto;justify-items:center;text-align:center}
+.view:is([data-view="terms"],[data-view="privacy"],[data-view="refunds"],[data-view="cookies"]) .legal{margin-inline:auto;width:100%}
+.view[data-view="about"] > .section{max-width:calc(1100px + 2 * var(--gutter));margin-inline:auto;width:100%}
+
+/* Customer reviews (home page + configurator) */
+.reviews{padding-top:0}
+.rv-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.rv-card{background:var(--raise);border-radius:var(--r-lg);padding:22px;display:flex}
+.rv-fig{margin:0;display:grid;gap:12px;align-content:start;width:100%}
+.rv-photo{width:64px;height:64px;border-radius:50%;object-fit:cover;background:var(--line)}
+.rv-stars{display:inline-flex;gap:3px}
+.rv-stars svg{width:18px;height:18px;fill:none;stroke:var(--line-2);stroke-width:1.5;stroke-linejoin:round}
+.rv-stars svg.on{fill:#F5B301;stroke:#F5B301}
+.rv-text{margin:0;color:var(--text,inherit);line-height:1.5;overflow-wrap:anywhere}
+.rv-name{font-weight:600;font-size:15px;color:var(--muted)}

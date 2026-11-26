@@ -137,7 +137,7 @@ export function makeBackend(kit: Kit) {
   const clip = (v: unknown, n: number) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n);
   /* Sends the cart and form to the Worker, which re-validates every kit, prices it itself (nothing price-related is trusted from
      here) and opens a Stripe Checkout Session. Returns the Stripe-hosted payment page to send the customer to.
-     Only signed-in customers can check out: the Worker answers 'sign_in_required' otherwise. */
+     Guests can check out too: an account is created for them after payment. */
   async function startCheckout(order: { customer: Record<string, string>; items: { cfg: Cfg; qty: number }[]; consentTerms: boolean; consentPersonalised: boolean | null }) {
     if (!backendConfigured) throw new BackendError(MSG.config, 'not_configured');
     const c = (order && order.customer) || {};
@@ -146,8 +146,7 @@ export function makeBackend(kit: Kit) {
     // NIF (tax number) is optional; only sent when filled in, and it must be valid.
     const nif = clip(c.nif, 20).replace(/\s+/g, '');
     if (nif) { if (!validNif(nif)) throw new BackendError(MSG.nif, 'invalid_nif'); customer.nif = nif; }
-    const session = ls.get();
-    if (!session) throw new BackendError(MSG.signIn, 'sign_in_required');
+    const session = ls.get(); // null = guest checkout (the account is created from this email once the payment is confirmed)
     const items: { cfg: Cfg; qty: number }[] = [];
     (Array.isArray(order.items) ? order.items : []).slice(0, 50).forEach((i) => {
       const cfg = i && kit.sanitizeCfg(i.cfg), qty = Math.min(99, Math.floor(+(i && i.qty)));
@@ -158,7 +157,7 @@ export function makeBackend(kit: Kit) {
     const body = { customer, items, lang: kit.lang, consent_terms: true, consent_personalised: order.consentPersonalised === true ? true : null };
     // The order is attached to the signed-in customer's account. An expired token means signing in again.
     let r: any;
-    try { r = await request('/api/checkout', { method: 'POST', body, token: session.access_token }); }
+    try { r = await request('/api/checkout', { method: 'POST', body, token: session ? session.access_token : undefined }); }
     catch (e: any) { if (e.code === 'sign_in_required' || e.code === 'session_expired') ls.clear(); throw e; }
     // Only ever follow a link to Stripe's own checkout domain.
     let url: URL | null = null;
@@ -270,6 +269,23 @@ export function makeBackend(kit: Kit) {
     if (!r || typeof r !== 'object') throw new BackendError(MSG.generic, 'bad_response');
     return r as Record<string, number>;
   }
+  /* ---------- Customer reviews (added in the admin "Reviews" tab) ---------- */
+  /* Public list. Failing is fine: the site then simply shows no reviews. */
+  async function reviewsPublic(): Promise<unknown> {
+    try { return await request('/api/reviews'); } catch { return null; }
+  }
+  async function listReviews(): Promise<unknown> { return authed('/api/admin/reviews'); }
+  /* body: { name, rating (0-5), comment, photo? (data URL) } */
+  async function addReview(body: Record<string, unknown>): Promise<unknown> { return authed('/api/admin/reviews', { method: 'POST', body }); }
+  /* body: any of { name, rating, comment, photo (data URL, or null to remove it) } */
+  async function saveReview(id: number, body: Record<string, unknown>): Promise<unknown> {
+    if (!Number.isInteger(id) || id < 1) throw new BackendError(MSG.invalid, 'invalid');
+    return authed('/api/admin/reviews/' + id, { method: 'PUT', body });
+  }
+  async function deleteReview(id: number): Promise<unknown> {
+    if (!Number.isInteger(id) || id < 1) throw new BackendError(MSG.invalid, 'invalid');
+    return authed('/api/admin/reviews/' + id, { method: 'DELETE' });
+  }
   /* Preview picture of an extra design as a blob: address (the page may only load images from itself, data: and blob:). */
   async function designArtBlob(id: string, w: 1000 | 1600, ver: number): Promise<string> {
     if (!backendConfigured || !/^[a-z0-9][a-z0-9-]{1,38}$/.test(id)) throw new BackendError(MSG.invalid, 'invalid');
@@ -295,6 +311,6 @@ export function makeBackend(kit: Kit) {
     if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
     return authed('/api/admin/designs/' + id, { method: 'DELETE' });
   }
-  return { configured: backendConfigured, pricesPublic, getPrices, savePrices, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, createOrder, setStatus };
+  return { configured: backendConfigured, pricesPublic, getPrices, savePrices, reviewsPublic, listReviews, addReview, saveReview, deleteReview, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, createOrder, setStatus };
 }
 export type Backend = ReturnType<typeof makeBackend>;

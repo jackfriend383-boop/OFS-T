@@ -45,7 +45,7 @@
   "pages": {
     "home": {"title": "{brand} — Kits de autocolantes para o Citroën Ami", "description": "Kits de autocolantes em vinil pré-cortados para a porta e o vidro lateral traseiro do Citroën Ami. Escolhe um design, define duas cores e vê o kit no teu carro antes de encomendar."},
     "shop": {"title": "Loja: todos os designs — {brand}", "crumb": "Loja", "description": "Descobre os designs de kits de autocolantes OFS/T para o Citroën Ami, a começar pelo camuflado de chamas exclusivo em quatro combinações de cores. Kit completo a partir de {min}, para os dois lados do carro."},
-    "configurator": {"title": "Configurador: cria o kit do teu Ami — {brand}", "crumb": "Configurador", "description": "Cria o teu kit de autocolantes para o Citroën Ami em direto, num Ami 2025 ou Ami Pop: escolhe o design, duas cores de vinil, o formato do autocolante do vidro e kit completo ou pares de peças individuais, e adiciona-o ao carrinho."},
+    "configurator": {"title": "Configurador: cria o kit do teu Ami — {brand}", "crumb": "Configurador", "description": "Cria o teu kit de autocolantes para o Citroën Ami em direto, num Ami 2025 ou Ami OG: escolhe o design, duas cores de vinil, o formato do autocolante do vidro e kit completo ou pares de peças individuais, e adiciona-o ao carrinho."},
     "about": {"title": "Sobre nós e perguntas frequentes — {brand}", "crumb": "Sobre nós e perguntas frequentes", "description": "Quem faz os kits de autocolantes OFS/T para o Citroën Ami, como são cortados e respostas sobre aplicação, lavagens, remoção e compatibilidade."},
     "privacy": {"title": "Política de privacidade — {brand}", "crumb": "Política de privacidade", "description": "Como a OFS/T trata os dados pessoais na sua loja online de kits de autocolantes para o Citroën Ami."},
     "terms": {"title": "Condições de venda — {brand}", "crumb": "Condições de venda", "description": "Condições de venda dos kits de autocolantes OFS/T para o Citroën Ami."},
@@ -81,7 +81,7 @@
     "pages": [
       ["home", "Início", "apresentação, designs populares, como encomendar e aplicar, carros compatíveis"],
       ["shop", "Loja", "os designs, com categoria e preço do kit completo"],
-      ["configurator", "Configurador", "pré-visualização em direto no Ami 2025 ou Ami Pop; design, cores, peças e formato do autocolante do vidro. Ligação direta a um design com ?design=<id> (acrescenta &model=pop para o Ami Pop)"],
+      ["configurator", "Configurador", "pré-visualização em direto no Ami 2025 ou Ami OG; design, cores, peças e formato do autocolante do vidro. Ligação direta a um design com ?design=<id> (acrescenta &model=pop para o Ami OG)"],
       ["about", "Sobre nós e perguntas frequentes", "quem faz os kits; tempo de aplicação, lavagens, remoção, compatibilidade, designs personalizados"]
     ],
     "legal": [
@@ -106,7 +106,7 @@
   "colors": {
     "volt": "Lima", "ice": "Gelo", "ember": "Brasa", "violet": "Violeta", "rose": "Rosa", "gold": "Dourado", "chalk": "Giz",
     "stone": "Pedra", "graphite": "Grafite", "flame": "Vermelho Chama", "crimson": "Carmesim", "azure": "Azul Celeste", "cobalt": "Cobalto",
-    "black": "Preto", "snow": "Branco Puro", "mint": "Menta", "racing": "Verde Corrida", "purple": "Roxo Real", "sun": "Amarelo Sol", "teal": "Azul Petróleo", "burgundy": "Bordeaux", "sand": "Areia", "silver": "Prateado", "copper": "Cobre", "midnight": "Azul Noite Metalizado", "gunmetal": "Cinza Metal", "rosegold": "Ouro Rosa", "pearl": "Branco Pérola"
+    "black": "Preto", "snow": "Branco Puro", "mint": "Menta", "racing": "Verde Corrida", "purple": "Roxo Real", "sun": "Amarelo Sol", "teal": "Azul Petróleo", "burgundy": "Bordeaux", "sand": "Areia", "silver": "Prateado", "copper": "Cobre", "midnight": "Azul Noite", "gunmetal": "Cinza Metal", "rosegold": "Ouro Rosa", "pearl": "Branco Pérola"
   },
   "tags": {
     "flame-red": "Chamas em dois tons, recortes a preto",
@@ -170,7 +170,7 @@
     "privacyLink": "política de privacidade",
     "persCheck": "Compreendo que os kits personalizados são feitos de acordo com as minhas escolhas e não podem ser devolvidos por mudança de opinião (os kits com defeito estão sempre cobertos).",
     "newTab": " (abre num novo separador)",
-    "noPayment": "Vais pagar com segurança no passo seguinte, através da Stripe. Nunca vemos os dados do teu cartão.",
+    "noPayment": "Vais pagar com segurança no passo seguinte, através da Stripe. Nunca vemos os dados do teu cartão. Não precisas de conta: criamos uma automaticamente com este email depois do pagamento.",
     "notSetUp": "As encomendas online ainda não estão ativas — envia-nos um email para {email}.",
     "ourContact": "o nosso endereço de contacto",
     "emailPlaceholder": "[EMAIL DE CONTACTO]",
@@ -287,7 +287,7 @@
     "beDenied": "Esta conta não tem permissão para fazer isso.",
     "beGeneric": "Ocorreu um erro. Tenta novamente.",
     "bePayment": "Não foi possível abrir a página de pagamento. Tenta novamente dentro de instantes.",
-    "orderEyebrow": "A tua encomenda", "orderChecking": "A verificar o pagamento…", "orderPaidH": "Pagamento recebido", "orderPaidText": "Obrigado! Recebemos a tua encomenda e enviaremos um email para o endereço indicado quando o kit seguir.",
+    "orderEyebrow": "A tua encomenda", "orderChecking": "A verificar o pagamento…", "orderPaidH": "Pagamento recebido", "orderPaidText": "Obrigado! Recebemos a tua encomenda e enviaremos um email para o endereço indicado quando o kit seguir. Se ainda não tinhas conta, criámos uma com esse email e enviámos-te um link para entrares.",
     "orderPendingH": "A aguardar confirmação", "orderPendingText": "O teu pagamento ainda está a ser confirmado pelo banco. Esta página atualiza sozinha; também podes fechá-la, enviaremos um email.",
     "orderCancelledH": "Pagamento cancelado", "orderCancelledText": "Não foi cobrado nada. O carrinho continua guardado, podes voltar atrás e tentar de novo.",
     "orderFailedH": "O pagamento não foi concluído", "orderFailedText": "Não foi cobrado nada. O carrinho continua guardado, podes tentar de novo ou usar outro método de pagamento.",

@@ -10,7 +10,7 @@
     "ember": {"name": "Ember", "hex": "#FF6A2B"},
     "violet": {"name": "Violet", "hex": "#9B7BFF"},
     "rose": {"name": "Rose", "hex": "#FF5C8D"},
-    "gold": {"name": "Gold", "hex": "#F2B83A", "metal": true},
+    "gold": {"name": "Gold", "hex": "#F2B83A"},
     "chalk": {"name": "Chalk", "hex": "#F1F0EA"},
     "stone": {"name": "Stone", "hex": "#8C938E"},
     "graphite": {"name": "Graphite", "hex": "#2B2F33"},
@@ -27,12 +27,12 @@
     "teal": {"name": "Teal", "hex": "#0B8A8A"},
     "burgundy": {"name": "Burgundy", "hex": "#6E1626"},
     "sand": {"name": "Sand", "hex": "#D8C6A0"},
-    "silver": {"name": "Silver", "hex": "#BFC4CA", "metal": true},
-    "copper": {"name": "Copper", "hex": "#B5653A", "metal": true},
-    "midnight": {"name": "Midnight Blue Metallic", "hex": "#1C3566", "metal": true},
-    "gunmetal": {"name": "Gunmetal", "hex": "#4A4F57", "metal": true},
-    "rosegold": {"name": "Rose Gold", "hex": "#D49B85", "metal": true},
-    "pearl": {"name": "Pearl White", "hex": "#EFEADF", "metal": true}
+    "silver": {"name": "Silver", "hex": "#BFC4CA"},
+    "copper": {"name": "Copper", "hex": "#B5653A"},
+    "midnight": {"name": "Midnight Blue", "hex": "#1C3566"},
+    "gunmetal": {"name": "Gunmetal", "hex": "#4A4F57"},
+    "rosegold": {"name": "Rose Gold", "hex": "#D49B85"},
+    "pearl": {"name": "Pearl White", "hex": "#EFEADF"}
   },
   "designs": [
     {"id": "flame-red", "name": "Flame Camo", "tag": "Two-tone flames, black cuts", "cat": "Launch Edition", "price": 65, "c1": "flame", "c2": "crimson", "art": "flame", "master": "flame-camo"}

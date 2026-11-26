@@ -6,7 +6,7 @@ import EN from '../i18n/en.json';
 
 export type Lang = 'pt' | 'en';
 export interface Design { id: string; name: string; tag: string; cat: string; catName: string; price: number; c1: string; c2: string; art?: string; fixed?: boolean; master?: string; custom?: boolean; hidden?: boolean }
-/* Shape of the rear-window sticker: Ami 2025 = 'full' (the whole glass) or 'square'; Ami Pop = 'circle' (its half-ring glass) only. */
+/* Shape of the rear-window sticker: Ami 2025 = 'full' (the whole glass) or 'square'; Ami OG = 'circle' (its half-ring glass) only. */
 export type WinShape = 'full' | 'circle' | 'square';
 export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; numberOn: boolean; number: string; trim: string; pieces: Piece[]; winShape: WinShape }
 export interface CartItem { key: string; cfg: Cfg; qty: number }
@@ -52,15 +52,18 @@ function mergedDesigns(all = false): (Record<string, any>)[] {
   return out;
 }
 
-export const MODELS = { qs: 'Ami 2025', pop: 'Ami Pop' } as const;
-/* Factory colour schemes of the car in each version (preview only: not part of the kit key, not saved with orders). First = default. */
-export const TRIMS: Record<'qs' | 'pop', string[]> = { qs: ['yellow', 'purple', 'brown'], pop: ['base'] };
+export const MODELS = { qs: 'Ami 2025', pop: 'Ami OG' } as const;
+/* Ami OG variants (trims): base = Pop, blue = Blue, ogbrown = Brown. Factory colour schemes of the car in each version (preview only: not part of the kit key, not saved with orders). First = default. */
+export const TRIMS: Record<'qs' | 'pop', string[]> = { qs: ['yellow', 'purple', 'brown'], pop: ['base', 'blue', 'ogbrown'] };
 /* Preview-only car "colour" of the Ami 2025 for the home page model box: the front half of the car photo is the black car, the back
    half the brown one. Not selectable (not in TRIMS); `<Thumb cfg={{ ...cfg, trim: SPLIT_TRIM }} />` and CarStage draw it (side view). */
 export const SPLIT_TRIM = 'split';
 
 /* ---------- Rear-window sticker shape ---------- */
 export const WIN_SHAPES: Record<'qs' | 'pop', WinShape[]> = { qs: ['full', 'square'], pop: ['circle'] };
+/* Which pieces and window shapes a car gets: the Ami OG *Pop* has the front accents and the half-ring window only; the Ami 2025 and the Ami OG Blue / Brown
+   have door + window (full glass or square). Returns the key ('pop' or 'qs') that fullPieces / WIN_SHAPES / the prices are looked up by. */
+export const pieceModel = (model: string, trim?: string): 'qs' | 'pop' => (model === 'pop' && (!trim || trim === 'base') ? 'pop' : 'qs');
 export const DEFAULT_WIN_SHAPE: Record<'qs' | 'pop', WinShape> = { qs: 'full', pop: 'circle' };
 /* A shape the model offers, else that model's default (so switching model or an old cart never leaves an impossible shape). */
 export const normWinShape = (raw: unknown, model: string): WinShape => {
@@ -70,7 +73,7 @@ export const normWinShape = (raw: unknown, model: string): WinShape => {
 
 /* ---------- Kit pieces ----------
    'full' = the whole kit at the design's price. Individual pieces are always a left + right pair at a fixed
-   price (designs.json "pieces"). Front accents exist only on the Ami Pop.
+   price (designs.json "pieces"). Front accents exist only on the Ami OG.
    worker/src/pricing.ts repeats exactly this logic, so the price charged always matches the price shown.
    (Rim stickers were removed: an old cart / order that still lists 'rims' just ignores it.) */
 export type Piece = 'full' | 'door' | 'window' | 'accent';
@@ -132,8 +135,8 @@ export const kitPrice = (model: string, designPrice: number) => Math.min(designP
 export const piecesPrice = (pieces: Piece[], designPrice: number, model = 'qs') =>
   pieces.includes('full') ? kitPrice(model, designPrice) : pieces.reduce((s, p) => s + (p === 'full' ? 0 : PIECE_PRICE[p]), 0);
 /* Pieces actually in the box: full expanded to its parts (display order). */
-export const includedPieces = (c: Pick<Cfg, 'model' | 'pieces'>): Exclude<Piece, 'full'>[] => {
-  const ps = c.pieces || ['full'], full = ps.includes('full') ? fullPieces(c.model) : [];
+export const includedPieces = (c: Pick<Cfg, 'model' | 'pieces'> & { trim?: string }): Exclude<Piece, 'full'>[] => {
+  const ps = c.pieces || ['full'], full = ps.includes('full') ? fullPieces(pieceModel(c.model, c.trim)) : [];
   return (PIECES.filter((p) => p !== 'full' && (full.includes(p) || ps.includes(p))) as Exclude<Piece, 'full'>[]);
 };
 
@@ -200,10 +203,11 @@ function build(lang: Lang) {
     if (typeof c.number === 'string') out.number = cleanNumber(c.number);
     // The custom badge is only offered on the Ami 2025 (the Pop door has no badge plate).
     out.numberOn = !!c.numberOn && !!out.number && out.model !== 'pop';
-    // Rear-window sticker shape: Ami 2025 full / square, Ami Pop circle. (Older carts also carry centre / bcOn / bcPick / rim pieces: ignored.)
-    out.winShape = normWinShape(c.winShape, out.model);
+    // Rear-window sticker shape: Ami 2025 full / square, Ami OG circle. (Older carts also carry centre / bcOn / bcPick / rim pieces: ignored.)
+    const pm = pieceModel(out.model, out.trim);
+    out.winShape = normWinShape(c.winShape, pm);
     // Missing pieces (older carts, saved orders) = the full kit.
-    out.pieces = normPieces(c.pieces, out.model, d.price);
+    out.pieces = normPieces(c.pieces, pm, d.price);
     if (!out.numberOn && !out.number) out.number = 'OFST';
     return out;
   }
@@ -213,9 +217,9 @@ function build(lang: Lang) {
     const d = c && D(c.design); if (!d) return false;
     return !!(c!.numberOn && c!.number);
   }
-  const piecesOf = (c: Cfg) => normPieces(c.pieces, c.model, D(c.design)?.price ?? 0);
-  const priceOf = (c: Cfg) => piecesPrice(piecesOf(c), D(c.design)!.price, c.model) + (c.numberOn && c.number ? EXTRA.badge : 0);
-  const keyOf = (c: Cfg) => [c.design, c.c1, c.c2, c.numberOn ? c.number : '', c.model || 'qs', piecesOf(c).join(','), normWinShape(c.winShape, c.model)].join('|');
+  const piecesOf = (c: Cfg) => normPieces(c.pieces, pieceModel(c.model, c.trim), D(c.design)?.price ?? 0);
+  const priceOf = (c: Cfg) => piecesPrice(piecesOf(c), D(c.design)!.price, pieceModel(c.model, c.trim)) + (c.numberOn && c.number ? EXTRA.badge : 0);
+  const keyOf = (c: Cfg) => [c.design, c.c1, c.c2, c.numberOn ? c.number : '', pieceModel(c.model, c.trim) + (c.model || 'qs'), piecesOf(c).join(','), normWinShape(c.winShape, pieceModel(c.model, c.trim))].join('|');
   /* "Full kit · Rims" / "Door stickers (pair) · Window stickers (pair)", in display order. */
   const piecesLabel = (c: Cfg) => { const ps = piecesOf(c); return PIECES.filter((p) => ps.includes(p)).map((p) => T('pc_' + p)).join(' · '); };
   /* One sentence on delivery, from the owner's shipping price (admin "Prices" tab): free, a fixed fee, or a fee that is free above an amount. */
@@ -227,7 +231,7 @@ function build(lang: Lang) {
   };
   const colourLabel = (c: Cfg) => (D(c.design)!.fixed ? T('originalColours') : `${COLORS[c.c1].name} / ${COLORS[c.c2].name}`);
   /* Window shape name, only when the kit has window stickers ("Full window" / "Square" / "Circle"; keys winShape_full|circle|square). */
-  const winShapeLabel = (c: Cfg) => (includedPieces({ model: c.model, pieces: piecesOf(c) }).includes('window') ? T('winShape_' + normWinShape(c.winShape, c.model)) : '');
+  const winShapeLabel = (c: Cfg) => (includedPieces({ model: c.model, trim: c.trim, pieces: piecesOf(c) }).includes('window') ? T('winShape_' + normWinShape(c.winShape, pieceModel(c.model, c.trim))) : '');
   const descOf = (c: Cfg) =>
     `${modelName(c.model)} · ${colourLabel(c)} · ${piecesLabel(c)}` +
     `${winShapeLabel(c) ? ' · ' + winShapeLabel(c) : ''}` +
@@ -235,7 +239,7 @@ function build(lang: Lang) {
   const cfgQuery = (c: Cfg) => {
     const p = new URLSearchParams({ design: c.design, c1: c.c1, c2: c.c2 });
     if (c.numberOn && c.number) p.set('number', c.number);
-    if (normWinShape(c.winShape, c.model) !== DEFAULT_WIN_SHAPE[c.model || 'qs']) p.set('win', normWinShape(c.winShape, c.model));
+    if (normWinShape(c.winShape, pieceModel(c.model, c.trim)) !== DEFAULT_WIN_SHAPE[pieceModel(c.model, c.trim)]) p.set('win', normWinShape(c.winShape, pieceModel(c.model, c.trim)));
     if (c.model && c.model !== 'qs') p.set('model', c.model);
     if (c.trim && c.trim !== TRIMS[c.model || 'qs'][0]) p.set('trim', c.trim);
     const ps = piecesOf(c); if (ps.join() !== 'full') p.set('pieces', ps.join(','));

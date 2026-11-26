@@ -159,3 +159,13 @@ CREATE TABLE IF NOT EXISTS site_prices (
   cents      INTEGER NOT NULL CHECK (cents BETWEEN 0 AND 1000000),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+-- Round 8: customer reviews (migration 0012)
+CREATE TABLE IF NOT EXISTS reviews (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 60),
+  rating     INTEGER NOT NULL CHECK (rating BETWEEN 0 AND 5),
+  comment    TEXT NOT NULL CHECK (length(comment) BETWEEN 1 AND 600),
+  photo      TEXT CHECK (photo IS NULL OR length(photo) <= 160000),
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);

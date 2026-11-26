@@ -1,7 +1,7 @@
 /* Print files (admin page only, lazy-loaded).
 
    THE PRINT FILE IS A JPEG of the owner's final artwork with only the two colours changed (the supplier already owns the cutting mould).
-   The built-in design's artwork is src/data/masters/flame-final-door.jpg (door sheet) and flame-final-window.png (Ami Pop window); the
+   The built-in design's artwork is src/data/masters/flame-final-door.jpg (door sheet) and flame-final-window.png (Ami OG window); the
    script scripts/make-print-maps.py turns each into a WEIGHT MAP (public/assets/print/*.png: per pixel the share of colour 1, colour 2
    and white, black = the rest). Here the map is recoloured (black #000000, white #FFFFFF, c1, c2 = the order's colours) and written as a
    4:4:4 quality-100 JPEG by ./jpeg444 (same pixels as the artwork, nothing resampled).
@@ -9,7 +9,7 @@
    parts and <g id="CutContour">): for those the master is drawn to a picture (without the cut line) and written as the same kind of JPEG.
    The master code below (parse, recolour, sanitize, validate) is also used by the admin preview and the "Designs" tab.
    Built-in masters live in src/data/masters/<name>.svg; masters of added designs stay on the shop's server (setRemoteMaster). */
-import { includedPieces, normWinShape, type Cfg, type Kit } from './kit';
+import { includedPieces, normWinShape, pieceModel, type Cfg, type Kit } from './kit';
 import { encodeJpeg444 } from './jpeg444';
 
 const BUILTIN = import.meta.glob('../data/masters/*.svg', { query: '?raw', import: 'default' }) as Record<string, () => Promise<string>>;
@@ -185,7 +185,7 @@ const ART_MAPS: Record<string, { door: string; win: string; sq: string; doorGrey
 const SHEET_UNITS = 2000;
 const DOOR_BOX = { x: 28, y: 132, w: 1946, h: 706 };
 const WIN_CROP_X = 1000, WIN_CROP_W = 683;
-/* Print size: the sticker box (1946 units) is the 746 mm wide door mould, i.e. 66.26 px per inch per scale unit (JFIF stores whole dpi). The Ami Pop
+/* Print size: the sticker box (1946 units) is the 746 mm wide door mould, i.e. 66.26 px per inch per scale unit (JFIF stores whole dpi). The Ami OG
    window picture has no known physical size: 72 dpi (nominal). */
 const DOOR_DPI_UNIT = 66.26;
 export const POP_WIN_DPI = 72;
@@ -259,13 +259,13 @@ export function saveFile(name: string, blob: Blob) {
 export interface PrintFile { name: string; blob: Blob }
 /* The print files of one ordered kit, as JPEGs of the final artwork in the order's two colours:
      door sheet      (kits with door stickers)     the whole picture of the sheet (native size, 2388 x 1163)
-     window          Ami 2025 'full'               the window part of the recoloured sheet (the supplier cuts the shape with their own mould)
-                     Ami 2025 'square'             the rounded-square sticker, all of it a part of the door design in both colours
-                     Ami Pop 'circle'              the half-ring window picture
+     window          Ami 2025 / Ami OG 'full'       the window part of the recoloured sheet (the supplier cuts the shape with their own mould)
+                     Ami 2025 / Ami OG 'square'     the rounded-square sticker, all of it a part of the door design in both colours
+                     Ami OG 'circle'              the half-ring window picture
    There is no artwork for the Pop front accent piece: no file is made for it. Older orders (only design / c1 / c2) are the full kit, and a
    missing window shape or unknown colour gets the model's default / the design's own colours. Returns [] when the kit has no printable piece. */
 export async function printFiles(kit: Kit, c: Cfg, tag: string): Promise<PrintFile[]> {
-  const d = kit.D(c.design), model = c.model === 'pop' ? 'pop' : 'qs';
+  const d = kit.D(c.design), model = pieceModel(c.model === 'pop' ? 'pop' : 'qs', c.trim), shape = normWinShape(c.winShape, model); // window print file follows the chosen shape, not the car
   const fixed = !!d?.fixed;
   const hex = (id: string, fb: string | undefined) => kit.COLORS[id]?.hex || fb || null;
   const h1 = fixed ? null : hex(c.c1, d?.c1 && kit.COLORS[d.c1]?.hex), h2 = fixed ? null : hex(c.c2, d?.c2 && kit.COLORS[d.c2]?.hex);
@@ -279,21 +279,21 @@ export async function printFiles(kit: Kit, c: Cfg, tag: string): Promise<PrintFi
   }
   const dc1 = fixed ? maps.doorGreys[0] : 0, dc2 = fixed ? maps.doorGreys[1] : 0;
   const door1 = fixed ? [dc1, dc1, dc1] : hexRgb(h1, [51, 51, 51]), door2 = fixed ? [dc2, dc2, dc2] : hexRgb(h2, [92, 92, 92]);
-  if (wantDoor || (wantWin && model === 'qs')) {
+  if (wantDoor || (wantWin && shape !== 'circle')) {
     const sheet = await loadPlane(maps.door);
     const s = sheet.w / SHEET_UNITS, dpi = Math.round(DOOR_DPI_UNIT * s);
     if (wantDoor) out.push({ name: fileBase(c, tag, 'door', fixed) + '.jpg', blob: jpegBlob(recolourMap(sheet, door1, door2, { x: 0, y: 0, w: sheet.w, h: sheet.h }), sheet.w, sheet.h, dpi) });
-    if (wantWin && model === 'qs' && normWinShape(c.winShape, 'qs') === 'square') {
+    if (wantWin && shape === 'square') {
       // square sticker: only the rounded square (a piece of the door design), the page around it white
       const sqp = await loadPlane(maps.sq);
       out.push({ name: fileBase(c, tag, 'window-square', fixed) + '.jpg', blob: jpegBlob(recolourMap(sqp, door1, door2, { x: 0, y: 0, w: sqp.w, h: sqp.h }), sqp.w, sqp.h, SQ_DPI) });
-    } else if (wantWin && model === 'qs') {
-      const shape = normWinShape(c.winShape, 'qs'), x0 = Math.round((DOOR_BOX.x + WIN_CROP_X) * s), y0 = Math.round(DOOR_BOX.y * s);
+    } else if (wantWin && shape === 'full') {
+      const x0 = Math.round((DOOR_BOX.x + WIN_CROP_X) * s), y0 = Math.round(DOOR_BOX.y * s);
       const r = { x: x0, y: y0, w: Math.min(Math.round(WIN_CROP_W * s), sheet.w - x0), h: Math.min(Math.round(DOOR_BOX.h * s), sheet.h - y0) };
       out.push({ name: fileBase(c, tag, 'window-' + shape, fixed) + '.jpg', blob: jpegBlob(recolourMap(sheet, door1, door2, r), r.w, r.h, dpi) });
     }
   }
-  if (wantWin && model === 'pop') {
+  if (wantWin && shape === 'circle') {
     const win = await loadPlane(maps.win), w1 = fixed ? [maps.winGreys[0], maps.winGreys[0], maps.winGreys[0]] : hexRgb(h1, [51, 51, 51]), w2 = fixed ? [maps.winGreys[1], maps.winGreys[1], maps.winGreys[1]] : hexRgb(h2, [71, 71, 71]);
     out.push({ name: fileBase(c, tag, 'window-circle', fixed) + '.jpg', blob: jpegBlob(recolourMap(win, w1, w2, { x: 0, y: 0, w: win.w, h: win.h }), win.w, win.h, POP_WIN_DPI) });
   }

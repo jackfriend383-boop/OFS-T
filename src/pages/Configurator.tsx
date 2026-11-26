@@ -5,10 +5,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router';
 import { useApp } from '../state';
 import { COPY } from '../content';
-import { TRIMS, PIECES, PIECE_PRICE, WIN_SHAPES, includedPieces, kitPrice, piecesPrice, type Cfg, type Piece } from '../lib/kit';
+import { TRIMS, PIECES, PIECE_PRICE, WIN_SHAPES, pieceModel, includedPieces, kitPrice, piecesPrice, type Cfg, type Piece } from '../lib/kit';
 import { CarStage, Thumb, type StageApi } from '../components/Car';
 import { viewIcon, anglesOf, type Angle } from '../lib/car';
 import { FilterTabs } from '../components/DesignCard';
+import Reviews from '../components/Reviews';
 import { useFilterFeedback } from '../lib/filter';
 
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -25,7 +26,7 @@ function Swatches({ slot, labelId, cfg, onPick, groups }: { slot: 'c1' | 'c2'; l
   const { kit } = useApp();
   const row = useRef<HTMLDivElement>(null);
   const keys = Object.keys(kit.COLORS);
-  const sets: [string, string[]][] = [[groups[0], keys.filter((k) => !kit.COLORS[k].metal)], [groups[1], keys.filter((k) => kit.COLORS[k].metal)]];
+  const sets: [string, string[]][] = [[groups[0], keys]];
   const onKey = (e: React.KeyboardEvent) => {
     const step = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 } as Record<string, number>)[e.key];
     if (step === undefined && e.key !== 'Home' && e.key !== 'End') return;
@@ -39,11 +40,11 @@ function Swatches({ slot, labelId, cfg, onPick, groups }: { slot: 'c1' | 'c2'; l
     <div className="sw-groups" id={slot + 'Row'} ref={row} role="radiogroup" aria-labelledby={labelId} onKeyDown={onKey}>
       {sets.map(([title, ks]) => ks.length > 0 && (
         <div key={title} className="sw-group">
-          <span className="sw-group-t" aria-hidden="true">{title}</span>
+          
           <div className="sw-row">
             {ks.map((k) => {
               const sel = cfg[slot] === k;
-              return <button key={k} type="button" className={'sw' + (kit.COLORS[k].metal ? ' metal' : '')} style={{ '--c': kit.COLORS[k].hex } as any} data-k={k} role="radio" aria-checked={sel} tabIndex={sel ? 0 : -1} title={kit.COLORS[k].name} aria-label={kit.COLORS[k].name} onClick={() => onPick(k)} />;
+              return <button key={k} type="button" className="sw" style={{ '--c': kit.COLORS[k].hex } as any} data-k={k} role="radio" aria-checked={sel} tabIndex={sel ? 0 : -1} title={kit.COLORS[k].name} aria-label={kit.COLORS[k].name} onClick={() => onPick(k)} />;
             })}
           </div>
         </div>
@@ -54,7 +55,7 @@ function Swatches({ slot, labelId, cfg, onPick, groups }: { slot: 'c1' | 'c2'; l
 
 /* Car colour (factory trim of the chosen Ami version): one radio per trim, a round two-tone swatch plus its name.
    Arrow keys move and select, like the vinyl colour swatches. */
-const TRIM_SW: Record<string, [string, string]> = { yellow: ['#111214', '#E4F21B'], purple: ['#111214', '#B79BEA'], brown: ['#8C8379', '#8C8379'], base: ['#8C8379', '#8C8379'] };
+const TRIM_SW: Record<string, string[]> = { yellow: ['#111214', '#E4F21B'], purple: ['#111214', '#B79BEA'], brown: ['#8C8379', '#8C8379'], base: ['#8C8379', '#E4F21B', '#FF6A2B'], blue: ['#7F8A93', '#7F8A93'], ogbrown: ['#989289', '#989289'] };
 function Trims({ labelId, value, items, names, onPick }: { labelId: string; value: string; items: string[]; names: Record<string, string>; onPick: (k: string) => void }) {
   const row = useRef<HTMLDivElement>(null);
   const onKey = (e: React.KeyboardEvent) => {
@@ -69,9 +70,9 @@ function Trims({ labelId, value, items, names, onPick }: { labelId: string; valu
   return (
     <div className="trims" id="trimRow" ref={row} role="radiogroup" aria-labelledby={labelId} onKeyDown={onKey}>
       {items.map((k) => {
-        const sel = value === k, [a, b] = TRIM_SW[k] || TRIM_SW.base;
+        const sel = value === k, cols = TRIM_SW[k] || TRIM_SW.base, [a, b] = [cols[0], cols[1] || cols[0]], three = cols.length > 2;
         return <button key={k} type="button" className="trim" data-k={k} role="radio" aria-checked={sel} tabIndex={sel ? 0 : -1} onClick={() => onPick(k)}>
-          <span className="trim-sw" style={{ '--c': a, '--c2': b } as any} aria-hidden="true" /><span className="trim-n">{names[k] || k}</span>
+          <span className="trim-sw" style={{ '--c': a, '--c2': b, ...(three ? { background: `conic-gradient(from 90deg, ${cols[0]} 0 33.4%, ${cols[1]} 0 66.7%, ${cols[2]} 0)` } : {}) } as any} aria-hidden="true" /><span className="trim-n">{names[k] || k}</span>
         </button>;
       })}
     </div>
@@ -152,7 +153,7 @@ export default function Configurator() {
   const [view, setView] = useState('full');
   // Camera angle of the preview photo (front, front ¾, side, rear); the arrows, ← → and swipes turn the car.
   const [angle, setAngle] = useState<Angle>('side');
-  const angles = anglesOf(cfg.model);
+  const angles = anglesOf(cfg.model, cfg.trim);
   const trims = TRIMS[cfg.model];
   // Preview background: grey studio or the beach. Remembered for this browser tab only.
   const [scene, setScene] = useState<'studio' | 'beach'>('studio');
@@ -160,9 +161,9 @@ export default function Configurator() {
   // Night preview follows the site theme (light = day scenes above, dark = night city).
   // In the dark theme the button switches between the night city (lights on) and a dark grey studio (lights off).
   const [dark, setDark] = useState(false);
-  const [darkStudio, setDarkStudio] = useState(false);
+  const [darkStudio, setDarkStudio] = useState(true); // the dark theme starts on the studio (lights off); the night city is one click away
   const night = dark && !darkStudio;
-  useEffect(() => { try { if (sessionStorage.getItem('ofst-scene-dark') === 'studio') setDarkStudio(true); } catch { /* private mode */ } }, []);
+  useEffect(() => { try { if (sessionStorage.getItem('ofst-scene-dark') === 'night') setDarkStudio(false); } catch { /* private mode */ } }, []);
   useEffect(() => {
     const sync = () => setDark(isDarkSite());
     sync();
@@ -234,12 +235,12 @@ export default function Configurator() {
 
   /* Turn the car to the previous/next camera angle (wraps around); the camera goes back to the full view of that angle. */
   const rotate = useCallback((dir: number) => {
-    const list = anglesOf(cfgRef.current.model); if (list.length < 2) return;
+    const list = anglesOf(cfgRef.current.model, cfgRef.current.trim); if (list.length < 2) return;
     const cur = api.current?.currentAngle() ?? 'side';
     const next = list[((list.indexOf(cur) < 0 ? 0 : list.indexOf(cur)) + dir + list.length) % list.length];
     api.current?.angle(next); setAngle(next); setView('full');
   }, []);
-  // A version with fewer photos (Ami Pop) falls back to its first angle.
+  // A version with fewer photos (Ami OG) falls back to its first angle.
   useEffect(() => {
     if (!angles.includes(angle)) { api.current?.angle(angles[0]); setAngle(angles[0]); }
   }, [cfg.model]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -264,13 +265,14 @@ export default function Configurator() {
 
   const tones = d.art === 'flame';
   const pop = cfg.model === 'pop';
+  const pm = pieceModel(cfg.model, cfg.trim), accents = pm === 'pop'; // accents + half-ring window: the Ami OG Pop only
   const ps = cfg.pieces, isFull = ps.includes('full');
   /* Price lines: the full kit, or each chosen pair. */
   const lines: [string, string][] = [];
-  if (isFull) lines.push([c.kitFull(d.name), money(kitPrice(cfg.model, d.price))]);
+  if (isFull) lines.push([c.kitFull(d.name), money(kitPrice(pm, d.price))]);
   else (['door', 'window', 'accent'] as const).forEach((p) => { if (ps.includes(p)) lines.push([T('pc_' + p), money(PIECE_PRICE[p])]); });
   const hasWindow = isFull || ps.includes('window');
-  const winAllowed: string[] = WIN_SHAPES[cfg.model] as string[];
+  const winAllowed: string[] = WIN_SHAPES[pm] as string[];
   const winShape = cfg.winShape as string;
   if (hasWindow) lines.push([T('winLine', { shape: c.win[winShape] }), '']);
   /* "What's included": every piece in the box with its quantity, plus the badge and the fitting guide. */
@@ -286,7 +288,7 @@ export default function Configurator() {
     else next = cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p];
     update({ pieces: next });
   };
-  const pieceItems = PIECES.filter((p) => p !== 'accent' || pop);
+  const pieceItems = PIECES.filter((p) => p !== 'accent' || accents);
   const pers = kit.isPersonalised(cfg), total = kit.priceOf(cfg);
 
   // Final value announced to screen readers once the clicking stops (600 ms), not on every click. Written straight into the
@@ -314,11 +316,11 @@ export default function Configurator() {
   const colourText = d.fixed ? T('originalColours') : `${colourName(cfg.c1)} / ${colourName(cfg.c2)}`;
   /* "Your selection" rows: label, value, price, and the options card that "Change" scrolls back to. */
   const rows: [string, string, string, string][] = [
-    [c.design, d.name, '', 'optDesignCard'],
     [c.version, kit.modelName(cfg.model), '', 'optModelCard'],
-    ...(trims.length > 1 ? [[c.carColour, c.trims[cfg.trim] || cfg.trim, '', 'optModelCard'] as [string, string, string, string]] : []),
+    [c.design, d.name, '', 'optDesignCard'],
+    ...(trims.length > 1 ? [[pop ? c.variant : c.carColour, c.trims[cfg.trim] || cfg.trim, '', 'optModelCard'] as [string, string, string, string]] : []),
     [c.colours, colourText, '', 'optColourCard'],
-    [c.pieces, kit.piecesLabel(cfg), money(piecesPrice(ps, d.price, cfg.model)), 'optPiecesCard'],
+    [c.pieces, kit.piecesLabel(cfg), money(piecesPrice(ps, d.price, pm)), 'optPiecesCard'],
     ...(hasWindow ? [[c.winTitle, c.win[winShape], '', 'optWinCard'] as [string, string, string, string]] : []),
   ];
   const toggleFull = () => {
@@ -393,27 +395,27 @@ export default function Configurator() {
             <p className="muted cfg-lead">{c.lead}</p>
           </header>
 
+          <section className="ocard" id="optModelCard" aria-labelledby="optModelLbl">
+            <div className="ocard-head"><h2 id="optModelLbl">{c.version}</h2><span className="ocard-val">{kit.modelName(cfg.model)}</span></div>
+            <Seg id="segModel" labelledBy="optModelLbl" value={cfg.model} items={[['qs', 'Ami 2025'], ['pop', 'Ami OG']]} onPick={(v) => update({ model: v as Cfg['model'] })} />
+            {trims.length > 1 && <>
+              <div className="sub-label"><span id="trimLabel">{pop ? c.variant : c.carColour}</span><span id="trimName">{c.trims[cfg.trim] || cfg.trim}</span></div>
+              <Trims labelId="trimLabel" value={cfg.trim} items={trims} names={c.trims} onPick={(k) => update({ trim: k })} />
+            </>}
+          </section>
+
           <section className="ocard" id="optDesignCard" aria-labelledby="pickerTitle">
-            <div className="ocard-head"><h2 id="pickerTitle">{c.choose}</h2><span className="ocard-price">{money(kitPrice(cfg.model, d.price))}</span></div>
+            <div className="ocard-head"><h2 id="pickerTitle">{c.choose}</h2><span className="ocard-price">{money(kitPrice(pm, d.price))}</span></div>
             <div className="picker" id="picker">
               {kit.CATS.length > 2 && <FilterTabs id="cfgTabs" cats={kit.CATS} value={cat} onPick={setCat} label={COPY[lang].shop.filter} />}
               <div className="strip" id="strip" role="group" aria-label={c.designsGroup} ref={strip}>
                 {DESIGNS.map((x) => (
                   <button key={x.id} type="button" className={'pcard' + (cat !== 'All' && x.cat !== cat ? ' out' : '')} data-id={x.id} data-cat={x.cat} aria-pressed={x.id === cfg.design} onClick={() => pickDesign(x.id, true)}>
-                    <Thumb cfg={kit.defaultCfg(x)} /><b>{x.name}</b><small><span>{x.tag}</span><span className="price">{money(kitPrice(cfg.model, x.price))}</span></small>
+                    <Thumb cfg={kit.defaultCfg(x)} /><b>{x.name}</b><small><span>{x.tag}</span><span className="price">{money(kitPrice(pm, x.price))}</span></small>
                   </button>
                 ))}
               </div>
             </div>
-          </section>
-
-          <section className="ocard" id="optModelCard" aria-labelledby="optModelLbl">
-            <div className="ocard-head"><h2 id="optModelLbl">{c.version}</h2><span className="ocard-val">{kit.modelName(cfg.model)}</span></div>
-            <Seg id="segModel" labelledBy="optModelLbl" value={cfg.model} items={[['qs', 'Ami 2025'], ['pop', 'Ami Pop']]} onPick={(v) => update({ model: v as Cfg['model'] })} />
-            {trims.length > 1 && <>
-              <div className="sub-label"><span id="trimLabel">{c.carColour}</span><span id="trimName">{c.trims[cfg.trim] || cfg.trim}</span></div>
-              <Trims labelId="trimLabel" value={cfg.trim} items={trims} names={c.trims} onPick={(k) => update({ trim: k })} />
-            </>}
           </section>
 
           <section className="ocard" id="optColourCard" aria-labelledby="optColourLbl">
@@ -426,7 +428,7 @@ export default function Configurator() {
                     <h3 id={slot + 'Label'}>{i ? c.colour2 : c.colour1}<small>{T(tones ? (i ? 'darkTone' : 'lightTone') : (i ? 'accent' : 'primary'))}</small></h3>
                     <span className="pal-name" id={slot + 'Name'}><i style={{ '--c': kit.COLORS[cfg[slot]].hex } as any} aria-hidden="true" />{colourName(cfg[slot])}</span>
                   </div>
-                  <Swatches slot={slot} labelId={slot + 'Label'} cfg={cfg} groups={[c.classics, c.metallics]} onPick={(k) => update(slot === 'c1' ? { c1: k } : { c2: k })} />
+                  <Swatches slot={slot} labelId={slot + 'Label'} cfg={cfg} groups={[c.classics, '']} onPick={(k) => update(slot === 'c1' ? { c1: k } : { c2: k })} />
                 </div>
               ))}
             </div>
@@ -435,14 +437,14 @@ export default function Configurator() {
 
           {/* Pieces: full kit (default) or individual pairs; rims as an add-on. */}
           <section className="ocard" id="optPiecesCard" aria-labelledby="optPiecesLbl">
-            <div className="ocard-head"><h2 id="optPiecesLbl">{c.pieces}</h2><span className="ocard-price">{money(piecesPrice(ps, d.price, cfg.model))}</span></div>
+            <div className="ocard-head"><h2 id="optPiecesLbl">{c.pieces}</h2><span className="ocard-price">{money(piecesPrice(ps, d.price, pm))}</span></div>
             <div className="pcs" role="group" aria-labelledby="optPiecesLbl">
               {pieceItems.map((p) => {
                 const on = ps.includes(p);
-                const note = p === 'full' ? c.fullNote(pop) : c.pair;
-                const price = p === 'full' ? kitPrice(cfg.model, d.price) : PIECE_PRICE[p];
+                const note = p === 'full' ? c.fullNote(accents) : c.pair;
+                const price = p === 'full' ? kitPrice(pm, d.price) : PIECE_PRICE[p];
                 return <button key={p} type="button" className="pc" data-p={p} role="checkbox" aria-checked={on} onClick={() => togglePiece(p)}>
-                  <span className="pc-ic">{pieceIcon(p === 'window' && pop ? 'windowPop' : p)}</span>
+                  <span className="pc-ic">{pieceIcon(p === 'window' && accents ? 'windowPop' : p)}</span>
                   <span className="pc-t"><b>{c.pc[p]}</b><small>{note}</small></span>
                   <span className="pc-p">{money(price)}</span>
                   <span className="pc-ck" aria-hidden="true" />
@@ -452,7 +454,7 @@ export default function Configurator() {
             <p className="opt-val pcs-note">{c.piecesNote} {c.piecesAuto}</p>
           </section>
 
-          {/* Window sticker shape: the Ami 2025 offers square or full window, the Ami Pop only the circle. */}
+          {/* Window sticker shape: the Ami 2025 offers square or full window, the Ami OG only the circle. */}
           <section className="ocard" id="optWinCard" aria-labelledby="optWinLbl">
             <div className="ocard-head"><h2 id="optWinLbl">{c.winTitle}</h2><span className="ocard-val">{c.win[winShape]}</span></div>
             <div className="wins" id="winRow" role="radiogroup" aria-labelledby="optWinLbl" onKeyDown={(e) => {
@@ -467,7 +469,7 @@ export default function Configurator() {
                 return <button key={k} type="button" className="win" data-k={k} role="radio" aria-checked={sel} disabled={!ok} tabIndex={sel ? 0 : -1} onClick={() => update({ winShape: k })}>
                   <svg viewBox="0 0 48 26" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden="true" focusable="false">{WIN_ICON[k]}</svg>
                   <b>{c.win[k]}</b>
-                  {!ok && <small>{c.winOnly(pop ? 'Ami 2025' : 'Ami Pop')}</small>}
+                  {!ok && <small>{c.winOnly(accents ? 'Ami 2025 / Blue / Brown' : 'Ami OG Pop')}</small>}
                 </button>;
               })}
             </div>
@@ -505,6 +507,8 @@ export default function Configurator() {
           <dl className="specs">{c.specs.map(([k, v]) => <div key={k} style={{ display: 'contents' }}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         </section>
       </section>
+
+      <Reviews id="cfgReviews" />
 
       <section className="brochure" aria-labelledby="broTitle">
         <div className="bro-head">

@@ -57,6 +57,14 @@ const COPY = {
   },
 } as const;
 
+/* Sent after a guest pays: their account was created from the email used in the purchase; the link (valid for 7 days) signs them in. */
+export function accountCreatedEmail(lang: 'pt' | 'en', link: string) {
+  const c = lang === 'pt'
+    ? { subject: 'A tua conta OFS/T foi criada', title: 'Criámos a tua conta', body: 'Com a tua compra criámos uma conta OFS/T com este email. Nela vês as tuas encomendas e guardas os teus dados para a próxima vez. Não precisas de palavra-passe: usa o botão para entrar. O link é válido durante 7 dias.', button: 'Entrar na minha conta', ignore: 'Se não queres esta conta, ignora este email ou apaga-a na página da conta.' }
+    : { subject: 'Your OFS/T account is ready', title: 'We created your account', body: 'With your purchase we created an OFS/T account with this email. It shows your orders and keeps your details for next time. There is no password: use the button to sign in. The link works for 7 days.', button: 'Go to my account', ignore: "If you don't want this account, ignore this email or delete it on the account page." };
+  const html = shell(c.title, `<p style="margin:0;line-height:1.5">${esc(c.body)}</p>${button(link, c.button)}<p style="margin:0;color:#555;font-size:13px;line-height:1.5">${esc(c.ignore)}</p>`);
+  return { subject: c.subject, html, text: `${c.body}\n\n${link}\n\n${c.ignore}` };
+}
 export function signInEmail(lang: 'pt' | 'en', link: string) {
   const c = COPY[lang];
   const html = shell(c.linkTitle, `<p style="margin:0;line-height:1.5">${esc(c.linkBody)}</p>${button(link, c.linkButton)}<p style="margin:0;color:#555;font-size:13px;line-height:1.5">${esc(c.linkIgnore)}</p>`);

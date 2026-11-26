@@ -5,7 +5,7 @@ import PT_JSON from '../../src/i18n/pt.json';
 import { DEFAULT_PRICES, type Prices } from './prices';
 const PT = PT_JSON as unknown as { colors: Record<string, string>; js: Record<string, string> };
 
-const MODELS: Record<string, string> = { qs: 'Ami 2025', pop: 'Ami Pop' };
+const MODELS: Record<string, string> = { qs: 'Ami 2025', pop: 'Ami OG' };
 const COLORS = DATA.colors as Record<string, { name: string; hex: string }>;
 type PricedDesign = { id: string; name: string; price: number; c1: string; c2: string; fixed?: boolean };
 const DESIGNS = DATA.designs as PricedDesign[];
@@ -17,6 +17,9 @@ const PIECES = ['full', 'door', 'window', 'accent'];
 const PIECE_NAMES: Record<string, string> = { full: 'Full kit', door: 'Door stickers (pair)', window: 'Window stickers (pair)', accent: 'Front accents (pair)' };
 /* Rear-window sticker shape per model (same as WIN_SHAPES in src/lib/kit.ts). */
 const WIN_SHAPES: Record<string, string[]> = { qs: ['full', 'square'], pop: ['circle'] };
+/* Same rule as pieceModel in src/lib/kit.ts: only the Ami OG Pop has front accents and the half-ring window; Ami 2025 / OG Blue / OG Brown are door + window (full or square). */
+const OG_TRIMS = ['base', 'blue', 'ogbrown'];
+const pieceModel = (model: string, trim?: string) => (model === 'pop' && (!trim || trim === 'base') ? 'pop' : 'qs');
 const WIN_NAMES: Record<string, string> = { full: 'Full window', circle: 'Circle', square: 'Square' };
 const fullPieces = (model: string) => (model === 'pop' ? ['door', 'window', 'accent'] : ['door', 'window']);
 function normPieces(raw: unknown, model: string): string[] {
@@ -37,7 +40,7 @@ const has = (o: object, k: unknown): boolean => typeof k === 'string' && Object.
 const cleanNumber = (v: unknown) => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9 .#&!-]/g, '').slice(0, 8);
 
 export interface PricedItem {
-  cfg: { model: string; design: string; c1: string; c2: string; numberOn: boolean; number: string; pieces: string[]; winShape: string };
+  cfg: { model: string; trim?: string; design: string; c1: string; c2: string; numberOn: boolean; number: string; pieces: string[]; winShape: string };
   qty: number;
   unit_cents: number;
   name: string;
@@ -57,9 +60,10 @@ export function priceItem(raw: any, lang: 'pt' | 'en' = 'en', designs: PricedDes
   const c2 = has(COLORS, c.c2) ? c.c2 : d.c2;
   const number = typeof c.number === 'string' ? cleanNumber(c.number) : '';
   const numberOn = !!c.numberOn && !!number && model !== 'pop'; // the custom badge is only offered on the Ami 2025
-  const pieces = normPieces(c.pieces, model);
-  const winShape = WIN_SHAPES[model].includes(c.winShape) ? c.winShape : WIN_SHAPES[model][0]; // Ami 2025: full / square; Ami Pop: circle
-  const unit = piecesPrice(pieces, model, d.price, P) + (numberOn ? P.badge : 0);
+  const trim = model === 'pop' ? (OG_TRIMS.includes(c.trim) ? c.trim : 'base') : undefined, pm = pieceModel(model, trim);
+  const pieces = normPieces(c.pieces, pm);
+  const winShape = WIN_SHAPES[pm].includes(c.winShape) ? c.winShape : WIN_SHAPES[pm][0]; // Ami 2025: full / square; Ami OG: circle
+  const unit = piecesPrice(pieces, pm, d.price, P) + (numberOn ? P.badge : 0);
   // The line text is stored with the order and shown in emails, on Stripe and in the order history: in the order's language.
   const W = lang === 'pt' ? PT : null;
   const cname = (k: string) => (W && has(W.colors, k) ? W.colors[k] : COLORS[k].name);
@@ -71,7 +75,7 @@ export function priceItem(raw: any, lang: 'pt' | 'en' = 'en', designs: PricedDes
   const shapeName = hasWindow ? ` · ${W && W.js['winShape_' + winShape] ? W.js['winShape_' + winShape] : WIN_NAMES[winShape]}` : '';
   const desc = `${MODELS[model]} · ${colours} · ${PIECES.filter((p) => pieces.includes(p)).map(pieceName).join(' · ')}${shapeName}${numberOn ? badge : ''}`;
   return {
-    cfg: { model, design: d.id, c1, c2, numberOn, number: numberOn ? number : '', pieces, winShape },
+    cfg: { model, ...(trim ? { trim } : {}), design: d.id, c1, c2, numberOn, number: numberOn ? number : '', pieces, winShape },
     qty: Math.min(99, qty),
     unit_cents: Math.round(unit * 100),
     name: d.name,

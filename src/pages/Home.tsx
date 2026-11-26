@@ -3,12 +3,13 @@
    Auto-cycling (WCAG 2.2.2): off with prefers-reduced-motion, paused while hovered, focused, off-screen or in a hidden tab,
    and stopped for good once the visitor picks a design with the dots. */
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { useApp } from '../state';
 import { COPY } from '../content';
 import type { Preset } from '../lib/kit';
 import { CarStage, Thumb } from '../components/Car';
 import { DesignCard, presetLabel } from '../components/DesignCard';
+import Reviews from '../components/Reviews';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -21,7 +22,7 @@ const PIECE_SHAPES: Record<string, { vb: string; d: string }> = {
     + 'M10 97H146V113H26C16 113 12 106 10 97Z M154 97H290C288 106 284 113 274 113H154Z' },
   // Ami 2025 rear quarter window: wide rounded panel with softly bowed top and bottom edges.
   window: { vb: '0 0 200 110', d: 'M30 6C70 2 130 2 170 6C188 8 196 22 196 40V70C196 92 186 104 166 104C120 108 80 108 34 104C14 104 4 92 4 70V40C4 22 12 8 30 6Z' },
-  // Ami Pop front accent (15.8 × 3.1 cm): two thin brackets, one per headlight.
+  // Ami OG front accent (15.8 × 3.1 cm): two thin brackets, one per headlight.
   accent: { vb: '0 0 200 40', d: 'M8 2H192A6 6 0 0 1 198 8V17H190V10H10V17H2V8A6 6 0 0 1 8 2Z M8 38H192A6 6 0 0 0 198 32V23H190V30H10V23H2V32A6 6 0 0 0 8 38Z' },
   // Rim sticker: a ring that sits on the wheel.
   rims: { vb: '0 0 100 100', d: 'M4 50A46 46 0 1 1 96 50A46 46 0 1 1 4 50Z M22 50A28 28 0 1 0 78 50A28 28 0 1 0 22 50Z' },
@@ -82,7 +83,6 @@ function KitCard({ code, name, qty, tag, size, text, sizeLabel, qtyLabel, soon }
 export default function Home() {
   const { kit, lang, to } = useApp();
   const c = COPY[lang].home;
-  const navigate = useNavigate();
   const { hash } = useLocation();
   const PRESETS = kit.presets; // premade colour pairs, names in the page language
   const presetCfg = (designId: string, presetId: string) => kit.presetCfg(designId, presetId) ?? kit.defaultCfg(kit.D(designId)!);
@@ -100,7 +100,7 @@ export default function Home() {
     stopped.current = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     const el = hostWrap.current?.querySelector('#heroCar'); let io: IntersectionObserver | undefined;
     if (el && 'IntersectionObserver' in window) { io = new IntersectionObserver((es) => { visible.current = es[es.length - 1].isIntersecting; }); io.observe(el); }
-    const t = setInterval(() => { if (!stopped.current && !paused.current && visible.current && !document.hidden) setI((n) => (n + 1) % cycle.length); }, 3400);
+    const t = setInterval(() => { if (!stopped.current && !paused.current && visible.current && !document.hidden) setI((n) => (n + 1) % cycle.length); }, 1800); // fast cycle through the premade colourways
     return () => { clearInterval(t); io?.disconnect(); };
   }, [cycle.length]);
   // Arriving from the configurator's "Back to models" link (#versions): open at the version picker.
@@ -109,7 +109,6 @@ export default function Home() {
 
   const cfg = presetCfg(hero.id, heroPreset.id);
   const fromPrice = Math.min(...kit.DESIGNS.map((x) => x.price));
-  const presetQuery = (p: { c1: string; c2: string }) => 'design=' + encodeURIComponent(hero.id) + '&c1=' + p.c1 + '&c2=' + p.c2;
   const goVersions = () => {
     const el = document.getElementById('versions'); if (!el) return;
     const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -140,7 +139,7 @@ export default function Home() {
         <div className="hero-stage" ref={hostWrap}
           onMouseEnter={() => (paused.current = true)} onMouseLeave={() => (paused.current = false)} onFocus={() => (paused.current = true)} onBlur={() => (paused.current = false)}>
           {/* Day mode always: no night prop, so no car lights or night effect in the dark theme. */}
-          <CarStage id="heroCar" cfg={cfg} rollIn style={{ cursor: 'pointer' }} onClick={() => navigate(to('configurator', presetQuery(heroPreset)))} />
+          <CarStage id="heroCar" cfg={cfg} rollIn style={{ cursor: 'pointer' }} onClick={goVersions} />
           <div className="hero-caption">
             <div className={'hero-name' + (swap ? ' swap' : '')}><span className="eyebrow" id="heroCat">{presetLabel(kit, heroPreset)}</span><strong id="heroName">{hero.name}</strong></div>
             <div className="dots" id="heroDots" role="group" aria-label={c.showDesign}>
@@ -171,6 +170,8 @@ export default function Home() {
         <div className="sec-head"><h2 className="display">{c.popular}</h2><Link className="btn btn-ghost" to={to('shop')}>{c.all(PRESETS.length)}</Link></div>
         <div className="grid-cards" id="featured">{PRESETS.map((p) => <DesignCard key={p.id} d={hero} preset={p} />)}</div>
       </div>
+
+      <Reviews />
 
       <div className="section" style={{ paddingTop: 0 }}>
         <div className="sec-head"><h2 className="display">{c.how}</h2></div>

@@ -45,7 +45,7 @@
   "pages": {
     "home": {"title": "{brand} — Sticker kits for the Citroën Ami", "description": "Pre-cut vinyl sticker kits for the Citroën Ami door panel and rear quarter window. Pick a design, set two colours and preview the kit on your car before you order."},
     "shop": {"title": "Shop all designs — {brand}", "crumb": "Shop", "description": "Browse OFS/T sticker kit designs for the Citroën Ami, starting with the signature Flame Camo in four colour combinations. Full kit from {min}, for both sides of the car."},
-    "configurator": {"title": "Configurator: design your Ami kit — {brand}", "crumb": "Configurator", "description": "Design your Citroën Ami sticker kit live on an Ami 2025 or Ami Pop: choose a design, two vinyl colours, the window sticker shape and a full kit or single pairs of pieces, then add it to your cart."},
+    "configurator": {"title": "Configurator: design your Ami kit — {brand}", "crumb": "Configurator", "description": "Design your Citroën Ami sticker kit live on an Ami 2025 or Ami OG: choose a design, two vinyl colours, the window sticker shape and a full kit or single pairs of pieces, then add it to your cart."},
     "about": {"title": "About & FAQ — {brand}", "crumb": "About & FAQ", "description": "Who makes OFS/T sticker kits for the Citroën Ami, how they are cut, and answers on fitting, car washes, removal and compatibility."},
     "privacy": {"title": "Privacy policy — {brand}", "crumb": "Privacy policy", "description": "How OFS/T handles personal data in its online shop for Citroën Ami sticker kits."},
     "terms": {"title": "Terms of sale — {brand}", "crumb": "Terms of sale", "description": "Terms of sale for OFS/T sticker kits for the Citroën Ami."},
@@ -81,7 +81,7 @@
     "pages": [
       ["home", "Home", "overview, popular designs, how ordering and fitting work, compatible cars"],
       ["shop", "Shop", "all designs with category and full-kit price"],
-      ["configurator", "Configurator", "live preview on the Ami 2025 or Ami Pop; pick design, colours, pieces and window sticker shape. Deep link a design with ?design=<id> (add &model=pop for the Ami Pop)"],
+      ["configurator", "Configurator", "live preview on the Ami 2025 or Ami OG; pick design, colours, pieces and window sticker shape. Deep link a design with ?design=<id> (add &model=pop for the Ami OG)"],
       ["about", "About & FAQ", "who makes the kits; fitting time, car washes, removal, compatibility, custom designs"]
     ],
     "legal": [
@@ -156,7 +156,7 @@
     "privacyLink": "privacy policy",
     "persCheck": "I understand that personalised kits are made to my choices and cannot be returned for a change of mind (faulty kits are always covered).",
     "newTab": " (opens in a new tab)",
-    "noPayment": "You'll pay securely on the next step with Stripe. We never see your card details.",
+    "noPayment": "You'll pay securely on the next step with Stripe. We never see your card details. You don't need an account: we create one automatically with this email after payment.",
     "notSetUp": "Online ordering isn't set up yet — email us at {email}.",
     "ourContact": "our contact address",
     "emailPlaceholder": "[CONTACT EMAIL]",
@@ -273,7 +273,7 @@
     "beDenied": "This account isn't allowed to do that.",
     "beGeneric": "Something went wrong. Please try again.",
     "bePayment": "We couldn't open the payment page. Please try again in a moment.",
-    "orderEyebrow": "Your order", "orderChecking": "Checking your payment…", "orderPaidH": "Payment received", "orderPaidText": "Thank you! We've got your order and will email you at the address you gave when your kit ships.",
+    "orderEyebrow": "Your order", "orderChecking": "Checking your payment…", "orderPaidH": "Payment received", "orderPaidText": "Thank you! We've got your order and will email you at the address you gave when your kit ships. If you didn't have an account yet, we created one with that email and sent you a link to sign in.",
     "orderPendingH": "Waiting for confirmation", "orderPendingText": "Your payment is still being confirmed by your bank. This page updates by itself; you can also close it, we'll email you.",
     "orderCancelledH": "Payment cancelled", "orderCancelledText": "Nothing was charged. Your cart is still saved, so you can go back and try again.",
     "orderFailedH": "Payment didn't go through", "orderFailedText": "Nothing was charged. Your cart is still saved, so you can try again or use another payment method.",

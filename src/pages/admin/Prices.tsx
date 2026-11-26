@@ -1,6 +1,6 @@
 /* Admin "Prices" tab: every price the shop charges that can change over time, in one place.
    - Full kit price per design (also in the Designs tab) - whole euros.
-   - Price of each PAIR of pieces: door, window, Ami Pop front accents (one for each side of the car).
+   - Price of each PAIR of pieces: door, window, Ami OG front accents (one for each side of the car).
    - The custom badge extra.
    - Shipping (0 = free) and the order value from which shipping is free (0 = never).
    The shop's server (worker/src/prices.ts + designs.ts) checks every number again and is the only thing that decides what Stripe charges;
@@ -18,11 +18,11 @@ const DEFAULTS: Record<Key, number> = { door: DATA.pieces.door, window: DATA.pie
 const TXT = {
   en: {
     title: 'Prices & shipping', note: 'Everything the shop charges. Changes apply to the shop and to checkout as soon as you save (visitors see them on their next page load). Pieces are always sold as a pair: one for each side of the car.',
-    kits: 'Full kit (per design)', kitsNote: 'Both sides of the car: door pair + window pair, plus the front accent pair on the Ami Pop.', kitCol: 'Full kit price (€)',
-    pieces: 'Single pieces (price per pair)', door: 'Door stickers (pair)', window: 'Window stickers (pair)', accent: 'Front accents (pair, Ami Pop only)',
+    kits: 'Full kit (per design)', kitsNote: 'Both sides of the car: door pair + window pair, plus the front accent pair on the Ami OG.', kitCol: 'Full kit price (€)',
+    pieces: 'Single pieces (price per pair)', door: 'Door stickers (pair)', window: 'Window stickers (pair)', accent: 'Front accents (pair, Ami OG only)',
     extras: 'Extras', badge: 'Custom badge text (extra)', badgeNote: 'Only charged on an order that has badge text; the configurator does not offer it at the moment.',
     ship: 'Shipping', shipping: 'Shipping cost per order (€)', shipHint: '0 = free delivery.', freeFrom: 'Free shipping from an order of (€)', freeHint: '0 = no free-shipping threshold.',
-    check: 'Check', model: { qs: 'Ami 2025', pop: 'Ami Pop' }, parts: 'Pieces separately', kit: 'Full kit', charged: 'Customer pays for the full kit',
+    check: 'Check', model: { qs: 'Ami 2025', pop: 'Ami OG' }, parts: 'Pieces separately', kit: 'Full kit', charged: 'Customer pays for the full kit',
     okLine: 'The full kit is cheaper than or equal to its pieces.',
     badLine: (kit: string, parts: string) => `The full kit (${kit}) costs more than its pieces added up (${parts}). The shop charges ${parts} for the full kit so splitting the kit never saves money. Lower the kit price or raise the pieces.`,
     shipNow: (s: string) => `Customers currently see: ${s}`,
@@ -32,11 +32,11 @@ const TXT = {
   },
   pt: {
     title: 'Preços e portes', note: 'Tudo o que a loja cobra. As alterações aplicam-se à loja e ao pagamento assim que guardares (os visitantes veem-nas na página seguinte que abrirem). As peças são sempre vendidas aos pares: uma para cada lado do carro.',
-    kits: 'Kit completo (por design)', kitsNote: 'Os dois lados do carro: par de portas + par de vidros, e no Ami Pop também o par de acentos frontais.', kitCol: 'Preço do kit completo (€)',
-    pieces: 'Peças individuais (preço por par)', door: 'Autocolantes de porta (par)', window: 'Autocolantes de vidro (par)', accent: 'Acentos frontais (par, só Ami Pop)',
+    kits: 'Kit completo (por design)', kitsNote: 'Os dois lados do carro: par de portas + par de vidros, e no Ami OG também o par de acentos frontais.', kitCol: 'Preço do kit completo (€)',
+    pieces: 'Peças individuais (preço por par)', door: 'Autocolantes de porta (par)', window: 'Autocolantes de vidro (par)', accent: 'Acentos frontais (par, só Ami OG)',
     extras: 'Extras', badge: 'Texto personalizado no emblema (extra)', badgeNote: 'Só é cobrado numa encomenda com texto no emblema; o configurador não o oferece neste momento.',
     ship: 'Portes', shipping: 'Portes por encomenda (€)', shipHint: '0 = entrega grátis.', freeFrom: 'Portes grátis a partir de uma encomenda de (€)', freeHint: '0 = sem valor mínimo para portes grátis.',
-    check: 'Verificação', model: { qs: 'Ami 2025', pop: 'Ami Pop' }, parts: 'Peças em separado', kit: 'Kit completo', charged: 'O cliente paga pelo kit completo',
+    check: 'Verificação', model: { qs: 'Ami 2025', pop: 'Ami OG' }, parts: 'Peças em separado', kit: 'Kit completo', charged: 'O cliente paga pelo kit completo',
     okLine: 'O kit completo custa o mesmo ou menos do que as peças em separado.',
     badLine: (kit: string, parts: string) => `O kit completo (${kit}) custa mais do que as peças somadas (${parts}). A loja cobra ${parts} pelo kit completo para que dividir o kit nunca poupe dinheiro. Baixa o preço do kit ou sobe o das peças.`,
     shipNow: (s: string) => `Os clientes veem agora: ${s}`,
