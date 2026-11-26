@@ -1,10 +1,11 @@
-/* App-wide state: language/kit, cart (localStorage), modal dialogs (cart drawer, search), toast and screen-reader announcements.
+﻿/* App-wide state: language/kit, cart (localStorage), modal dialogs (cart drawer, search), toast and screen-reader announcements.
    Replaces core.js. The cart is shared between languages and tabs, exactly as before (same storage key). */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { cleanReviews, type Review } from './lib/reviews';
 import { cleanRemoteDesigns, cleanRemotePrices, getKit, setRemoteDesigns, setRemotePrices, langOfPath, pageOfPath, pagePath, type Cfg, type CartItem, type Kit, type Lang, type PageKey } from './lib/kit';
 import { registerRemoteArt } from './lib/car';
+import { registerOutline } from './lib/outline';
 import { makeBackend, type Backend, type Customer } from './lib/backend';
 
 export type ModalName = 'cart' | 'search' | null;
@@ -112,6 +113,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!live || !list.length) return;
       // Pictures first, so a design never shows up without its image.
       for (const r of list) {
+        if (r.hasOutline) { try { registerOutline(r.id, await backendRef0.current.designOutlineBlob(r.id, r.outlineVer)); } catch { /* the default outline is used */ } }
         if (!r.hasMaster || !r.mode) continue;
         try {
           const [u1, u2] = await Promise.all([backendRef0.current.designArtBlob(r.id, 1000, r.ver), backendRef0.current.designArtBlob(r.id, 1600, r.ver)]);

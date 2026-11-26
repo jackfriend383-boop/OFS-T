@@ -1,4 +1,4 @@
-/* Page shell: header (nav ink, theme, language, search, cart, mobile menu), footer, and the cart / search / toast overlays. */
+﻿/* Page shell: header (nav ink, theme, language, search, cart, mobile menu), footer, and the cart / search / toast overlays. */
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useApp } from '../state';
@@ -126,13 +126,20 @@ function Header() {
     return () => { removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
   }, [home]);
 
+  /* The bar and the menu panel sit at the top of the page: a click on any of their buttons or links brings you back up there
+     (smoothly), so the menu / search / cart you just opened is never out of sight. Closing the menu does not scroll. */
+  const toTop = (e: React.MouseEvent) => {
+    if (scrollY < 4 || !(e.target as HTMLElement).closest('button, a')) return;
+    if (menu && (e.target as HTMLElement).closest('.menu-btn')) return;
+    scrollTo({ top: 0, behavior: typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
   const hoverable = () => typeof matchMedia === 'function' && matchMedia('(hover: hover)').matches;
   const links = NAV.map((k) => ({ k, href: to(k), label: kit.L.nav[k], cur: page === k }));
   const cartLabel = cartCount ? T.n('openCart', cartCount) : T('openCartEmpty');
   return (
     <>
       {/* Menu on the left, the logo centred, tools on the right. The page links live in the menu panel at every width. */}
-      <header className="top" data-nav={home ? (menu ? 'up' : nav) : undefined}>
+      <header className="top" onClickCapture={toTop} data-nav={home ? (menu ? 'up' : nav) : undefined}>
         <div className="top-l">
           <button type="button" className="menu-btn" id="menuBtn" ref={menuBtn} aria-label={ui.t_menu} aria-expanded={menu} aria-controls="mnav" onClick={() => setMenu((m) => !m)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg><span>{ui.t_menu}</span></button>
         </div>
@@ -145,7 +152,7 @@ function Header() {
           <button type="button" className="icon-btn" id="openCart" aria-label={cartLabel} aria-haspopup="dialog" onClick={() => openModal('cart')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h2.2l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.6 8H6.1" /><circle cx="9.5" cy="20" r="1.2" /><circle cx="17" cy="20" r="1.2" /></svg><span className="badge" id="cartCount" aria-hidden="true">{cartCount}</span></button>
         </div>
       </header>
-      <nav className={'mnav' + (menu ? ' on' : '')} id="mnav" ref={mnav} aria-label={ui.t_nav_mobile}>
+      <nav className={'mnav' + (menu ? ' on' : '')} id="mnav" ref={mnav} onClickCapture={toTop} aria-label={ui.t_nav_mobile}>
         {links.map((l) => <Link key={l.k} to={l.href} data-r={l.k} className={l.k === 'configurator' ? 'btn-fx' : undefined} aria-current={l.cur ? 'page' : undefined}>{l.label}</Link>)}
         {backend.configured && <Link to={to('account')} data-r="account" aria-current={page === 'account' ? 'page' : undefined}>{account.user ? T('acctMyAccount') : T('acctSignIn')}</Link>}
         <LangSwitch cls="mlang" />

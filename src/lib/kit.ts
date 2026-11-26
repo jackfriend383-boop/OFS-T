@@ -1,11 +1,11 @@
-/* Shared data + helpers for one language: translations (T), localised designs and colours, kit configs, prices, URLs.
+﻿/* Shared data + helpers for one language: translations (T), localised designs and colours, kit configs, prices, URLs.
    Replaces the old window.OFST global (core.js + i18n.js). Pure functions, safe to run on the server. */
 import DATA from '../data/designs.json';
 import PT from '../i18n/pt.json';
 import EN from '../i18n/en.json';
 
 export type Lang = 'pt' | 'en';
-export interface Design { id: string; name: string; tag: string; cat: string; catName: string; price: number; c1: string; c2: string; art?: string; fixed?: boolean; master?: string; custom?: boolean; hidden?: boolean }
+export interface Design { id: string; name: string; tag: string; cat: string; catName: string; price: number; c1: string; c2: string; art?: string; fixed?: boolean; master?: string; custom?: boolean; hidden?: boolean; boxColor?: string; outlineScale?: number }
 /* Shape of the rear-window sticker: Ami 2025 = 'full' (the whole glass) or 'square'; Ami OG = 'circle' (its half-ring glass) only. */
 export type WinShape = 'full' | 'circle' | 'square';
 export interface Cfg { model: 'qs' | 'pop'; design: string; c1: string; c2: string; numberOn: boolean; number: string; trim: string; pieces: Piece[]; winShape: WinShape }
@@ -17,7 +17,7 @@ export const FEATURED: string[] = DATA.featured;
 /* ---------- Designs added / changed in the admin "Designs" tab ----------
    The built-in designs (designs.json) always exist. The shop's server also sends a short list (GET /api/designs): designs the owner
    added, and changes to built-in ones (price, name, hidden...). It is checked and merged here, then every kit is rebuilt. */
-export interface RemoteDesign { id: string; name: string | null; tag: string | null; tagPt: string | null; cat: string | null; price: number | null; c1: string | null; c2: string | null; fixed: boolean | null; hidden: boolean; mode: 'mask' | 'rgb' | null; ver: number; custom: boolean; hasMaster: boolean }
+export interface RemoteDesign { id: string; name: string | null; tag: string | null; tagPt: string | null; cat: string | null; price: number | null; c1: string | null; c2: string | null; fixed: boolean | null; hidden: boolean; mode: 'mask' | 'rgb' | null; ver: number; custom: boolean; hasMaster: boolean; boxColor: string | null; outlineScale: number | null; outlineVer: number; hasOutline: boolean }
 let REMOTE: RemoteDesign[] = [];
 const COLOR_IDS = DATA.colors as Record<string, unknown>;
 const okText = (v: unknown, n: number) => (typeof v === 'string' && v.trim() ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n) : null);
@@ -32,6 +32,8 @@ export function cleanRemoteDesigns(raw: unknown): RemoteDesign[] {
       id: r.id, name: okText(r.name, 60), tag: okText(r.tag, 120), tagPt: okText(r.tagPt, 120), cat: okText(r.cat, 30), price,
       c1: typeof r.c1 === 'string' && has(COLOR_IDS, r.c1) ? r.c1 : null, c2: typeof r.c2 === 'string' && has(COLOR_IDS, r.c2) ? r.c2 : null,
       fixed: r.fixed == null ? null : !!r.fixed, hidden: !!r.hidden, mode: r.mode === 'rgb' ? 'rgb' : r.mode === 'mask' ? 'mask' : null, ver: Number.isInteger(r.ver) ? r.ver : 1, custom: !!r.custom, hasMaster: !!r.hasMaster,
+      boxColor: typeof r.boxColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(r.boxColor) ? r.boxColor.toLowerCase() : null,
+      outlineScale: Number.isInteger(r.outlineScale) && r.outlineScale >= 30 && r.outlineScale <= 250 ? r.outlineScale : null, outlineVer: Number.isInteger(r.outlineVer) ? r.outlineVer : 0, hasOutline: !!r.hasOutline,
     });
   }
   return out;
@@ -43,11 +45,11 @@ function mergedDesigns(all = false): (Record<string, any>)[] {
   for (const d of DATA.designs as any[]) {
     const r = by.get(d.id);
     if (r && r.hidden && !all) continue;
-    out.push(r ? { ...d, hidden: r.hidden || undefined, name: r.name ?? d.name, cat: r.cat ?? d.cat, price: r.price ?? d.price, c1: r.c1 ?? d.c1, c2: r.c2 ?? d.c2, fixed: r.fixed ?? d.fixed, tagEn: r.tag, tagPt: r.tagPt, tag: r.tag ?? d.tag } : d);
+    out.push(r ? { ...d, hidden: r.hidden || undefined, name: r.name ?? d.name, cat: r.cat ?? d.cat, price: r.price ?? d.price, c1: r.c1 ?? d.c1, c2: r.c2 ?? d.c2, fixed: r.fixed ?? d.fixed, tagEn: r.tag, tagPt: r.tagPt, tag: r.tag ?? d.tag, boxColor: r.boxColor ?? undefined, outlineScale: r.outlineScale ?? undefined } : d);
   }
   for (const r of REMOTE) {
     if (!r.custom || (r.hidden && !all) || !r.name || !r.price || !r.c1 || !r.c2 || (DATA.designs as any[]).some((d) => d.id === r.id)) continue;
-    out.push({ id: r.id, name: r.name, tag: r.tag || '', tagEn: r.tag, tagPt: r.tagPt, cat: r.cat || 'Launch Edition', price: r.price, c1: r.c1, c2: r.c2, fixed: !!r.fixed, custom: true, art: r.id, hidden: r.hidden || undefined });
+    out.push({ id: r.id, name: r.name, tag: r.tag || '', tagEn: r.tag, tagPt: r.tagPt, cat: r.cat || 'Launch Edition', price: r.price, c1: r.c1, c2: r.c2, fixed: !!r.fixed, custom: true, art: r.id, hidden: r.hidden || undefined, boxColor: r.boxColor ?? undefined, outlineScale: r.outlineScale ?? undefined });
   }
   return out;
 }

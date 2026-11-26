@@ -1,4 +1,4 @@
-/* OFS/T order backend client: talks to the Cloudflare Worker in worker/ (which owns the D1 database) over plain fetch.
+﻿/* OFS/T order backend client: talks to the Cloudflare Worker in worker/ (which owns the D1 database) over plain fetch.
    Config comes from src/data/site.json (`apiUrl`, validated at build time by vite.config.ts). When it is empty,
    `configured` is false and the site falls back to "email us" (checkout) / setup instructions (admin).
    Security notes (see SECURITY.md and worker/src/index.ts):
@@ -302,6 +302,12 @@ export function makeBackend(kit: Kit) {
     if (!res.ok) throw new BackendError(MSG.generic, 'http_' + res.status);
     return URL.createObjectURL(await res.blob());
   }
+  async function designOutlineBlob(id: string, ver: number): Promise<string> {
+    if (!backendConfigured || !/^[a-z0-9][a-z0-9-]{1,38}$/.test(id)) throw new BackendError(MSG.invalid, 'invalid');
+    const res = await fetch(URL_ + '/api/design-outline/' + id + '?v=' + (Math.floor(+ver) || 1), { credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin' });
+    if (!res.ok) throw new BackendError(MSG.generic, 'http_' + res.status);
+    return URL.createObjectURL(new Blob([await res.text()], { type: 'image/svg+xml' }));
+  }
   const idOk = (id: string) => /^[a-z0-9][a-z0-9-]{1,38}$/.test(String(id));
   async function listDesigns(): Promise<any[]> {
     const r = await authed('/api/admin/designs');
@@ -320,6 +326,6 @@ export function makeBackend(kit: Kit) {
     if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
     return authed('/api/admin/designs/' + id, { method: 'DELETE' });
   }
-  return { configured: backendConfigured, pricesPublic, getPrices, savePrices, reviewsPublic, listReviews, addReview, saveReview, deleteReview, joinWaitlist, listWaitlist, deleteWaitlist, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, createOrder, setStatus };
+  return { configured: backendConfigured, pricesPublic, getPrices, savePrices, reviewsPublic, listReviews, addReview, saveReview, deleteReview, joinWaitlist, listWaitlist, deleteWaitlist, designsPublic, designArtBlob, designOutlineBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, createOrder, setStatus };
 }
 export type Backend = ReturnType<typeof makeBackend>;

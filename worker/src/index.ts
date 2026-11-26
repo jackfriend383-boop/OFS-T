@@ -1,5 +1,5 @@
-import { priceItem, isPersonalised, type PricedItem } from './pricing';
-import { DesignError, adminDelete, adminList, adminMaster, adminSave, designArt, pricingDesigns, publicList } from './designs';
+﻿import { priceItem, isPersonalised, type PricedItem } from './pricing';
+import { DesignError, adminDelete, adminList, adminMaster, adminSave, designArt, designOutline, pricingDesigns, publicList } from './designs';
 import { PriceError, loadPrices, savePrices, shippingCents, type Prices } from './prices';
 import { ReviewError, addReview, deleteReview, listReviews, saveReview } from './reviews';
 import { WaitlistError, deleteWaitlist, joinWaitlist, listWaitlist } from './waitlist';
@@ -811,6 +811,14 @@ export default {
         const h: Record<string, string> = { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'cross-origin' };
         const origin = allowedOrigin(req, env); if (origin) { h['Access-Control-Allow-Origin'] = origin; h['Vary'] = 'Origin'; }
         return new Response(png, { status: 200, headers: h });
+      }
+      const outl = /^\/api\/design-outline\/([a-z0-9-]{2,40})$/.exec(path);
+      if (outl && req.method === 'GET') {
+        const svg = await designOutline(env, outl[1]);
+        if (!svg) throw new HttpError(404, 'not_found');
+        const h: Record<string, string> = { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'", 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'cross-origin' };
+        const origin = allowedOrigin(req, env); if (origin) { h['Access-Control-Allow-Origin'] = origin; h['Vary'] = 'Origin'; }
+        return new Response(svg, { status: 200, headers: h });
       }
       // Site settings edited in the admin "Edits" tab: background pictures (public, cached; the picture URL carries ?v= so changes bust caches).
       if (path === '/api/site-settings' && req.method === 'GET') return respond(await publicSettings(env, new URL(req.url).origin), 200, req, env, { 'Cache-Control': 'public, max-age=20, stale-while-revalidate=60' });

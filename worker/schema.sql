@@ -178,3 +178,6 @@ CREATE TABLE IF NOT EXISTS waitlist (
   lang       TEXT NOT NULL DEFAULT 'pt',
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+-- Round 14 (migrations/0014_design_box.sql): designs gained box_color TEXT, outline TEXT, outline_scale INTEGER, outline_ver INTEGER NOT NULL DEFAULT 0.
+

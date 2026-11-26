@@ -1,4 +1,4 @@
-/* Designs managed from the admin "Designs" tab. The built-in designs (src/data/designs.json) always exist; the `designs` table
+﻿/* Designs managed from the admin "Designs" tab. The built-in designs (src/data/designs.json) always exist; the `designs` table
    (migrations/0009_designs.sql) holds designs the owner added, and overrides for built-in ones (price, name, hidden...).
    If the table cannot be read (migration not run yet) everything falls back to the built-in list, so the shop keeps working. */
 import DATA from '../../src/data/designs.json';
@@ -13,8 +13,8 @@ const MAX_CUSTOM = 40;
 const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
 export interface PricedDesign { id: string; name: string; price: number; c1: string; c2: string; fixed?: boolean }
 
-interface Row { id: string; name: string | null; tag: string | null; tag_pt: string | null; cat: string | null; price: number | null; c1: string | null; c2: string | null; fixed: number | null; hidden: number; mode: string | null; ver: number; has_master: number }
-const COLS = 'id, name, tag, tag_pt, cat, price, c1, c2, fixed, hidden, mode, ver, (master IS NOT NULL) AS has_master';
+interface Row { id: string; name: string | null; tag: string | null; tag_pt: string | null; cat: string | null; price: number | null; c1: string | null; c2: string | null; fixed: number | null; hidden: number; mode: string | null; ver: number; has_master: number; box_color: string | null; outline_scale: number | null; outline_ver: number; has_outline: number }
+const COLS = 'id, name, tag, tag_pt, cat, price, c1, c2, fixed, hidden, mode, ver, (master IS NOT NULL) AS has_master, box_color, outline_scale, outline_ver, (outline IS NOT NULL) AS has_outline';
 async function rows(env: DesignEnv): Promise<Row[]> {
   try { return ((await env.DB.prepare(`SELECT ${COLS} FROM designs ORDER BY sort, created_at`).all()).results || []) as unknown as Row[]; }
   catch (e: any) { console.error('designs table unavailable', e && e.message); return []; }
@@ -37,7 +37,7 @@ export async function pricingDesigns(env: DesignEnv): Promise<PricedDesign[]> {
   return out;
 }
 
-const pub = (r: Row) => ({ id: r.id, name: r.name, tag: r.tag, tagPt: r.tag_pt, cat: r.cat, price: r.price, c1: r.c1, c2: r.c2, fixed: r.fixed == null ? null : !!r.fixed, hidden: !!r.hidden, mode: r.mode, ver: r.ver, custom: !isBuiltin(r.id), hasMaster: !!r.has_master });
+const pub = (r: Row) => ({ id: r.id, name: r.name, tag: r.tag, tagPt: r.tag_pt, cat: r.cat, price: r.price, c1: r.c1, c2: r.c2, fixed: r.fixed == null ? null : !!r.fixed, hidden: !!r.hidden, mode: r.mode, ver: r.ver, custom: !isBuiltin(r.id), hasMaster: !!r.has_master, boxColor: r.box_color, outlineScale: r.outline_scale, outlineVer: r.outline_ver, hasOutline: !!r.has_outline });
 /* What the shop pages need: overrides of built-in designs + designs added in the admin (hidden custom designs are left out). */
 export async function publicList(env: DesignEnv) {
   return { designs: (await rows(env)).filter((r) => isBuiltin(r.id) || (!r.hidden && r.has_master)).map(pub) };
@@ -58,6 +58,13 @@ export async function designArt(env: DesignEnv, id: string, w: number): Promise<
   return out;
 }
 
+/* The outline picture shown in the design's shop box (SVG text; served by GET /api/design-outline/:id). */
+export async function designOutline(env: DesignEnv, id: string): Promise<string | null> {
+  if (!ID.test(id)) return null;
+  const r = await env.DB.prepare('SELECT outline FROM designs WHERE id = ?1').bind(id).first<{ outline: string | null }>().catch(() => null);
+  return r && r.outline ? r.outline : null;
+}
+
 const text = (v: unknown, max: number, min = 0): string => {
   if (typeof v !== 'string') throw new DesignError(400, 'invalid');
   const s = v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
@@ -69,6 +76,13 @@ function checkMaster(v: unknown): string {
   if (typeof v !== 'string' || v.length < 500 || v.length > 1000000 || !/<svg[\s>]/.test(v) || !v.includes('id="Artwork"') || !v.includes('id="CutContour"')) throw new DesignError(400, 'invalid');
   if (/<script|<foreignObject|<image|<use[\s>]|javascript:|vbscript:|data:|\son[a-z]+\s*=|<!ENTITY|<iframe|<embed[\s>]|<object[\s>]|<a[\s>]|<animate[\s>]|<animateTransform[\s>]|<animateMotion[\s>]|<set[\s>]|<handler[\s>]|<link[\s>]|<meta[\s>]|<base[\s>]|@import|&#/i.test(v)) throw new DesignError(400, 'invalid'); // pure vector shapes only
   if (/href\s*=(?!\s*["']?\s*#)/i.test(v)) throw new DesignError(400, 'invalid'); // gradients may reference "#id"; nothing may point outside the file
+  return v;
+}
+/* The outline is shown as a plain picture, but it is still checked like the master: vector shapes only, nothing that points outside the file. */
+function checkOutline(v: unknown): string {
+  if (typeof v !== 'string' || v.length < 100 || v.length > 400000 || !/<svg[\s>]/.test(v)) throw new DesignError(400, 'invalid');
+  if (/<script|<foreignObject|<image|<use[\s>]|javascript:|vbscript:|data:|\son[a-z]+\s*=|<!ENTITY|<iframe|<embed[\s>]|<object[\s>]|<a[\s>]|<animate[\s>]|<animateTransform[\s>]|<animateMotion[\s>]|<set[\s>]|<handler[\s>]|<link[\s>]|<meta[\s>]|<base[\s>]|@import|&#|url\(\s*["']?\s*(?!#)/i.test(v)) throw new DesignError(400, 'invalid');
+  if (/href\s*=(?!\s*["']?\s*#)/i.test(v)) throw new DesignError(400, 'invalid');
   return v;
 }
 const checkArt = (v: unknown): string => { if (typeof v !== 'string' || v.length < 100 || v.length > 400000 || !B64.test(v) || !v.startsWith('iVBORw0KGgo')) throw new DesignError(400, 'invalid'); return v; };
@@ -88,6 +102,9 @@ export async function adminSave(env: DesignEnv, id: string, b: any) {
   opt('cat', (v) => text(v, 30, 1)); opt('c1', colour); opt('c2', colour);
   opt('price', (v) => { const n = Number(v); if (!Number.isInteger(n) || n < 1 || n > 999) throw new DesignError(400, 'invalid'); return n; });
   if (has('hidden')) set.hidden = b.hidden === true ? 1 : 0;
+  if (has('boxColor')) { if (b.boxColor === null) set.box_color = null; else { if (typeof b.boxColor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(b.boxColor)) throw new DesignError(400, 'invalid'); set.box_color = b.boxColor.toLowerCase(); } }
+  if (has('outlineScale')) { if (b.outlineScale === null) set.outline_scale = null; else { const n = Number(b.outlineScale); if (!Number.isInteger(n) || n < 30 || n > 250) throw new DesignError(400, 'invalid'); set.outline_scale = n; } }
+  if (has('outline')) { set.outline = b.outline === null ? null : checkOutline(b.outline); set.outline_ver = (cur?.outline_ver || 0) + 1; }
   {
     if (has('fixed')) { if (b.fixed === null && builtin) { set.fixed = null; set.mode = null; } else { set.fixed = b.fixed === true ? 1 : 0; set.mode = b.fixed === true ? 'rgb' : 'mask'; } }
     if (has('master') || has('art1000') || has('art1600')) {

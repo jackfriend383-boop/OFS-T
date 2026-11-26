@@ -1,4 +1,4 @@
-/* FONTS: self-hosted Inter Tight (assets/fonts/, SIL OFL 1.1, see assets/fonts/InterTight-OFL.txt). latin + latin-ext subsets.
+﻿/* FONTS: self-hosted Inter Tight (assets/fonts/, SIL OFL 1.1, see assets/fonts/InterTight-OFL.txt). latin + latin-ext subsets.
    No requests go to Google Fonts. */
 @font-face{font-family:'Inter Tight';font-style:normal;font-weight:100 900;font-display:swap;src:url(../assets/fonts/inter-tight-latin-ext-wght-normal.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
 @font-face{font-family:'Inter Tight';font-style:normal;font-weight:100 900;font-display:swap;src:url(../assets/fonts/inter-tight-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
@@ -1196,24 +1196,21 @@ html.lite .stage-ctrl,html.lite .ctrl-group{backdrop-filter:none;-webkit-backdro
 
 /* Shop: one liquid-glass box per design (name on the left, fading into the black outline on the right) */
 .dbox-hint{margin:0 0 16px}
-.dbox-list{position:relative;display:grid;gap:18px;padding:clamp(14px,3vw,28px);border-radius:34px;isolation:isolate;overflow:hidden;
-  background:radial-gradient(60% 90% at 8% 12%,rgba(255,92,56,.32),transparent 62%),radial-gradient(55% 80% at 92% 88%,rgba(52,92,255,.28),transparent 64%),radial-gradient(40% 60% at 55% 50%,rgba(255,200,64,.22),transparent 70%),var(--raise)}
-.dbox-item{display:grid;gap:18px}
+.dbox-list{position:relative;display:grid;gap:18px}
+.dbox-frame{--frame:#a9d4f5;--oscale:1;padding:clamp(7px,1.5vw,14px);border-radius:30px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--frame) 38%,#fff),var(--frame) 55%,color-mix(in srgb,var(--frame) 62%,#fff))}.dbox-item{display:grid;gap:18px}
 .dbox-item[hidden]{display:none}
 .dbox{all:unset;box-sizing:border-box;position:relative;display:flex;align-items:center;width:100%;min-height:clamp(104px,16vw,148px);padding:0 clamp(22px,4vw,48px);border-radius:28px;overflow:hidden;cursor:pointer;isolation:isolate;
-  background:linear-gradient(100deg,rgba(12,13,17,.84) 0%,rgba(12,13,17,.58) 32%,rgba(255,255,255,.34) 64%,rgba(255,255,255,.66) 100%);
+  background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,255,255,.82));
   -webkit-backdrop-filter:blur(22px) saturate(1.7);backdrop-filter:blur(22px) saturate(1.7);
-  border:1px solid rgba(255,255,255,.42);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -1px 0 rgba(255,255,255,.14),inset 0 0 28px rgba(255,255,255,.08),0 22px 44px -26px rgba(0,0,0,.55);
+  border:.25px solid rgba(255,255,255,.7);
+  box-shadow:0 22px 44px -26px rgba(0,0,0,.4);
   transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
-.dbox::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(120% 140% at 0% 0%,rgba(255,255,255,.3),transparent 48%)}
-.dbox:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.75),inset 0 -1px 0 rgba(255,255,255,.18),inset 0 0 34px rgba(255,255,255,.12),0 28px 50px -26px rgba(0,0,0,.6)}
-.dbox:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
-.dbox-name{position:relative;z-index:2;font-weight:800;letter-spacing:-.02em;font-size:clamp(1.5rem,3.4vw,2.5rem);line-height:1.05;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.35);max-width:48%}
-.dbox-art{position:absolute;right:0;top:0;bottom:0;width:66%;z-index:1;display:flex;align-items:center;justify-content:flex-end;pointer-events:none;
-  -webkit-mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.55) 34%,#000 70%);mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.55) 34%,#000 70%)}
-.dbox-art img{height:150%;width:auto;max-width:none;margin-right:-4%;opacity:.92}
-.dbox-go{position:absolute;right:clamp(12px,2vw,20px);top:clamp(10px,1.6vw,16px);z-index:3;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#111;background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.dbox:hover{transform:translateY(-2px);box-shadow:0 28px 50px -26px rgba(0,0,0,.5)}
+.dbox:focus-visible{outline:2px solid #111;outline-offset:3px}
+.dbox-name{position:relative;z-index:2;font-weight:800;letter-spacing:-.02em;font-size:clamp(1.5rem,3.4vw,2.5rem);line-height:1.05;color:#000;max-width:48%}
+.dbox-art{position:absolute;right:0;top:0;bottom:0;width:78%;z-index:1;pointer-events:none;}
+.dbox-art img{position:absolute;right:-2%;top:50%;transform:translateY(-50%);height:calc(128% * var(--oscale,1));width:auto;max-width:none;-webkit-mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.03) 12%,rgba(0,0,0,.12) 26%,rgba(0,0,0,.35) 42%,rgba(0,0,0,.7) 62%,#000 82%);mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.03) 12%,rgba(0,0,0,.12) 26%,rgba(0,0,0,.35) 42%,rgba(0,0,0,.7) 62%,#000 82%)}.dbox-go{position:absolute;right:clamp(12px,2vw,20px);top:clamp(10px,1.6vw,16px);z-index:3;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#111;background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 2px 10px rgba(0,0,0,.18)}
 .dbox-go svg{width:16px;height:16px;transition:transform .3s var(--ease)}
 .dbox[aria-expanded="true"] .dbox-go svg{transform:rotate(180deg)}
 .dbox-panel{animation:swap .4s var(--ease)}

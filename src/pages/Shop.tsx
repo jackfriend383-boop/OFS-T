@@ -1,10 +1,9 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useApp } from '../state';
 import { COPY } from '../content';
 import { DesignCard, FilterTabs } from '../components/DesignCard';
 import { useFilterFeedback } from '../lib/filter';
-
-const OUTLINE = import.meta.env.BASE_URL + 'assets/img/design-outline.svg';
+import { DEFAULT_FRAME, outlineUrl } from '../lib/outline';
 
 /* The shop shows one liquid-glass box per design: the name (white, bold) on the left, fading into the design's black outline on the
    right. Clicking a box opens its 4 most popular colour combinations underneath; clicking again (or another box) closes it. */
@@ -32,11 +31,13 @@ export default function Shop() {
             const open = openId === d.id, hidden = cat !== 'All' && d.cat !== cat;
             return (
               <div className={'dbox-item' + (hidden ? ' out' : '')} key={d.id} hidden={hidden}>
+                <div className="dbox-frame" style={{ '--frame': d.boxColor || DEFAULT_FRAME, '--oscale': (d.outlineScale || 100) / 100 } as React.CSSProperties}>
                 <button type="button" className="dbox" aria-expanded={open} aria-controls={'dp-' + d.id} aria-label={c.open(d.name)} onClick={() => setOpenId(open ? null : d.id)}>
                   <span className="dbox-name">{d.name}</span>
-                  <span className="dbox-art" aria-hidden="true"><img src={OUTLINE} alt="" loading="lazy" decoding="async" /></span>
+                  <span className="dbox-art" aria-hidden="true"><img src={outlineUrl(d.id)} alt="" loading="lazy" decoding="async" /></span>
                   <span className="dbox-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="m6 9 6 6 6-6" /></svg></span>
                 </button>
+                </div>
                 {open && (
                   <div className="dbox-panel" id={'dp-' + d.id} role="region" aria-label={c.top(d.name)}>
                     <div className="grid-cards">{POPULAR.map((p) => <DesignCard key={d.id + p.id} d={d} preset={p} />)}</div>

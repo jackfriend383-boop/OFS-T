@@ -166,3 +166,10 @@
 .rv-stars svg.on{fill:#F5B301;stroke:#F5B301}
 @media (max-width:560px){.rv-row{grid-template-columns:auto 1fr}.rv-row-act{grid-column:1 / -1;justify-content:flex-start}}
 .rv-form .rv-photo{width:64px;height:64px;border-radius:50%;object-fit:cover}
+
+/* Designs tab: shop box (frame colour, outline picture + size, live preview) */
+.dz-box{border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:14px;margin:0}
+.dz-box legend{padding:0 6px;font-weight:600;font-size:13px}
+.dz-colour{display:flex;align-items:center;gap:10px}
+.dz-colour input[type=color]{width:48px;height:34px;padding:0;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer}
+.dz-form .dbox{pointer-events:none}
