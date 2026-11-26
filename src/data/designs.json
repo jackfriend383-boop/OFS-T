@@ -1,7 +1,7 @@
 {
   "currency": "EUR",
   "extras": {"badge": 9},
-  "pieces": {"door": 45, "window": 29, "accent": 12},
+  "pieces": {"door": 45, "window": 29, "accent": 10},
   "shipping": {"fee": 0, "freeFrom": 0},
   "cats": ["All", "Launch Edition"],
   "colors": {
@@ -35,7 +35,7 @@
     "pearl": {"name": "Pearl White", "hex": "#EFEADF"}
   },
   "designs": [
-    {"id": "flame-red", "name": "Flame Camo", "tag": "Two-tone flames, black cuts", "cat": "Launch Edition", "price": 65, "c1": "flame", "c2": "crimson", "art": "flame", "master": "flame-camo"}
+    {"id": "flame-red", "name": "Flame Camo", "tag": "Two-tone flames, black cuts", "cat": "Launch Edition", "price": 70, "c1": "flame", "c2": "crimson", "art": "flame", "master": "flame-camo"}
   ],
   "presets": [
     {"id": "graphite-mint", "c1": "graphite", "c2": "mint"},

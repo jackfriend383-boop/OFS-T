@@ -286,6 +286,15 @@ export function makeBackend(kit: Kit) {
     if (!Number.isInteger(id) || id < 1) throw new BackendError(MSG.invalid, 'invalid');
     return authed('/api/admin/reviews/' + id, { method: 'DELETE' });
   }
+  /* ---------- Waiting list (people outside the São Miguel pre-sale) ---------- */
+  async function joinWaitlist(email: string, area: string): Promise<void> {
+    await request('/api/waitlist', { method: 'POST', body: { email: String(email || '').trim(), area, lang: kit.lang, consent: true } });
+  }
+  async function listWaitlist(): Promise<unknown> { return authed('/api/admin/waitlist'); }
+  async function deleteWaitlist(id: number): Promise<unknown> {
+    if (!Number.isInteger(id) || id < 1) throw new BackendError(MSG.invalid, 'invalid');
+    return authed('/api/admin/waitlist/' + id, { method: 'DELETE' });
+  }
   /* Preview picture of an extra design as a blob: address (the page may only load images from itself, data: and blob:). */
   async function designArtBlob(id: string, w: 1000 | 1600, ver: number): Promise<string> {
     if (!backendConfigured || !/^[a-z0-9][a-z0-9-]{1,38}$/.test(id)) throw new BackendError(MSG.invalid, 'invalid');
@@ -311,6 +320,6 @@ export function makeBackend(kit: Kit) {
     if (!idOk(id)) throw new BackendError(MSG.invalid, 'invalid');
     return authed('/api/admin/designs/' + id, { method: 'DELETE' });
   }
-  return { configured: backendConfigured, pricesPublic, getPrices, savePrices, reviewsPublic, listReviews, addReview, saveReview, deleteReview, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, createOrder, setStatus };
+  return { configured: backendConfigured, pricesPublic, getPrices, savePrices, reviewsPublic, listReviews, addReview, saveReview, deleteReview, joinWaitlist, listWaitlist, deleteWaitlist, designsPublic, designArtBlob, listDesigns, designMaster, saveDesign, deleteDesign, email: typeof SITE.email === 'string' ? SITE.email : '', BackendError, startCheckout, cancelCheckout, orderStatus, hasCustomerSession, requestLink, verifyLink, me, saveProfile, myOrders, customerSignOut, deleteAccount, signIn, signOut, getSession, isAdmin, listOrders, listInvoices, addInvoice, createOrder, setStatus };
 }
 export type Backend = ReturnType<typeof makeBackend>;

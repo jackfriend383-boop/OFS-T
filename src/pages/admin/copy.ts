@@ -1,6 +1,6 @@
 /* Interface text for the dashboard tabs (pt-PT + English). Plain text only, rendered by React as text. */
 const en = {
-  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', invoices: 'Invoices', customers: 'Customers', designs: 'Designs', prices: 'Prices & shipping', reviews: 'Reviews', edits: 'Edits', tools: 'Print tools' },
+  tabs: { overview: 'Overview', reports: 'Sales reports', orders: 'Orders', invoices: 'Invoices', customers: 'Customers', designs: 'Designs', prices: 'Prices & shipping', reviews: 'Reviews', waitlist: 'Waiting list', edits: 'Edits', tools: 'Print tools' },
   tabsLabel: 'Dashboard sections',
   range: 'Period', ranges: { today: 'Today', '7': '7 days', '30': '30 days', '90': '90 days', all: 'All time' },
   vsPrev: 'vs previous period',
@@ -42,7 +42,7 @@ const en = {
   noPriceBad: 'The price must be a number between 0.01 and 10000.',
 };
 const pt: typeof en = {
-  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', designs: 'Designs', prices: 'Preços e portes', reviews: 'Opiniões', edits: 'Edições', tools: 'Ficheiros de impressão' },
+  tabs: { overview: 'Resumo', reports: 'Relatórios de vendas', orders: 'Encomendas', invoices: 'Faturas', customers: 'Clientes', designs: 'Designs', prices: 'Preços e portes', reviews: 'Opiniões', waitlist: 'Lista de espera', edits: 'Edições', tools: 'Ficheiros de impressão' },
   tabsLabel: 'Secções do painel',
   range: 'Período', ranges: { today: 'Hoje', '7': '7 dias', '30': '30 dias', '90': '90 dias', all: 'Sempre' },
   vsPrev: 'vs período anterior',

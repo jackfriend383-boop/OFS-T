@@ -2,6 +2,7 @@ import { priceItem, isPersonalised, type PricedItem } from './pricing';
 import { DesignError, adminDelete, adminList, adminMaster, adminSave, designArt, pricingDesigns, publicList } from './designs';
 import { PriceError, loadPrices, savePrices, shippingCents, type Prices } from './prices';
 import { ReviewError, addReview, deleteReview, listReviews, saveReview } from './reviews';
+import { WaitlistError, deleteWaitlist, joinWaitlist, listWaitlist } from './waitlist';
 import { SettingsError, deleteSlot, publicSettings, putImage, putSettings, slotImage } from './settings';
 import { createCheckoutSession, expireCheckoutSession, verifyWebhook } from './stripe';
 import { sendMail, signInEmail, paidEmail, invoiceEmail, accountCreatedEmail, shippedEmail, newOrderEmail, adminAlertEmail, type MailAttachment } from './mail';
@@ -825,6 +826,11 @@ export default {
       if (path === '/api/prices' && req.method === 'GET') return respond(await loadPrices(env), 200, req, env, { 'Cache-Control': 'public, max-age=30' });
       // Customer reviews the owner added in the admin "Reviews" tab (home page + configurator).
       if (path === '/api/reviews' && req.method === 'GET') return respond(await listReviews(env), 200, req, env, { 'Cache-Control': 'public, max-age=60' });
+      // Waiting list for people outside the São Miguel pre-sale: a few sign-ups per IP per hour, the answer never reveals who is already on it.
+      if (path === '/api/waitlist' && req.method === 'POST') {
+        if (!(await allowHit(env, 'waitlist:' + clientIp(req), 60, 6))) throw new HttpError(429, 'rate_limited');
+        return respond(await joinWaitlist(env, await readJson(req, 2_000)), 201, req, env);
+      }
       if (path === '/api/checkout' && req.method === 'POST') return respond(await startCheckout(req, env), 201, req, env);
       const cancel = /^\/api\/checkout\/([^/]+)\/cancel$/.exec(path);
       if (cancel && req.method === 'POST') return respond(await cancelCheckout(req, env, cancel[1]), 200, req, env);
@@ -854,6 +860,9 @@ export default {
         const rv = /^\/api\/admin\/reviews\/(\d{1,9})$/.exec(path);
         if (rv && req.method === 'PUT') return respond(await saveReview(env, Number(rv[1]), await readJson(req, 250_000)), 200, req, env);
         if (rv && req.method === 'DELETE') return respond(await deleteReview(env, Number(rv[1])), 200, req, env);
+        if (path === '/api/admin/waitlist' && req.method === 'GET') return respond(await listWaitlist(env), 200, req, env);
+        const wl = /^\/api\/admin\/waitlist\/(\d{1,9})$/.exec(path);
+        if (wl && req.method === 'DELETE') return respond(await deleteWaitlist(env, Number(wl[1])), 200, req, env);
         const ss = /^\/api\/admin\/site-settings\/([A-Za-z]{4,12})$/.exec(path);
         if (ss && req.method === 'PUT') return respond(await putSettings(env, ss[1], await readJson(req, 2_000)), 200, req, env);
         if (ss && req.method === 'DELETE') return respond(await deleteSlot(env, ss[1]), 200, req, env);
@@ -866,7 +875,7 @@ export default {
       }
       throw new HttpError(404, 'not_found');
     } catch (e: any) {
-      if (e instanceof HttpError || e instanceof DesignError || e instanceof SettingsError || e instanceof PriceError || e instanceof ReviewError) return respond({ error: e.code }, e.status, req, env);
+      if (e instanceof HttpError || e instanceof DesignError || e instanceof SettingsError || e instanceof PriceError || e instanceof ReviewError || e instanceof WaitlistError) return respond({ error: e.code }, e.status, req, env);
       console.error('unhandled', e && e.message);
       return respond({ error: 'server' }, 500, req, env);
     }

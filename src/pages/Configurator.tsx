@@ -10,6 +10,9 @@ import { CarStage, Thumb, type StageApi } from '../components/Car';
 import { viewIcon, anglesOf, type Angle } from '../lib/car';
 import { FilterTabs } from '../components/DesignCard';
 import Reviews from '../components/Reviews';
+import Faq from '../components/Faq';
+import Waitlist from '../components/Waitlist';
+import Community from '../components/Community';
 import { useFilterFeedback } from '../lib/filter';
 
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -509,6 +512,9 @@ export default function Configurator() {
       </section>
 
       <Reviews id="cfgReviews" />
+      <Faq id="cfgFaq" />
+      <Waitlist id="cfgWaitlist" />
+      <Community id="cfgCommunity" />
 
       <section className="brochure" aria-labelledby="broTitle">
         <div className="bro-head">

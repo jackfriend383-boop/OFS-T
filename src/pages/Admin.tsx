@@ -16,13 +16,14 @@ import { BarList, Columns, TrendChart } from './admin/Charts';
 import Designs from './admin/Designs';
 import Prices from './admin/Prices';
 import Reviews from './admin/Reviews';
+import WaitlistTab from './admin/Waitlist';
 import Edits from './admin/Edits';
 import KitFields, { baseCfg } from './admin/KitFields';
 import NewOrder from './admin/NewOrder';
 
 type Panel = 'boot' | 'setup' | 'login' | 'locked' | 'main';
-type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'designs' | 'prices' | 'reviews' | 'edits' | 'tools';
-const TABS: Tab[] = ['overview', 'reports', 'orders', 'invoices', 'customers', 'designs', 'prices', 'reviews', 'edits', 'tools'];
+type Tab = 'overview' | 'reports' | 'orders' | 'invoices' | 'customers' | 'designs' | 'prices' | 'reviews' | 'waitlist' | 'edits' | 'tools';
+const TABS: Tab[] = ['overview', 'reports', 'orders', 'invoices', 'customers', 'designs', 'prices', 'reviews', 'waitlist', 'edits', 'tools'];
 const TAB_KEY = 'ofst-admin-tab', RANGE_KEY = 'ofst-admin-range';
 const remember = (k: string, v: string) => { try { sessionStorage.setItem(k, v); } catch { /* private mode */ } };
 const recall = (k: string) => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } };
@@ -549,6 +550,7 @@ export default function Admin() {
               {tab === 'designs' && <Designs />}
               {tab === 'prices' && <Prices />}
               {tab === 'reviews' && <Reviews />}
+              {tab === 'waitlist' && <WaitlistTab />}
               {tab === 'edits' && <Edits onExpired={() => handleError({ code: 'session_expired', message: T('beSession') })} />}
               {tab === 'tools' && toolSection}
             </div>

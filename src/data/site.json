@@ -13,6 +13,12 @@
   "email": "geral@ofstdesigns.com",
   "phone": "[PHONE (optional)]",
   "securityEmail": "[SECURITY CONTACT EMAIL]",
+  "social": {
+    "instagram": "",
+    "tiktok": "",
+    "facebook": "",
+    "hashtag": "OFSTAmi"
+  },
   "themeColorDark": "#0A0B10",
   "themeColorLight": "#F2F3F6",
   "lastmod": "2026-10-06",

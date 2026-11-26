@@ -8,6 +8,7 @@ import { CartDrawer } from './Cart';
 import { SearchDialog } from './Search';
 import { useReveal } from '../lib/motion';
 import { ThemeButton } from './ThemeButton';
+import { SocialLinks } from './Community';
 
 const BASE = import.meta.env.BASE_URL;
 const reduce = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -159,7 +160,7 @@ function Footer() {
         </address>
       </div>
       <div><h2>{ui.t_foot_shop}</h2><Link to={to('shop')}>{ui.t_all_designs}</Link><Link to={to('configurator')}>{ui.t_configurator}</Link></div>
-      <div><h2>{ui.t_help}</h2><Link to={to('about') + '#faq'}>{ui.t_faq}</Link></div>
+      <div><h2>{ui.t_help}</h2><Link to={to('about') + '#faq'}>{ui.t_faq}</Link><Link to={to('home') + '#waitlist'}>{kit.T('waitlistFoot')}</Link><SocialLinks label={kit.T('followUs')} /></div>
       <div>
         <h2>{ui.t_legal}</h2>
         <Link to={to('privacy')}>{ui.t_privacy}</Link><Link to={to('terms')}>{ui.t_terms}</Link><Link to={to('refunds')}>{dec(ui.t_refunds)}</Link><Link to={to('cookies')}>{ui.t_cookies}</Link>

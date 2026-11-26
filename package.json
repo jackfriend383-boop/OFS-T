@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node scripts/prerender.mjs",
+    "sync-admin": "node scripts/sync-admin.mjs",
+    "build": "node scripts/sync-admin.mjs && tsc --noEmit && vite build && node scripts/prerender.mjs",
     "dev:admin": "vite --config vite.admin.config.ts --port 5174",
     "build:admin": "tsc --noEmit && vite build --config vite.admin.config.ts",
     "preview": "vite preview",

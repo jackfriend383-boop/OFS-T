@@ -195,6 +195,7 @@ function Checkout({ onBack }: { onBack: () => void }) {
         readOnly={f.id === 'coEmail' && !!u?.email /* receipts go to the signed-in account's email */}
         aria-invalid={errs[f.id] ? true : undefined} aria-describedby={errs[f.id] ? f.id + 'Err' : undefined} />
       <p className="err" id={f.id + 'Err'} hidden={!errs[f.id]}>{errs[f.id]}</p>
+      {f.id === 'coPost' && errs.coPost === T('shipPostMsg') && <p className="note" style={{ margin: 0 }}><a href={import.meta.env.BASE_URL.replace(/\/$/, '') + to('home') + '#waitlist'}>{T('joinWaitlist')}</a></p>}
     </div>
   );
   const termsLabel = (() => {

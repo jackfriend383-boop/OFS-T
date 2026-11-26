@@ -39,11 +39,12 @@ export default function Reviews() {
 
   const load = useCallback(async () => {
     try { setList(cleanReviews(await backend.listReviews())); }
-    catch (e: any) { setList([]); setMsg(e && (e.code === 'not_found' || e.status === 404) ? t.needDeploy : t.failed); }
+    // The shop's server answers "invalid" (a 404) for a route it does not have yet: the Worker was not updated / migrated.
+    catch (e: any) { setList([]); setMsg(e && (e.code === 'invalid' || e.code === 'server') ? t.needDeploy : e && e.message ? e.message : t.failed); }
   }, [backend, t.needDeploy, t.failed]);
   useEffect(() => { void load(); }, [load]);
 
-  const errMsg = (e: any) => (e && e.code === 'too_many' ? t.tooMany : e && (e.code === 'not_found' || e.status === 404) ? t.needDeploy : t.failed);
+  const errMsg = (e: any) => (e && e.code === 'session_expired' && e.message ? e.message : e && e.code === 'server' ? t.needDeploy : t.failed);
 
   async function pick(f: File | undefined) {
     if (!f) return;

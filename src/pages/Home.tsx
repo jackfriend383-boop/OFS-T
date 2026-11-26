@@ -10,6 +10,9 @@ import type { Preset } from '../lib/kit';
 import { CarStage, Thumb } from '../components/Car';
 import { DesignCard, presetLabel } from '../components/DesignCard';
 import Reviews from '../components/Reviews';
+import Waitlist from '../components/Waitlist';
+import Faq from '../components/Faq';
+import Community from '../components/Community';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -81,7 +84,7 @@ function KitCard({ code, name, qty, tag, size, text, sizeLabel, qtyLabel, soon }
 }
 
 export default function Home() {
-  const { kit, lang, to } = useApp();
+  const { kit, lang, to, T } = useApp();
   const c = COPY[lang].home;
   const { hash } = useLocation();
   const PRESETS = kit.presets; // premade colour pairs, names in the page language
@@ -152,6 +155,7 @@ export default function Home() {
       {/* Version picker: each card opens the configurator with that Ami version already chosen. */}
       <section className="section versions" id="versions" aria-labelledby="versionsTitle" tabIndex={-1}>
         <div className="sec-head"><div><span className="eyebrow">{c.versionsEyebrow}</span><h2 className="display" id="versionsTitle">{c.versionsTitle}</h2></div></div>
+        <p className="presale"><span className="chip">{T('presaleTag')}</span></p>
         <div className="vgrid">
           {c.versions.map(([m, name, text]) => (
             <Link key={m} className="vcard" to={to('configurator', 'model=' + m)}>
@@ -197,6 +201,10 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <Waitlist />
+      <Faq />
+      <Community />
 
       <div className="section" style={{ paddingTop: 0 }}>
         <div className="canvas-band">
