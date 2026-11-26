@@ -10,7 +10,6 @@ import type { Preset } from '../lib/kit';
 import { CarStage, Thumb } from '../components/Car';
 import { DesignCard, presetLabel } from '../components/DesignCard';
 import Reviews from '../components/Reviews';
-import Waitlist from '../components/Waitlist';
 import Faq from '../components/Faq';
 import Community from '../components/Community';
 
@@ -175,7 +174,11 @@ export default function Home() {
         <div className="grid-cards" id="featured">{PRESETS.map((p) => <DesignCard key={p.id} d={hero} preset={p} />)}</div>
       </div>
 
-      <Reviews />
+      {/* Reviews on the left (each opens in full), the community box on the right. */}
+      <div className="section rv-community">
+        <Reviews />
+        <Community />
+      </div>
 
       <div className="section" style={{ paddingTop: 0 }}>
         <div className="sec-head"><h2 className="display">{c.how}</h2></div>
@@ -192,20 +195,7 @@ export default function Home() {
         </ul>
       </section>
 
-      <div className="section" style={{ paddingTop: 0 }}>
-        <div className="fit">
-          <div style={{ display: 'grid', gap: 14 }}>
-            <span className="eyebrow">{c.fitEyebrow}</span>
-            <h2 className="display" style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)' }}>{c.fitTitle}</h2>
-            <p className="muted" style={{ margin: 0, maxWidth: '44ch' }}>{c.fitText}</p>
-          </div>
-        </div>
-      </div>
-
-      <Waitlist />
       <Faq />
-      <Community />
-
       <div className="section" style={{ paddingTop: 0 }}>
         <div className="canvas-band">
           <h2 className="display">{c.canvas}</h2>

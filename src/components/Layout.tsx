@@ -107,13 +107,32 @@ function Header() {
   }, [menu, modal]);
   useEffect(() => { if (modal) setMenu(false); }, [modal]);
 
+  /* Home only: the bar scrolls away as you go down and comes back (soft white fade from the top) as soon as you scroll up. */
+  const home = page === 'home';
+  const [nav, setNav] = useState<'top' | 'up' | 'down'>('top');
+  useEffect(() => {
+    if (!home) { setNav('top'); return; }
+    let last = scrollY, raf = 0;
+    const run = () => {
+      raf = 0;
+      const y = scrollY;
+      if (y < 48) { setNav('top'); last = y; return; }
+      if (Math.abs(y - last) < 8) return; // ignore tiny jitters
+      setNav(y < last ? 'up' : 'down'); last = y;
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(run); };
+    run();
+    addEventListener('scroll', onScroll, { passive: true });
+    return () => { removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, [home]);
+
   const hoverable = () => typeof matchMedia === 'function' && matchMedia('(hover: hover)').matches;
   const links = NAV.map((k) => ({ k, href: to(k), label: kit.L.nav[k], cur: page === k }));
   const cartLabel = cartCount ? T.n('openCart', cartCount) : T('openCartEmpty');
   return (
     <>
       {/* Menu on the left, the logo centred, tools on the right. The page links live in the menu panel at every width. */}
-      <header className="top">
+      <header className="top" data-nav={home ? (menu ? 'up' : nav) : undefined}>
         <div className="top-l">
           <button type="button" className="menu-btn" id="menuBtn" ref={menuBtn} aria-label={ui.t_menu} aria-expanded={menu} aria-controls="mnav" onClick={() => setMenu((m) => !m)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg><span>{ui.t_menu}</span></button>
         </div>
@@ -160,7 +179,7 @@ function Footer() {
         </address>
       </div>
       <div><h2>{ui.t_foot_shop}</h2><Link to={to('shop')}>{ui.t_all_designs}</Link><Link to={to('configurator')}>{ui.t_configurator}</Link></div>
-      <div><h2>{ui.t_help}</h2><Link to={to('about') + '#faq'}>{ui.t_faq}</Link><Link to={to('home') + '#waitlist'}>{kit.T('waitlistFoot')}</Link><SocialLinks label={kit.T('followUs')} /></div>
+      <div><h2>{ui.t_help}</h2><Link to={to('about') + '#faq'}>{ui.t_faq}</Link><Link to={to('configurator') + '#cfgWaitlist'}>{kit.T('waitlistFoot')}</Link><SocialLinks label={kit.T('followUs')} /></div>
       <div>
         <h2>{ui.t_legal}</h2>
         <Link to={to('privacy')}>{ui.t_privacy}</Link><Link to={to('terms')}>{ui.t_terms}</Link><Link to={to('refunds')}>{dec(ui.t_refunds)}</Link><Link to={to('cookies')}>{ui.t_cookies}</Link>

@@ -31,6 +31,7 @@ const en = {
   },
   shop: {
     eyebrow: 'Shop', h1: 'All designs', designs: 'Designs', filter: 'Filter by category',
+    hint: 'Pick a design to see its most popular colour combinations.', top: (name: string) => `Most popular ${name} combinations`, open: (name: string) => `Show the most popular ${name} combinations`,
     lead: 'Hand-drawn, customisable designs for every taste and style. New releases are on the way; if you have ideas, get in touch and we will help you express your style.',
   },
   cfg: {
@@ -122,6 +123,7 @@ const pt: typeof en = {
   },
   shop: {
     eyebrow: 'Loja', h1: 'Todos os designs', designs: 'Designs', filter: 'Filtrar por categoria',
+    hint: 'Escolhe um design para ver as combinações de cores mais populares.', top: (name: string) => `Combinações mais populares de ${name}`, open: (name: string) => `Mostrar as combinações mais populares de ${name}`,
     lead: 'Designs feitos à mão e personalizáveis para todos os gostos e estilos. Novos lançamentos por vir, se tiveres ideias contacta-nos para te ajudarmos a expressar o teu estilo.',
   },
   cfg: {

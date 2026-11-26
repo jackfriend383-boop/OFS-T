@@ -511,10 +511,13 @@ export default function Configurator() {
         </section>
       </section>
 
-      <Reviews id="cfgReviews" />
+      {/* Reviews on the left (each opens in full), the community box on the right. */}
+      <div className="section rv-community">
+        <Reviews id="cfgReviews" />
+        <Community id="cfgCommunity" />
+      </div>
       <Faq id="cfgFaq" />
       <Waitlist id="cfgWaitlist" />
-      <Community id="cfgCommunity" />
 
       <section className="brochure" aria-labelledby="broTitle">
         <div className="bro-head">

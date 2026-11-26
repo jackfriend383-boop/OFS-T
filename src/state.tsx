@@ -144,8 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let live = true;
     if (!backendRef0.current.configured) return;
-    backendRef0.current.reviewsPublic().then((r) => { if (live) setReviews(cleanReviews(r)); });
-    return () => { live = false; };
+    backendRef0.current.reviewsPublic().then((r) => { if (live) setReviews(cleanReviews(r)); });    return () => { live = false; };
   }, []);
   const commit = useCallback((next: CartItem[]) => { setCart(next); store.set(CART_KEY, JSON.stringify(next)); }, []);
   const cartRef = useRef(cart); cartRef.current = cart;
